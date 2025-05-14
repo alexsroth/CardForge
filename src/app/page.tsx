@@ -3,50 +3,13 @@
 
 import Link from 'next/link';
 import ProjectCard from '@/components/project-card';
-import type { Project } from '@/lib/types';
+// import type { Project } from '@/lib/types'; // Project type still needed for mapping
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Loader2 } from 'lucide-react';
 import { useProjects } from '@/contexts/ProjectContext'; // Import useProjects
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Mock data for projects - this will now primarily serve as SEED DATA for ProjectContext
-// if localStorage is empty. The page itself will consume projects from the context.
-export const mockProjects: Project[] = [
-  {
-    id: 'project-alpha',
-    name: 'Alpha Beasts',
-    thumbnailUrl: 'https://placehold.co/300x200.png',
-    dataAiHint: 'fantasy creature',
-    lastModified: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
-    associatedTemplateIds: ['creature', 'spell', 'generic'],
-    cards: [ // Example card data for this project
-        { id: 'card-alpha-1', templateId: 'creature', name: 'Alpha Wolf', description: 'A leader of the pack.', cost: 3, attack: 3, defense: 2, imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'wolf illustration' },
-        { id: 'card-alpha-2', templateId: 'spell', name: 'Nature\'s Call', description: 'Summon a beast.', cost: 2, effectText: 'Search your deck for a creature card.', imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'forest magic' },
-    ]
-  },
-  {
-    id: 'project-beta',
-    name: 'Cyber Spells',
-    thumbnailUrl: 'https://placehold.co/300x200.png',
-    dataAiHint: 'abstract technology',
-    lastModified: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(), // 5 days ago
-    associatedTemplateIds: ['spell', 'item', 'generic'],
-    cards: [
-        { id: 'card-beta-1', templateId: 'spell', name: 'Overload', description: 'Deal damage to all enemies.', cost: 5, effectText: 'Deals 3 damage to all opponent creatures.', imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'electric shock' },
-    ]
-  },
-  {
-    id: 'project-gamma',
-    name: 'Medieval Items',
-    thumbnailUrl: 'https://placehold.co/300x200.png',
-    dataAiHint: 'medieval weapon',
-    lastModified: new Date().toISOString(),
-    associatedTemplateIds: ['item', 'creature', 'generic'],
-    cards: [
-        { id: 'card-gamma-1', templateId: 'item', name: 'Knight\'s Shield', description: 'A sturdy shield.', cost: 2, effectText: 'Target creature gets +0/+2.', imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'metal shield' },
-    ]
-  },
-];
+// Mock data for projects is GONE from here. It's now seeded by ProjectContext.
 
 
 function DashboardLoadingSkeleton() {
