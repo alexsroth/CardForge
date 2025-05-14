@@ -7,6 +7,7 @@ import Image from 'next/image';
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react'; // Import all icons
+import { cn } from '@/lib/utils'; // Import the cn utility
 
 interface DynamicCardRendererProps {
   card: CardData;
