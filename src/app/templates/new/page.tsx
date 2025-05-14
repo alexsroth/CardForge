@@ -82,6 +82,31 @@ const toCamelCase = (str: string): string => {
   return result;
 };
 
+function generateSamplePlaceholderUrl(fieldDef: TemplateFieldDefinition): string {
+  const width = fieldDef.placeholderConfigWidth || 100;
+  const height = fieldDef.placeholderConfigHeight || 100;
+  
+  let path = `${width}x${height}`;
+  const cleanBgColor = fieldDef.placeholderConfigBgColor?.replace('#', '').trim();
+  const cleanTextColor = fieldDef.placeholderConfigTextColor?.replace('#', '').trim();
+  const cleanText = fieldDef.placeholderConfigText?.trim();
+
+  if (cleanBgColor) {
+    path += `/${cleanBgColor}`;
+    if (cleanTextColor) {
+      path += `/${cleanTextColor}`;
+    }
+  }
+  path += '.png'; // Always request PNG for preview
+
+  let fullUrl = `https://placehold.co/${path}`;
+
+  if (cleanText) {
+    fullUrl += `?text=${encodeURIComponent(cleanText)}`;
+  }
+  return fullUrl;
+}
+
 
 export default function TemplateDesignerPage() {
   const [templateId, setTemplateId] = useState('');
@@ -127,24 +152,7 @@ export default function TemplateDesignerPage() {
     fields.forEach(fieldDef => {
       const key = fieldDef.key as keyof CardData;
        if (fieldDef.type === 'placeholderImage') {
-          const width = fieldDef.placeholderConfigWidth || 250;
-          const height = fieldDef.placeholderConfigHeight || 140;
-          let path = `${width}x${height}`;
-          const bgColor = fieldDef.placeholderConfigBgColor?.replace('#', '').trim();
-          const textColor = fieldDef.placeholderConfigTextColor?.replace('#', '').trim();
-          const text = fieldDef.placeholderConfigText?.trim();
-
-          if (bgColor) {
-            path += `/${bgColor}`;
-            if (textColor) {
-              path += `/${textColor}`;
-            }
-          }
-          let url = `https://placehold.co/${path}`;
-          if (text) {
-            url += `?text=${encodeURIComponent(text)}`;
-          }
-          (generatedSampleCard as any)[key] = url;
+          (generatedSampleCard as any)[key] = generateSamplePlaceholderUrl(fieldDef);
        } else if (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '') {
         if (fieldDef.type === 'number') {
           (generatedSampleCard as any)[key] = Number(fieldDef.defaultValue);
@@ -171,7 +179,7 @@ export default function TemplateDesignerPage() {
       if (['name', 'description', 'cost', 'attack', 'defense', 'imageUrl', 'dataAiHint', 'rarity', 'effectText', 'flavorText', 'artworkUrl', 'cardType', 'statusIcon'].includes(fieldDef.key)) {
         if ((fieldDef.type !== 'placeholderImage' && (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '')) ) {
              if((fieldDef.key === 'imageUrl' || fieldDef.key === 'artworkUrl') && typeof fieldDef.defaultValue === 'string' && !fieldDef.defaultValue.startsWith('http') && !fieldDef.defaultValue.startsWith('https')) {
-                (generatedSampleCard as any)[key] = `https://placehold.co/${fieldDef.key === 'imageUrl' ? '250x140' : '280x400'}`;
+                (generatedSampleCard as any)[key] = `https://placehold.co/${fieldDef.key === 'imageUrl' ? '250x140' : '280x400'}.png`;
              }
         } else if (fieldDef.type !== 'placeholderImage') { 
             if(fieldDef.key === 'imageUrl' && !(generatedSampleCard as any)[key]) { 
@@ -418,7 +426,7 @@ export default function TemplateDesignerPage() {
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Data Fields</h3>
-              <ScrollArea className="h-auto pr-3 border rounded-md"> 
+              <ScrollArea className="h-auto pr-3"> 
                 <div className="p-2 space-y-3">
                   {fields.map((field, index) => (
                     <FieldRow
@@ -445,7 +453,6 @@ export default function TemplateDesignerPage() {
 
         {/* Bottom Section: Layout Editor (Left) and Preview (Right) */}
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Left Column: Layout Definition Editor */}
           <Card className="md:w-[65%] flex flex-col">
             <CardHeader>
               <CardTitle className="text-xl font-bold">Layout Definition (JSON)</CardTitle>
@@ -534,32 +541,33 @@ export default function TemplateDesignerPage() {
                      <pre className="text-xs bg-background/50 p-2 rounded border whitespace-pre-wrap">
 {`// For a simple text display
 {
-  "fieldKey": "yourCardNameFieldKey", 
+  "fieldKey": "yourCardNameFieldKey", // Replace with one of YOUR field keys from above
   "type": "text",
-  "style": { "position": "absolute", "top": "20px", "left": "20px" }
+  "style": { "position": "absolute", "top": "20px", "left": "20px", "fontWeight": "bold" }
 }
 
-// For an image
+// For an image (ensure 'yourImageUrlFieldKey' is a field of type 'text' or 'placeholderImage' in Data Fields)
 {
-  "fieldKey": "yourImageUrlFieldKey",
+  "fieldKey": "yourImageUrlFieldKey", // Replace
   "type": "image",
   "style": { 
     "position": "absolute", "top": "50px", "left": "20px", 
-    "width": "240px", "height": "120px", "objectFit": "cover" 
+    "width": "240px", "height": "120px", "objectFit": "cover", "borderRadius": "4px" 
   }
 }
 
-// For text with a preceding icon
+// For text with a preceding icon (ensure 'yourManaCostFieldKey' exists)
 {
-  "fieldKey": "yourManaCostFieldKey",
+  "fieldKey": "yourManaCostFieldKey", // Replace
   "type": "iconValue",
   "icon": "Coins", // Lucide icon name
   "style": { "position": "absolute", "top": "20px", "right": "20px" }
 }
 
 // For an icon whose name is stored in your card data
+// (ensure 'yourIconDataFieldKey' exists and is a 'text' field where you'd store "Zap" or "Shield")
 {
-  "fieldKey": "yourIconDataFieldKey", // This field in your card data holds "Zap" or "Shield"
+  "fieldKey": "yourIconDataFieldKey", // Replace
   "type": "iconFromData",
   "style": { "position": "absolute", "bottom": "20px", "left": "20px" }
 }`}
@@ -583,7 +591,6 @@ export default function TemplateDesignerPage() {
             </CardFooter>
           </Card>
 
-          {/* Right Column: Live Preview */}
           <Card className="md:w-[35%] sticky top-20 self-start"> 
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center">

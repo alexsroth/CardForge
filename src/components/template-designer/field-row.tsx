@@ -3,12 +3,12 @@
 "use client";
 
 import type { ChangeEvent } from 'react';
-import { useState } from 'react'; // Import useState
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Trash2, ChevronDown, ChevronRight } from 'lucide-react'; // Import Chevron icons
+import { Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { Textarea } from '../ui/textarea';
 import { cn } from '@/lib/utils';
 
@@ -18,8 +18,7 @@ export interface TemplateFieldDefinition {
   type: 'text' | 'textarea' | 'number' | 'select' | 'boolean' | 'placeholderImage';
   placeholder?: string;
   defaultValue?: string | number | boolean;
-  optionsString?: string; // Comma-separated value:label pairs, e.g., "val1:Label 1,val2:Label 2"
-  // Config for 'placeholderImage'
+  optionsString?: string; 
   placeholderConfigWidth?: number;
   placeholderConfigHeight?: number;
   placeholderConfigBgColor?: string;
@@ -34,15 +33,75 @@ interface FieldRowProps {
   isSaving?: boolean;
 }
 
+function generatePreviewPlaceholderUrl(config: {
+  width?: number;
+  height?: number;
+  bgColor?: string;
+  textColor?: string;
+  text?: string;
+}): string {
+  const {
+    width = 100, // Default width if not provided
+    height = 100, // Default height if not provided
+    bgColor,
+    textColor,
+    text,
+  } = config;
+
+  let path = `${width}x${height}`;
+  const cleanBgColor = bgColor?.replace('#', '').trim();
+  const cleanTextColor = textColor?.replace('#', '').trim();
+  const cleanText = text?.trim();
+
+  if (cleanBgColor) {
+    path += `/${cleanBgColor}`;
+    if (cleanTextColor) {
+      path += `/${cleanTextColor}`;
+    }
+  }
+  path += '.png'; // Always request PNG
+
+  let fullUrl = `https://placehold.co/${path}`;
+
+  if (cleanText) {
+    fullUrl += `?text=${encodeURIComponent(cleanText)}`;
+  }
+  return fullUrl;
+}
+
+
 export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldRowProps) {
-  const [isSecondaryVisible, setIsSecondaryVisible] = useState(false); // State for visibility
+  const [isSecondaryVisible, setIsSecondaryVisible] = useState(false);
+  const [generatedPlaceholderUrl, setGeneratedPlaceholderUrl] = useState('');
+
+  useEffect(() => {
+    if (field.type === 'placeholderImage') {
+      const url = generatePreviewPlaceholderUrl({
+        width: field.placeholderConfigWidth,
+        height: field.placeholderConfigHeight,
+        bgColor: field.placeholderConfigBgColor,
+        textColor: field.placeholderConfigTextColor,
+        text: field.placeholderConfigText,
+      });
+      setGeneratedPlaceholderUrl(url);
+    } else {
+      setGeneratedPlaceholderUrl('');
+    }
+  }, [
+    field.type,
+    field.placeholderConfigWidth,
+    field.placeholderConfigHeight,
+    field.placeholderConfigBgColor,
+    field.placeholderConfigTextColor,
+    field.placeholderConfigText,
+  ]);
 
   const handleGenericChange = (name: keyof TemplateFieldDefinition, value: any) => {
     onChange({ ...field, [name]: value });
   };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target as HTMLInputElement; // type assertion for checkbox
+    const { name, value, type } = e.target as HTMLInputElement; 
     let processedValue: string | number | boolean = value;
 
     if (type === 'checkbox') {
@@ -54,27 +113,26 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
   };
 
   const handleSelectChange = (name: keyof TemplateFieldDefinition, value: string) => {
-    // When changing type, reset placeholder config if not changing to placeholderImage
-    if (name === 'type' && value !== 'placeholderImage') {
-      onChange({ 
-        ...field, 
-        [name]: value,
-        placeholderConfigWidth: undefined,
-        placeholderConfigHeight: undefined,
-        placeholderConfigBgColor: undefined,
-        placeholderConfigTextColor: undefined,
-        placeholderConfigText: undefined,
-      });
-    } else {
-      handleGenericChange(name, value);
+    const newFieldData: Partial<TemplateFieldDefinition> = { [name]: value };
+    if (name === 'type') {
+        if (value === 'placeholderImage') {
+            newFieldData.placeholderConfigWidth = field.placeholderConfigWidth || 250;
+            newFieldData.placeholderConfigHeight = field.placeholderConfigHeight || 140;
+        } else {
+            newFieldData.placeholderConfigWidth = undefined;
+            newFieldData.placeholderConfigHeight = undefined;
+            newFieldData.placeholderConfigBgColor = undefined;
+            newFieldData.placeholderConfigTextColor = undefined;
+            newFieldData.placeholderConfigText = undefined;
+        }
     }
+    onChange({ ...field, ...newFieldData });
   };
 
-  const hasSecondaryContent = field.placeholder || field.defaultValue !== undefined || field.type === 'select' || field.type === 'placeholderImage';
+  const hasSecondaryContent = field.type === 'placeholderImage' || field.placeholder || field.defaultValue !== undefined || field.type === 'select';
 
   return (
     <div className="p-3 border rounded-md bg-card shadow-sm space-y-2">
-      {/* Main Info Row */}
       <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
         {hasSecondaryContent && (
           <Button
@@ -144,7 +202,6 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
         </Button>
       </div>
 
-      {/* Secondary Info Section - Collapsible */}
       {isSecondaryVisible && hasSecondaryContent && field.type !== 'placeholderImage' && (
         <div className={cn(
             "grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 pt-2 mt-1 border-t border-dashed"
@@ -214,7 +271,6 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
         </div>
       )}
 
-      {/* Placeholder Image Configuration */}
       {isSecondaryVisible && field.type === 'placeholderImage' && (
         <div className="pt-2 mt-1 border-t border-dashed space-y-3">
           <p className="text-xs text-muted-foreground font-medium">Placeholder Image Configuration:</p>
@@ -246,27 +302,27 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
               />
             </div>
             <div>
-              <Label htmlFor={`field-ph-bgcolor-${field.key}`} className="text-xs text-muted-foreground">Background Color (hex, no #)</Label>
+              <Label htmlFor={`field-ph-bgcolor-${field.key}`} className="text-xs text-muted-foreground">Background Color (hex/name)</Label>
               <Input
                 id={`field-ph-bgcolor-${field.key}`}
                 name="placeholderConfigBgColor"
                 type="text"
                 value={field.placeholderConfigBgColor || ''}
                 onChange={handleInputChange}
-                placeholder="e.g., cccccc"
+                placeholder="e.g., cccccc or orange"
                 className="h-8 text-xs"
                 disabled={isSaving}
               />
             </div>
             <div>
-              <Label htmlFor={`field-ph-textcolor-${field.key}`} className="text-xs text-muted-foreground">Text Color (hex, no #)</Label>
+              <Label htmlFor={`field-ph-textcolor-${field.key}`} className="text-xs text-muted-foreground">Text Color (hex/name)</Label>
               <Input
                 id={`field-ph-textcolor-${field.key}`}
                 name="placeholderConfigTextColor"
                 type="text"
                 value={field.placeholderConfigTextColor || ''}
                 onChange={handleInputChange}
-                placeholder="e.g., 969696"
+                placeholder="e.g., 969696 or white"
                 className="h-8 text-xs"
                 disabled={isSaving}
               />
@@ -285,6 +341,18 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
               />
             </div>
           </div>
+          {generatedPlaceholderUrl && (
+            <div className="mt-2 space-y-1">
+              <Label className="text-xs text-muted-foreground">Generated URL Preview:</Label>
+              <Input
+                type="text"
+                value={generatedPlaceholderUrl}
+                readOnly
+                className="h-8 text-xs bg-muted/50 font-mono"
+                disabled={isSaving}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
