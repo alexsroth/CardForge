@@ -4,16 +4,17 @@
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { CardTemplate, CardTemplateId as ImportedCardTemplateId } from '@/lib/card-templates'; // Assuming this is where CardTemplate is defined
+import type { CardTemplate as ImportedCardTemplate, CardTemplateId as ImportedCardTemplateId } from '@/lib/card-templates'; // Assuming this is where CardTemplate is defined
 import { cardTemplates as initialSeedTemplates } from '@/lib/card-templates'; // The seed data
 
+export type CardTemplate = ImportedCardTemplate;
 export type CardTemplateId = ImportedCardTemplateId;
 
 interface TemplateContextType {
   templates: CardTemplate[];
   getTemplateById: (id: CardTemplateId | undefined) => CardTemplate | undefined;
-  saveTemplate: (templateData: CardTemplate) => void;
   addTemplate: (templateData: CardTemplate) => Promise<{ success: boolean; message: string }>;
+  updateTemplate: (templateData: CardTemplate) => Promise<{ success: boolean; message: string }>;
   getAvailableTemplatesForSelect: (allowedTemplateIds?: CardTemplateId[]) => Array<{ value: CardTemplateId; label: string }>;
   isLoading: boolean;
 }
@@ -30,15 +31,29 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
     try {
       const storedTemplates = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (storedTemplates) {
-        setTemplates(JSON.parse(storedTemplates));
+        // Ensure fields are always arrays
+        const parsedTemplates: CardTemplate[] = JSON.parse(storedTemplates);
+        const validatedTemplates = parsedTemplates.map(t => ({
+          ...t,
+          fields: Array.isArray(t.fields) ? t.fields : []
+        }));
+        setTemplates(validatedTemplates);
       } else {
         // Seed with initial templates if nothing in localStorage
-        setTemplates(initialSeedTemplates);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialSeedTemplates));
+        const validatedSeedTemplates = initialSeedTemplates.map(t => ({
+          ...t,
+          fields: Array.isArray(t.fields) ? t.fields : []
+        }));
+        setTemplates(validatedSeedTemplates);
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(validatedSeedTemplates));
       }
     } catch (error) {
       console.error("Failed to load templates from localStorage, using initial seed:", error);
-      setTemplates(initialSeedTemplates);
+      const validatedSeedTemplates = initialSeedTemplates.map(t => ({
+          ...t,
+          fields: Array.isArray(t.fields) ? t.fields : []
+        }));
+      setTemplates(validatedSeedTemplates);
     } finally {
       setIsLoading(false);
     }
@@ -58,21 +73,6 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
     return templates.find(t => t.id === id);
   }, [templates]);
 
-  const saveTemplate = useCallback((templateData: CardTemplate) => {
-    setTemplates(prevTemplates => {
-      const existingIndex = prevTemplates.findIndex(t => t.id === templateData.id);
-      let updatedTemplates;
-      if (existingIndex > -1) {
-        updatedTemplates = [...prevTemplates];
-        updatedTemplates[existingIndex] = templateData;
-      } else {
-        updatedTemplates = [...prevTemplates, templateData];
-      }
-      persistTemplates(updatedTemplates);
-      return updatedTemplates;
-    });
-  }, [persistTemplates]);
-
   const addTemplate = useCallback(async (templateData: CardTemplate): Promise<{ success: boolean; message: string }> => {
     if (templates.some(t => t.id === templateData.id)) {
       return { success: false, message: `Template ID '${templateData.id}' already exists.` };
@@ -84,6 +84,33 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
     });
     return { success: true, message: `Template '${templateData.name}' saved successfully.` };
   }, [templates, persistTemplates]);
+
+  const updateTemplate = useCallback(async (templateData: CardTemplate): Promise<{ success: boolean; message: string }> => {
+    if (!templateData.id) {
+      return { success: false, message: "Template ID is missing, cannot update." };
+    }
+    let found = false;
+    setTemplates(prevTemplates => {
+      const updatedTemplates = prevTemplates.map(t => {
+        if (t.id === templateData.id) {
+          found = true;
+          return templateData; // Replace with new data
+        }
+        return t;
+      });
+      if (found) {
+        persistTemplates(updatedTemplates);
+        return updatedTemplates;
+      }
+      return prevTemplates; // No change if not found (though should ideally not happen if called correctly)
+    });
+
+    if (found) {
+      return { success: true, message: `Template '${templateData.name}' updated successfully.` };
+    } else {
+      return { success: false, message: `Template with ID '${templateData.id}' not found. Update failed.` };
+    }
+  }, [persistTemplates]);
 
 
   const getAvailableTemplatesForSelect = useCallback((allowedTemplateIds?: CardTemplateId[]) => {
@@ -98,7 +125,7 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
   }, [templates]);
 
   return (
-    <TemplateContext.Provider value={{ templates, getTemplateById, saveTemplate, addTemplate, getAvailableTemplatesForSelect, isLoading }}>
+    <TemplateContext.Provider value={{ templates, getTemplateById, addTemplate, updateTemplate, getAvailableTemplatesForSelect, isLoading }}>
       {children}
     </TemplateContext.Provider>
   );
@@ -111,3 +138,5 @@ export const useTemplates = (): TemplateContextType => {
   }
   return context;
 };
+
+    

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, AlertTriangle, Info, Settings2, Loader2 } from 'lucide-react';
+import { PlusCircle, AlertTriangle, Info, Settings2, Loader2, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -78,7 +78,7 @@ export default function TemplateLibraryPage() {
         <AlertTitle className="text-primary">Template Management Note</AlertTitle>
         <AlertDescription>
           This library displays templates currently stored in your browser's local storage.
-          When you create new templates via the "Template Designer", they are saved here.
+          When you create or edit templates, they are saved here.
           Project associations are managed on the "Manage Assignments" page and are also stored locally.
         </AlertDescription>
       </Alert>
@@ -123,6 +123,13 @@ export default function TemplateLibraryPage() {
                     )}
                   </div>
                 </CardContent>
+                <CardFooter>
+                  <Button variant="outline" size="sm" asChild className="w-full">
+                    <Link href={`/templates/edit/${template.id}`}>
+                      <Pencil className="mr-2 h-4 w-4" /> Edit Template
+                    </Link>
+                  </Button>
+                </CardFooter>
               </Card>
             );
           })}
@@ -145,3 +152,5 @@ export default function TemplateLibraryPage() {
     </div>
   );
 }
+
+    
