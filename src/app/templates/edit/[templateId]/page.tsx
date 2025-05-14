@@ -13,12 +13,13 @@ import FieldRow, { type TemplateFieldDefinition } from '@/components/template-de
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates, type CardTemplateId } from '@/contexts/TemplateContext';
 import type { TemplateField, CardTemplate } from '@/lib/card-templates';
-import { DEFAULT_CARD_LAYOUT_JSON_STRING } from '@/lib/card-templates'; // Import default layout
+import { DEFAULT_CARD_LAYOUT_JSON_STRING } from '@/lib/card-templates'; 
 import type { CardData } from '@/lib/types';
 import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-renderer';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 // Helper to convert TemplateField (from storage) to TemplateFieldDefinition (for UI)
 function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldDefinition {
@@ -79,9 +80,9 @@ const toCamelCase = (str: string): string => {
     word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
   )].join('');
   
-  if (!result) result = 'untitledField'; // Fallback if cleaning results in empty string
+  if (!result) result = 'untitledField'; 
 
-   if (/^[0-9]/.test(result)) { // Ensure it doesn't start with a number
+   if (/^[0-9]/.test(result)) { 
     result = '_' + result;
   }
   return result;
@@ -100,6 +101,7 @@ export default function EditTemplatePage() {
   const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<TemplateFieldDefinition[]>([]);
   const [layoutDefinition, setLayoutDefinition] = useState<string>('');
+  const [layoutJsonError, setLayoutJsonError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [errorLoading, setErrorLoading] = useState<string | null>(null);
@@ -117,7 +119,6 @@ export default function EditTemplatePage() {
       setOriginalTemplateId(templateToEdit.id as CardTemplateId); 
       setTemplateName(templateToEdit.name);
       setFields(templateToEdit.fields.map(mapTemplateFieldToFieldDefinition));
-      // Ensure layoutDefinition is never empty, fall back to default if necessary
       setLayoutDefinition(templateToEdit.layoutDefinition?.trim() ? templateToEdit.layoutDefinition : DEFAULT_CARD_LAYOUT_JSON_STRING);
       setErrorLoading(null);
     } else {
@@ -126,29 +127,25 @@ export default function EditTemplatePage() {
     setIsLoadingPage(false);
   }, [templateIdToEdit, getTemplateById, templatesLoading]);
 
-  // Effect to update sampleCardForPreview when fields or originalTemplateId/templateName change
   useEffect(() => {
     const currentTemplateIdForPreview = originalTemplateId || 'previewTemplateId';
     const generatedSampleCard: CardData = {
       id: 'preview-card',
       templateId: currentTemplateIdForPreview as CardTemplateId,
-      // Sensible defaults for preview, especially for fields in the default layout
       name: 'Awesome Card Name',
       description: 'This is a sample description for the card preview. It can contain multiple lines and will be used to test the layout of text areas.',
       cost: 3,
       attack: 2,
       defense: 2,
-      imageUrl: 'https://placehold.co/250x140.png', // Used by default layout's image element
+      imageUrl: 'https://placehold.co/250x140.png', 
       dataAiHint: 'card art sample',
       rarity: 'rare',
       effectText: 'Sample effect: Draw a card. This unit gets +1/+1 until end of turn. This text might be long to test scrolling in a textarea layout element.',
       flavorText: 'This is some italicized flavor text.',
-      artworkUrl: 'https://placehold.co/280x400.png', // Used by default layout's backgroundImageField
-      cardType: 'Creature - Goblin', // Used by default layout's type line
-      // ... any other common fields you expect in a default layout
+      artworkUrl: 'https://placehold.co/280x400.png', 
+      cardType: 'Creature - Goblin', 
     };
 
-    // Override with values from defined fields
     fields.forEach(fieldDef => {
       const key = fieldDef.key as keyof CardData;
        if (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '') {
@@ -160,7 +157,6 @@ export default function EditTemplatePage() {
           (generatedSampleCard as any)[key] = fieldDef.defaultValue;
         }
       } else {
-         // If no default value, but the key is one of our common preview fields, ensure it's not overwritten by generic placeholders
          if (!Object.prototype.hasOwnProperty.call(generatedSampleCard, key) || generatedSampleCard[key] === undefined) {
            switch (fieldDef.type) {
             case 'text': (generatedSampleCard as any)[key] = `Sample ${fieldDef.label}`; break;
@@ -175,7 +171,6 @@ export default function EditTemplatePage() {
           }
         }
       }
-       // Ensure specific known fields are correctly populated, especially image URLs
       if (['name', 'description', 'cost', 'attack', 'defense', 'imageUrl', 'dataAiHint', 'rarity', 'effectText', 'flavorText', 'artworkUrl', 'cardType'].includes(fieldDef.key)) {
         if (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '') {
             (generatedSampleCard as any)[key] = fieldDef.defaultValue;
@@ -268,6 +263,25 @@ export default function EditTemplatePage() {
     setFields(newFields);
   };
 
+  const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newLayoutDef = e.target.value;
+    setLayoutDefinition(newLayoutDef);
+    // Clear previous error as user is typing
+    if (layoutJsonError) setLayoutJsonError(null);
+  };
+
+  const validateAndFormatLayoutJson = () => {
+    try {
+      const parsed = JSON.parse(layoutDefinition);
+      setLayoutDefinition(JSON.stringify(parsed, null, 2)); // Pretty print
+      setLayoutJsonError(null);
+      return true;
+    } catch (e: any) {
+      setLayoutJsonError(`Invalid JSON: ${e.message}`);
+      return false;
+    }
+  };
+
   const handleSaveTemplate = async () => {
     if (!originalTemplateId) {
         toast({ title: "Error", description: "Original template ID is missing. Cannot update.", variant: "destructive" });
@@ -293,17 +307,13 @@ export default function EditTemplatePage() {
         return;
     }
 
-    if (layoutDefinition.trim()) {
-      try {
-        JSON.parse(layoutDefinition);
-      } catch (e) {
-        toast({
-          title: "Invalid Layout JSON",
-          description: "The Layout Definition is not valid JSON. Please correct it or leave it empty.",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (layoutDefinition.trim() && !validateAndFormatLayoutJson()) {
+      toast({
+        title: "Invalid Layout JSON",
+        description: `Please correct the Layout Definition JSON. Error: ${layoutJsonError || 'Unknown JSON error.'}`,
+        variant: "destructive",
+      });
+      return;
     }
 
     setIsSaving(true);
@@ -312,7 +322,7 @@ export default function EditTemplatePage() {
       id: originalTemplateId, 
       name: templateName.trim(),
       fields: fields.map(mapFieldDefinitionToTemplateField),
-      layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : DEFAULT_CARD_LAYOUT_JSON_STRING, // Ensure default if empty
+      layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : DEFAULT_CARD_LAYOUT_JSON_STRING,
     };
 
     const result = await updateTemplate(updatedTemplateData);
@@ -423,12 +433,20 @@ export default function EditTemplatePage() {
                 <Textarea
                   id="layoutDefinition"
                   value={layoutDefinition}
-                  onChange={(e) => setLayoutDefinition(e.target.value)}
+                  onChange={handleLayoutDefinitionChange}
+                  onBlur={validateAndFormatLayoutJson}
                   placeholder='Enter JSON for card layout, e.g., { "width": "280px", "elements": [...] }'
                   rows={15}
                   className="font-mono text-xs"
                   disabled={isSaving}
                 />
+                {layoutJsonError && (
+                  <Alert variant="destructive" className="mt-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>JSON Error</AlertTitle>
+                    <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
+                  </Alert>
+                )}
                  <Accordion type="single" collapsible className="w-full mt-2">
                   <AccordionItem value="layout-guide">
                     <AccordionTrigger className="text-sm py-2 hover:no-underline">
@@ -477,7 +495,7 @@ export default function EditTemplatePage() {
 
         {/* Preview Section */}
         <div className="lg:w-1/2 xl:w-2/5">
-          <Card className="sticky top-20"> {/* Make preview sticky */}
+          <Card className="sticky top-20"> 
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center">
                 <Eye className="mr-2 h-5 w-5" />
@@ -501,5 +519,3 @@ export default function EditTemplatePage() {
     </div>
   );
 }
-
-    
