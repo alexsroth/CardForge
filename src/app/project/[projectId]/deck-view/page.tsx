@@ -16,7 +16,7 @@ function DeckViewLoadingSkeleton() {
     <div className="container mx-auto py-8 px-4">
       <Skeleton className="h-8 w-48 mb-2" /> {/* Back to Editor Button Skeleton */}
       <Skeleton className="h-10 w-3/4 mb-8" /> {/* Project Name Skeleton */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5"> {/* Adjusted gap */}
         {[...Array(10)].map((_, i) => (
           <div key={i} className="flex flex-col items-center">
             <Skeleton style={{ width: '280px', height: '400px' }} className="rounded-lg bg-card" />
@@ -93,7 +93,7 @@ export default function DeckViewPage() {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-6 gap-y-8 place-items-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5 place-items-center">
           {project.cards.map((card) => (
             <div key={card.id} className="transform hover:scale-105 transition-transform duration-200">
               <CardRenderer card={card} />
