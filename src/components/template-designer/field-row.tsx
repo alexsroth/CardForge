@@ -22,9 +22,10 @@ interface FieldRowProps {
   field: TemplateFieldDefinition;
   onChange: (updatedField: TemplateFieldDefinition) => void;
   onRemove: () => void;
+  isSaving?: boolean;
 }
 
-export default function FieldRow({ field, onChange, onRemove }: FieldRowProps) {
+export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldRowProps) {
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     let processedValue: string | number | boolean = value;
@@ -52,6 +53,7 @@ export default function FieldRow({ field, onChange, onRemove }: FieldRowProps) {
             onChange={handleInputChange}
             placeholder="e.g., cardTitle"
             className="text-sm"
+            disabled={isSaving}
           />
         </div>
         <div>
@@ -63,6 +65,7 @@ export default function FieldRow({ field, onChange, onRemove }: FieldRowProps) {
             onChange={handleInputChange}
             placeholder="e.g., Card Title"
             className="text-sm"
+            disabled={isSaving}
           />
         </div>
         <div>
@@ -71,6 +74,7 @@ export default function FieldRow({ field, onChange, onRemove }: FieldRowProps) {
             name="type"
             value={field.type}
             onValueChange={(value) => handleSelectChange('type', value)}
+            disabled={isSaving}
           >
             <SelectTrigger id={`field-type-${field.key}`} className="text-sm">
               <SelectValue placeholder="Select type" />
@@ -95,6 +99,7 @@ export default function FieldRow({ field, onChange, onRemove }: FieldRowProps) {
             value={field.placeholder || ''}
             onChange={handleInputChange}
             className="text-sm"
+            disabled={isSaving}
           />
         </div>
         {field.type === 'boolean' ? (
@@ -106,6 +111,7 @@ export default function FieldRow({ field, onChange, onRemove }: FieldRowProps) {
               checked={field.defaultValue === true || field.defaultValue === 'true'}
               onChange={(e) => onChange({...field, defaultValue: e.target.checked })}
               className="h-4 w-4"
+              disabled={isSaving}
             />
             <Label htmlFor={`field-defaultValue-bool-${field.key}`} className="font-normal">
               Default to checked?
@@ -121,6 +127,7 @@ export default function FieldRow({ field, onChange, onRemove }: FieldRowProps) {
               value={field.defaultValue === undefined ? '' : String(field.defaultValue)}
               onChange={handleInputChange}
               className="text-sm"
+              disabled={isSaving}
             />
           </div>
         )}
@@ -138,13 +145,14 @@ export default function FieldRow({ field, onChange, onRemove }: FieldRowProps) {
             placeholder="e.g., common:Common,uncommon:Uncommon,rare:Rare"
             className="text-sm"
             rows={2}
+            disabled={isSaving}
           />
           <p className="text-xs text-muted-foreground mt-1">Example: <code>opt1:Option 1,opt2:Option 2</code></p>
         </div>
       )}
 
       <div className="flex justify-end">
-        <Button onClick={onRemove} variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+        <Button onClick={onRemove} variant="ghost" size="sm" className="text-destructive hover:text-destructive" disabled={isSaving}>
           <Trash2 className="mr-1 h-4 w-4" /> Remove Field
         </Button>
       </div>

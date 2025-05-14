@@ -20,7 +20,7 @@ function parseOptionsString(optionsString?: string): Array<{ value: string; labe
   }).filter(opt => opt.value);
 }
 
-export function generateTemplateCode(
+export function generateTemplateObjectString(
   templateId: string,
   templateName: string,
   fields: TemplateFieldDefinition[]
@@ -50,18 +50,30 @@ export function generateTemplateCode(
     return fieldString;
   }).join(',\n');
 
-  return `
-// Add this to your src/lib/card-templates.ts file
-
-// 1. Add the new template object to the 'cardTemplates' array:
-/*
-{
+  return `{
   id: '${templateId}',
   name: '${templateName}',
   fields: [
 ${fieldsCode}
   ],
-},
+}`;
+}
+
+
+export function generateTemplateCode(
+  templateId: string,
+  templateName: string,
+  fields: TemplateFieldDefinition[],
+  objectString?: string, // Optional pre-generated object string
+): string {
+  const templateObject = objectString || generateTemplateObjectString(templateId, templateName, fields);
+
+  return `
+// Add this to your src/lib/card-templates.ts file
+
+// 1. Add the new template object to the 'cardTemplates' array:
+/*
+${templateObject},
 */
 
 // 2. Update the 'CARD_TEMPLATE_IDS' array to include your new template ID:
@@ -69,14 +81,8 @@ ${fieldsCode}
 export const CARD_TEMPLATE_IDS = [..., '${templateId}'] as const;
 */
 
-// -------- Generated Template Object (for easy copy-pasting) --------
-{
-  id: '${templateId}',
-  name: '${templateName}',
-  fields: [
-${fieldsCode}
-  ],
-}
+// -------- Generated Template Object (for easy copy-pasting if automatic save fails) --------
+${templateObject}
 // --------------------------------------------------------------------
 `;
 }
