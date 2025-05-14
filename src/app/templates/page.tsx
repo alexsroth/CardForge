@@ -42,9 +42,9 @@ export default function TemplateLibraryPage() {
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Template Library</h1>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
-            <Link href="#"> {/* Placeholder for future "Manage Assignments" page */}
+            <Link href="/templates/assignments">
               <Settings2 className="mr-2 h-4 w-4" />
-              Manage Assignments (Soon)
+              Manage Assignments
             </Link>
           </Button>
           <Button asChild>
@@ -62,7 +62,7 @@ export default function TemplateLibraryPage() {
         <AlertDescription>
           This library displays templates defined in <code>src/lib/card-templates.ts</code>.
           If you create a new template using the Template Designer, a <strong>server restart</strong> is typically required for it to appear here and be usable in the editor.
-          Project associations are based on mock data.
+          Project associations are currently based on mock data and can be managed (view-only for now regarding persistence) via the "Manage Assignments" button.
         </AlertDescription>
       </Alert>
 
