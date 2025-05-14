@@ -382,7 +382,7 @@ export default function TemplateDesignerPage() {
               <CardDescription>
                 Define the structure for a new card template. Template ID is auto-generated from the name.
                 Field Keys are auto-generated from Field Labels. Templates are saved to browser local storage.
-                Use the live preview on the right to test your layout JSON.
+                Use the live preview on the right to test your layout JSON. The default layout is a starting point.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -455,18 +455,18 @@ export default function TemplateDesignerPage() {
                       <ul className="list-disc list-inside pl-2 mb-2 space-y-0.5">
                         <li><code>width</code>, <code>height</code>: Card dimensions (e.g., "280px").</li>
                         <li><code>backgroundColor</code>, <code>borderColor</code>, <code>borderRadius</code>: CSS values.</li>
-                        <li><code>backgroundImageField</code>: (Optional) Key of a data field (e.g., "artworkUrl") to use for the card's full background image.</li>
+                        <li><code>backgroundImageField</code>: (Optional) Key of a data field (e.g., "artworkUrl") to use for the card's full background image. **This key must match one of your defined Data Field keys.**</li>
                       </ul>
                       <p className="font-semibold mb-1"><code>elements</code> array (each object defines one visual piece):</p>
                       <ul className="list-disc list-inside pl-2 space-y-0.5">
-                        <li><code>fieldKey</code>: String matching a key from your "Data Fields" (e.g., "name", "cost").</li>
+                        <li><code>fieldKey</code>: String that **must exactly match a 'Field Key'** from your "Data Fields" section above (e.g., if you have a field labeled "Card Title" with an auto-generated key "cardTitle", you would use <code>"cardTitle"</code> here). The default layout uses common examples like "name", "cost", "imageUrl".</li>
                         <li><code>type</code>: "text", "textarea", "image", or "iconValue".</li>
                         <li><code>style</code>: CSS-in-JS object (e.g., <code>{'{ "position": "absolute", "top": "10px", "fontSize": "1.2em" }'}</code>). Use camelCase for CSS properties (<code>fontSize</code> not <code>font-size</code>).</li>
                         <li><code>className</code>: (Optional) Tailwind CSS classes.</li>
                         <li><code>prefix</code>, <code>suffix</code>: (Optional, for "text", "iconValue") Text to add before/after the field's value.</li>
-                        <li><code>icon</code>: (For "iconValue") Name of a Lucide icon (e.g., "Coins", "Sword").</li>
+                        <li><code>icon</code>: (For "iconValue") Name of a Lucide icon (e.g., "Coins", "Sword"). **Ensure the icon exists in <code>lucide-react</code>.**</li>
                       </ul>
-                       <p className="mt-2 italic">The live preview updates as you edit. Ensure your JSON is valid.</p>
+                       <p className="mt-2 italic">The live preview updates as you edit. Ensure your JSON is valid. The default layout provided is a starting point; customize its <code>fieldKey</code> values to match your defined data fields.</p>
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
