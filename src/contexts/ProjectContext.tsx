@@ -5,12 +5,11 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { Project, CardData, CardTemplateId } from '@/lib/types';
-// REMOVED: import { mockProjects as initialSeedProjects } from '@/app/page';
-
 
 export interface ProjectContextType {
   projects: Project[];
   getProjectById: (id: string | undefined) => Project | undefined;
+  addProject: (projectData: { name: string; associatedTemplateIds?: CardTemplateId[] }) => Promise<{ success: boolean; message: string; newProject?: Project }>;
   updateProject: (updatedProject: Project) => Promise<{ success: boolean; message: string }>;
   updateProjectAssociatedTemplates: (projectId: string, associatedTemplateIds: CardTemplateId[]) => Promise<{ success: boolean; message: string }>;
   updateProjectCards: (projectId: string, cards: CardData[]) => Promise<{ success: boolean; message: string }>;
@@ -21,44 +20,9 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_KEY = 'cardForgeProjects';
 
-// Define seed data directly in this file to avoid circular dependencies
-// and use static ISO dates for hydration safety.
-const seedProjectsData: Project[] = [
-  {
-    id: 'project-alpha',
-    name: 'Alpha Beasts',
-    thumbnailUrl: 'https://placehold.co/300x200.png',
-    dataAiHint: 'fantasy creature',
-    lastModified: '2024-07-26T10:00:00.000Z', // Static ISO date
-    associatedTemplateIds: ['creature', 'spell', 'generic'],
-    cards: [ 
-        { id: 'card-alpha-1', templateId: 'creature', name: 'Alpha Wolf', description: 'A leader of the pack.', cost: 3, attack: 3, defense: 2, imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'wolf illustration' },
-        { id: 'card-alpha-2', templateId: 'spell', name: 'Nature\'s Call', description: 'Summon a beast.', cost: 2, effectText: 'Search your deck for a creature card.', imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'forest magic' },
-    ]
-  },
-  {
-    id: 'project-beta',
-    name: 'Cyber Spells',
-    thumbnailUrl: 'https://placehold.co/300x200.png',
-    dataAiHint: 'abstract technology',
-    lastModified: '2024-07-23T12:30:00.000Z', // Static ISO date
-    associatedTemplateIds: ['spell', 'item', 'generic'],
-    cards: [
-        { id: 'card-beta-1', templateId: 'spell', name: 'Overload', description: 'Deal damage to all enemies.', cost: 5, effectText: 'Deals 3 damage to all opponent creatures.', imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'electric shock' },
-    ]
-  },
-  {
-    id: 'project-gamma',
-    name: 'Medieval Items',
-    thumbnailUrl: 'https://placehold.co/300x200.png',
-    dataAiHint: 'medieval weapon',
-    lastModified: '2024-07-28T15:45:00.000Z', // Static ISO date
-    associatedTemplateIds: ['item', 'creature', 'generic'],
-    cards: [
-        { id: 'card-gamma-1', templateId: 'item', name: 'Knight\'s Shield', description: 'A sturdy shield.', cost: 2, effectText: 'Target creature gets +0/+2.', imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'metal shield' },
-    ]
-  },
-];
+// Seed data is now an empty array, or could be a single "Example Project" if desired.
+// For a truly blank start, an empty array is best.
+const seedProjectsData: Project[] = [];
 
 
 export const ProjectProvider = ({ children }: { children: ReactNode }) => {
@@ -72,26 +36,24 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       if (storedProjects) {
         initialData = JSON.parse(storedProjects);
       } else {
-        // Use the locally defined, static seedProjectsData
-        initialData = seedProjectsData.map(p => ({ ...p })); // Create a fresh copy for initial state
+        initialData = seedProjectsData.map(p => ({ ...p })); 
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialData));
       }
     } catch (error) {
       console.error("Failed to load projects from localStorage, using initial seed:", error);
-      initialData = seedProjectsData.map(p => ({ ...p })); // Create a fresh copy
+      initialData = seedProjectsData.map(p => ({ ...p })); 
     }
     
     setProjects(initialData);
     setIsLoading(false);
 
-  }, []); // Empty dependency array means this runs once on mount (client-side)
+  }, []);
 
   const persistProjects = useCallback((updatedProjects: Project[]) => {
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedProjects));
     } catch (error) {
       console.error("Failed to save projects to localStorage:", error);
-      // Potentially show a toast to the user
     }
   }, []);
 
@@ -99,6 +61,40 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     if (!id) return undefined;
     return projects.find(p => p.id === id);
   }, [projects]);
+
+  const addProject = useCallback(async (
+    projectData: { name: string; associatedTemplateIds?: CardTemplateId[] }
+  ): Promise<{ success: boolean; message: string; newProject?: Project }> => {
+    
+    const newProject: Project = {
+      id: `project-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      name: projectData.name.trim() || "Untitled Project",
+      thumbnailUrl: 'https://placehold.co/300x200.png', // Default thumbnail
+      dataAiHint: 'abstract game concept', // Default hint
+      lastModified: new Date().toISOString(),
+      associatedTemplateIds: projectData.associatedTemplateIds || [],
+      cards: [
+        // Add a default starter card for new projects
+        { 
+          id: `card-${Date.now()}`,
+          templateId: (projectData.associatedTemplateIds && projectData.associatedTemplateIds.length > 0) ? projectData.associatedTemplateIds[0] : 'generic',
+          name: 'My First Card',
+          description: 'This is a new card in your project. Edit its properties and template!',
+          imageUrl: 'https://placehold.co/280x400.png',
+          dataAiHint: 'card game concept',
+        }
+      ],
+    };
+
+    setProjects(prevProjects => {
+      const updatedProjects = [...prevProjects, newProject];
+      persistProjects(updatedProjects);
+      return updatedProjects;
+    });
+
+    return { success: true, message: `Project "${newProject.name}" created.`, newProject };
+  }, [persistProjects]);
+
 
   const updateProject = useCallback(async (updatedProjectData: Project): Promise<{ success: boolean; message: string }> => {
     if (!updatedProjectData.id) {
@@ -109,20 +105,31 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       let updatedProjectsList;
       if (existingIndex > -1) {
         updatedProjectsList = [...prevProjects];
-        // Ensure lastModified is updated if it's part of the update operation, otherwise keep existing
         updatedProjectsList[existingIndex] = {
           ...updatedProjectData,
-          lastModified: new Date().toISOString() // Update lastModified on any project update
+          lastModified: new Date().toISOString() 
         };
       } else {
-        console.warn(`Project with ID ${updatedProjectData.id} not found for update. Adding as new project.`);
-        updatedProjectsList = [...prevProjects, { ...updatedProjectData, lastModified: new Date().toISOString() }];
+        // This case should ideally not happen if addProject is used for new ones.
+        // If it does, it means we're trying to update a non-existent project.
+        console.warn(`Project with ID ${updatedProjectData.id} not found for update. This might indicate an issue.`);
+        // To prevent data loss, we could add it, but it's better to ensure projects are added via addProject.
+        // updatedProjectsList = [...prevProjects, { ...updatedProjectData, lastModified: new Date().toISOString() }];
+        updatedProjectsList = [...prevProjects]; // Keep current list if project not found for update
+         return updatedProjectsList; // Early return if project not found to prevent altering persistProjects
       }
       persistProjects(updatedProjectsList);
       return updatedProjectsList;
     });
-    return { success: true, message: `Project '${updatedProjectData.name}' updated successfully.` };
-  }, [persistProjects, projects]); // Added projects to dependency array for updateProject
+    // This message might be misleading if the project wasn't found.
+    // Consider returning success based on whether the project was actually found and updated.
+    const projectWasFound = projects.some(p => p.id === updatedProjectData.id);
+    if (projectWasFound) {
+        return { success: true, message: `Project '${updatedProjectData.name}' updated successfully.` };
+    } else {
+        return { success: false, message: `Project with ID '${updatedProjectData.id}' not found for update.` };
+    }
+  }, [persistProjects, projects]); 
 
 
   const updateProjectAssociatedTemplates = useCallback(async (projectId: string, associatedTemplateIds: CardTemplateId[]): Promise<{ success: boolean; message: string }> => {
@@ -146,7 +153,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
 
   return (
-    <ProjectContext.Provider value={{ projects, getProjectById, updateProject, updateProjectAssociatedTemplates, updateProjectCards, isLoading }}>
+    <ProjectContext.Provider value={{ projects, getProjectById, addProject, updateProject, updateProjectAssociatedTemplates, updateProjectCards, isLoading }}>
       {children}
     </ProjectContext.Provider>
   );

@@ -1,91 +1,100 @@
 
-"use client"; // Changed to client component to use ProjectContext
+"use client"; 
 
 import LiveEditorClientPage from '@/components/editor/live-editor-client-page';
 import { Suspense, useEffect, useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { EditorProjectData, Project } from '@/lib/types';
 import { useProjects } from '@/contexts/ProjectContext';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation'; // Import useRouter
 import { Loader2 } from 'lucide-react';
 
 interface EditorPageProps {
   // params are no longer needed via props if using useParams hook
 }
 
-// This server-side data fetching (getProjectData) is replaced by client-side context fetching.
-// async function getProjectData(projectId: string): Promise<EditorProjectData> { ... }
-
-
 export default function EditorPage({ }: EditorPageProps) {
   const params = useParams();
+  const router = useRouter(); // Initialize router
   const projectId = typeof params.projectId === 'string' ? params.projectId : undefined;
   
   const { getProjectById, isLoading: projectsLoading } = useProjects();
   const [projectData, setProjectData] = useState<Project | EditorProjectData | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [pageStatus, setPageStatus] = useState<'loading' | 'loaded' | 'error' | 'not_found'>('loading');
 
   useEffect(() => {
-    if (!projectsLoading && projectId) {
-      const foundProject = getProjectById(projectId);
-      if (foundProject) {
-        // Map to EditorProjectData if necessary, or ensure Project type is directly usable
-        // For now, assuming Project from context includes 'cards' and 'associatedTemplateIds'
-        setProjectData({
-            id: foundProject.id,
-            name: foundProject.name,
-            cards: foundProject.cards || [], // Ensure cards array exists
-            associatedTemplateIds: foundProject.associatedTemplateIds || [], // Ensure associatedTemplateIds exists
-        });
-      } else if (projectId === 'new-project') { // Handle "new-project" case explicitly if desired
-        setProjectData({
-            id: 'new-project', // Consider generating a unique ID here or on save
-            name: 'New Project',
-            cards: [
-              { 
-                id: `card-${Date.now()}`,
-                templateId: 'generic',
-                name: 'My First Card',
-                description: 'This is a generic card. Change its template and edit its properties!',
-                imageUrl: 'https://placehold.co/280x400.png',
-                dataAiHint: 'card game concept',
-              }
-            ],
-            associatedTemplateIds: ['generic', 'creature'],
-          });
-      } else {
-        setError(`Project with ID "${projectId}" not found.`);
-        setProjectData(undefined); // Clear any previous project data
-      }
+    if (!projectId) {
+      // Should not happen with Next.js file-based routing unless URL is malformed
+      setError("Project ID is missing from the URL.");
+      setPageStatus('error');
+      return;
     }
-  }, [projectId, projectsLoading, getProjectById]);
 
-  if (projectsLoading) {
+    if (projectsLoading) {
+      setPageStatus('loading');
+      return;
+    }
+
+    // Handle the "new-project" case from previous iterations if it's still bookmarked or linked
+    // Though the new flow aims to replace "new-project" with a real ID immediately.
+    if (projectId === 'new-project') {
+      // This path is less likely with the new "Create Project" dialog flow.
+      // Redirect to dashboard or show a message to create a project.
+      toast({
+          title: "Create a New Project",
+          description: "Please use the 'New Project' button on the dashboard to start.",
+          variant: "default",
+      });
+      router.push('/'); // Redirect to dashboard
+      return; 
+    }
+
+    const foundProject = getProjectById(projectId);
+
+    if (foundProject) {
+      setProjectData({
+          id: foundProject.id,
+          name: foundProject.name,
+          cards: foundProject.cards || [], 
+          associatedTemplateIds: foundProject.associatedTemplateIds || [],
+      });
+      setPageStatus('loaded');
+      setError(null);
+    } else {
+      // Project ID is not 'new-project' and not found in context after loading
+      setError(`Project with ID "${projectId}" not found.`);
+      setProjectData(undefined); 
+      setPageStatus('not_found');
+    }
+  }, [projectId, projectsLoading, getProjectById, router]);
+
+  if (pageStatus === 'loading') {
     return <EditorLoadingSkeleton title="Loading project data..." />;
   }
 
-  if (error) {
+  if (pageStatus === 'error' || pageStatus === 'not_found') {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)] text-destructive">
-        <h2 className="text-xl font-semibold">Error Loading Project</h2>
-        <p>{error}</p>
+        <h2 className="text-xl font-semibold">{pageStatus === 'error' ? "Error Loading Project" : "Project Not Found"}</h2>
+        <p>{error || `The project with ID "${projectId}" could not be found.`}</p>
+        <Button onClick={() => router.push('/')} className="mt-4">Go to Dashboard</Button>
       </div>
     );
   }
   
-  if (!projectData && !projectsLoading) { // Case where project ID is invalid or not 'new-project' after loading
-     return <EditorLoadingSkeleton title={`Project "${projectId}" not found or not yet loaded.`} showContentSkeleton={false} />;
+  // This state should ideally be covered by pageStatus checks above
+  if (!projectData && pageStatus !== 'loading') { 
+     return <EditorLoadingSkeleton title={`Preparing editor for project "${projectId}"...`} showContentSkeleton={false} />;
   }
 
 
   return (
     <div className="h-[calc(100vh-3.5rem)] overflow-hidden">
       <Suspense fallback={<EditorLoadingSkeleton title="Initializing Editor..." />}>
-        {projectData ? (
-          // Ensure the projectData passed to LiveEditorClientPage matches EditorProjectData type
+        {projectData && pageStatus === 'loaded' ? (
           <LiveEditorClientPage initialProjectData={projectData as EditorProjectData} />
         ) : (
-          // This state should ideally be covered by the loading/error states above
           <EditorLoadingSkeleton title="Preparing editor..." />
         )}
       </Suspense>
@@ -93,7 +102,13 @@ export default function EditorPage({ }: EditorPageProps) {
   );
 }
 
+
+// Helper for toast notifications - ensure useToast is available or remove if not used in this file
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button'; // If Button is used in error display
+
 function EditorLoadingSkeleton({ title = "Loading Editor...", showContentSkeleton = true }: { title?: string, showContentSkeleton?: boolean }) {
+  const { toast: localToast } = useToast(); // Renamed to avoid conflict if page also uses toast
   return (
     <div className="flex flex-col items-center justify-center h-full p-4">
       <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
@@ -119,3 +134,4 @@ function EditorLoadingSkeleton({ title = "Loading Editor...", showContentSkeleto
     </div>
   );
 }
+
