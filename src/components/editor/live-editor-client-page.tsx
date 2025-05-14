@@ -12,9 +12,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { generateCardNameAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-// Removed DND Kit imports as drag-and-drop is temporarily disabled
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProjects } from '@/contexts/ProjectContext'; 
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { LayoutGrid } from 'lucide-react';
 
 interface LiveEditorClientPageProps {
   initialProjectData: EditorProjectData; 
@@ -25,8 +27,11 @@ function EditorClientPageSkeleton() {
     <div className="flex h-full bg-muted/40">
       {/* Left Panel Skeleton */}
       <div className="w-[550px] flex flex-col border-r bg-background">
-        <div className="p-4 border-b">
-          <Skeleton className="h-7 w-1/2 mb-3" /> {/* Deck Name Placeholder */}
+        <div className="p-4 border-b space-y-3">
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-7 w-1/2" /> {/* Deck Name Placeholder */}
+            <Skeleton className="h-9 w-32" /> {/* View Deck Button Placeholder */}
+          </div>
           <div className="flex gap-2"> {/* DataControls Placeholder */}
             <Skeleton className="h-9 w-24" />
             <Skeleton className="h-9 w-32" />
@@ -83,7 +88,6 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   const [isMounted, setIsMounted] = useState(false);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  // initialCardsRef is not strictly needed with current save logic but can be kept for debugging or future diffing.
   const initialCardsRef = useRef<CardData[] | null>(null); 
 
   useEffect(() => {
@@ -92,9 +96,11 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     if (initialProjectData.cards && initialProjectData.cards.length > 0 && !selectedCardId) {
       setSelectedCardId(initialProjectData.cards[0].id);
     }
-  }, []); // Run only on initial mount
+  // Run only on initial mount, selectedCardId is an internal state here.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); 
 
-  // This effect handles updates from the initialProjectData prop (e.g., when navigating to a new project)
+  // This effect handles updates from the initialProjectData prop (e.g., when navigating to a new project or context updates)
   useEffect(() => {
     if (initialProjectData.id !== editorProjectId) {
       // Switched to a new project
@@ -102,19 +108,18 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
       setProjectName(initialProjectData.name);
       const currentCards = initialProjectData.cards || [];
       setCards(currentCards);
-      initialCardsRef.current = currentCards; // Update ref if project changes
+      initialCardsRef.current = currentCards; 
       setAssociatedTemplateIds(initialProjectData.associatedTemplateIds || []);
       setSelectedCardId(currentCards.length > 0 && currentCards[0]?.id ? currentCards[0].id : null);
     } else {
       // Same project, but metadata might have updated from context
-      // Only update non-card data if it has actually changed to avoid unnecessary re-renders
       if (initialProjectData.name !== projectName) {
         setProjectName(initialProjectData.name);
       }
-      if (JSON.stringify(initialProjectData.associatedTemplateIds) !== JSON.stringify(associatedTemplateIds)) {
+      // Use JSON.stringify for comparing arrays of primitives if order matters and they are simple
+      if (JSON.stringify(initialProjectData.associatedTemplateIds || []) !== JSON.stringify(associatedTemplateIds)) {
          setAssociatedTemplateIds(initialProjectData.associatedTemplateIds || []);
       }
-      // Cards are managed internally by this component's state once loaded.
     }
   }, [initialProjectData, editorProjectId, projectName, associatedTemplateIds]);
 
@@ -142,10 +147,6 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
           if (!result.success) {
             toast({ title: "Save Error", description: `Failed to save project changes: ${result.message}`, variant: "destructive" });
           }
-          // Optional: success toast, but can be noisy for auto-saves
-          // else {
-          //   toast({ title: "Project Saved", description: "Changes saved automatically." });
-          // }
         });
       } else {
         console.warn(`Debounced save: Project with ID ${editorProjectId} not found in context.`);
@@ -173,8 +174,6 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     setSelectedCardId(cardId);
   }, []);
 
-  // This handleUpdateCard is stable because its dependencies are empty.
-  // It only updates the local 'cards' state. The debounced useEffect above handles saving to context.
   const handleUpdateCard = useCallback((updatedCard: CardData) => {
     setCards(prevCards => 
       prevCards.map(card => card.id === updatedCard.id ? updatedCard : card)
@@ -188,7 +187,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
       templateId: NEW_CARD_TEMPLATE_ID_PLACEHOLDER, 
       name: 'Untitled Card', 
       description: '', 
-      imageUrl: 'https://placehold.co/280x400.png', // Default placeholder
+      imageUrl: 'https://placehold.co/280x400.png', 
       dataAiHint: 'new card art',
     };
     setCards(prevCards => [...prevCards, newCard]);
@@ -198,7 +197,6 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   const handleDeleteCard = useCallback((cardIdToDelete: string) => {
     setCards(currentCards => {
       const newCardsList = currentCards.filter(card => card.id !== cardIdToDelete);
-      // If the deleted card was selected, select the first card in the new list, or null if empty
       if (selectedCardId === cardIdToDelete) {
         setSelectedCardId(newCardsList.length > 0 ? newCardsList[0].id : null);
       }
@@ -228,7 +226,6 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   const handleImportData = useCallback((importedCards: CardData[]) => {
     const validImportedCards = importedCards.map(card => ({
       ...card,
-      // Ensure imported cards use a templateId that is valid for the project, or a default.
       templateId: associatedTemplateIds.includes(card.templateId as CardTemplateId) 
                     ? card.templateId as CardTemplateId
                     : (associatedTemplateIds.length > 0 ? associatedTemplateIds[0] : 'generic')
@@ -238,7 +235,6 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     toast({ title: "Data Imported", description: `${validImportedCards.length} cards loaded.` });
   }, [toast, associatedTemplateIds]);
 
-  // Removed handleDragEnd as DND is temporarily disabled
 
   if (!isMounted) {
     return <EditorClientPageSkeleton />;
@@ -246,12 +242,19 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
 
   const selectedEditorCard = cards.find(card => card.id === selectedCardId);
 
-  // DndContext is removed
   return (
       <div className="flex h-full bg-muted/40">
         <div className="w-[550px] flex flex-col border-r bg-background">
-          <div className="p-4 border-b">
-            <h2 className="text-xl font-semibold">{projectName}</h2>
+          <div className="p-4 border-b space-y-3">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">{projectName}</h2>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/project/${editorProjectId}/deck-view`}>
+                  <LayoutGrid className="mr-2 h-4 w-4" />
+                  View Deck
+                </Link>
+              </Button>
+            </div>
              <DataControls cards={cards} onImport={handleImportData} />
           </div>
           <div className="flex flex-grow min-h-0">
@@ -265,7 +268,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
             <Separator orientation="vertical" />
              {selectedEditorCard ? (
               <CardDetailPanel
-                key={selectedCardId} // Force re-mount if selectedCardId changes
+                key={selectedCardId} 
                 card={selectedEditorCard}
                 onUpdateCard={handleUpdateCard} 
                 onGenerateName={handleGenerateName}
@@ -283,3 +286,4 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
       </div>
   );
 }
+    
