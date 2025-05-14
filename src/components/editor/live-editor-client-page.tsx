@@ -12,8 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { generateCardNameAction } from '@/app/actions';
 import { useToast } from '@/hooks/use-toast';
-import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+// Removed DND Kit imports as drag-and-drop is temporarily disabled
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProjects } from '@/contexts/ProjectContext'; 
 
@@ -84,24 +83,18 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   const [isMounted, setIsMounted] = useState(false);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // initialCardsRef is not strictly needed with current save logic but can be kept for debugging or future diffing.
   const initialCardsRef = useRef<CardData[] | null>(null); 
 
   useEffect(() => {
     setIsMounted(true);
     initialCardsRef.current = initialProjectData.cards || [];
-     // Select the first card if available, after initial mount and data load
     if (initialProjectData.cards && initialProjectData.cards.length > 0 && !selectedCardId) {
       setSelectedCardId(initialProjectData.cards[0].id);
     }
-  }, [initialProjectData.id]); // Rerun only if project ID changes, initial select logic moved from effect below
+  }, []); // Run only on initial mount
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
+  // This effect handles updates from the initialProjectData prop (e.g., when navigating to a new project)
   useEffect(() => {
     if (initialProjectData.id !== editorProjectId) {
       // Switched to a new project
@@ -109,26 +102,26 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
       setProjectName(initialProjectData.name);
       const currentCards = initialProjectData.cards || [];
       setCards(currentCards);
-      initialCardsRef.current = currentCards;
+      initialCardsRef.current = currentCards; // Update ref if project changes
       setAssociatedTemplateIds(initialProjectData.associatedTemplateIds || []);
       setSelectedCardId(currentCards.length > 0 && currentCards[0]?.id ? currentCards[0].id : null);
     } else {
-      // Potentially an update to the current project's metadata (name, associated templates)
-      // from context, but not the cards themselves if editor is active.
-      setProjectName(initialProjectData.name);
-      setAssociatedTemplateIds(initialProjectData.associatedTemplateIds || []);
-      // Critical: Do not reset 'cards' or 'selectedCardId' here if editorProjectId is the same.
-      // This component's internal 'cards' state is the source of truth while editing.
-      // If initialProjectData.cards is different, it implies an external update.
-      // A more sophisticated merge or conflict resolution might be needed for a multi-user scenario.
-      // For single-user, we assume this component's 'cards' state is king.
+      // Same project, but metadata might have updated from context
+      // Only update non-card data if it has actually changed to avoid unnecessary re-renders
+      if (initialProjectData.name !== projectName) {
+        setProjectName(initialProjectData.name);
+      }
+      if (JSON.stringify(initialProjectData.associatedTemplateIds) !== JSON.stringify(associatedTemplateIds)) {
+         setAssociatedTemplateIds(initialProjectData.associatedTemplateIds || []);
+      }
+      // Cards are managed internally by this component's state once loaded.
     }
-  }, [initialProjectData, editorProjectId]);
+  }, [initialProjectData, editorProjectId, projectName, associatedTemplateIds]);
 
 
   // Debounced save effect
   useEffect(() => {
-    if (!isMounted || !editorProjectId) { // Ensure project ID is set
+    if (!isMounted || !editorProjectId) { 
       return; 
     }
     
@@ -137,22 +130,21 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     }
 
     debounceTimerRef.current = setTimeout(() => {
-      const projectToUpdate = getProjectById(editorProjectId); // Get the latest version from context
+      const projectToUpdate = getProjectById(editorProjectId); 
       if (projectToUpdate) {
-        // Construct the full project object to save, ensuring all parts are current
         const updatedFullProject: Project = {
-          ...projectToUpdate, // Start with current project data from context (includes ID, potentially other metadata)
-          name: projectName,  // Use current editor's project name state
-          cards: cards,       // Use current editor's cards state
-          associatedTemplateIds: associatedTemplateIds, // Use current editor's associated templates state
-          // lastModified will be updated by updateProject in context
+          ...projectToUpdate, 
+          name: projectName,  
+          cards: cards,       
+          associatedTemplateIds: associatedTemplateIds, 
         };
         updateProject(updatedFullProject).then(result => {
           if (!result.success) {
             toast({ title: "Save Error", description: `Failed to save project changes: ${result.message}`, variant: "destructive" });
           }
+          // Optional: success toast, but can be noisy for auto-saves
           // else {
-          //   toast({ title: "Project Saved", description: "Changes saved to local storage." });
+          //   toast({ title: "Project Saved", description: "Changes saved automatically." });
           // }
         });
       } else {
@@ -168,6 +160,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   }, [cards, projectName, associatedTemplateIds, editorProjectId, getProjectById, updateProject, toast, isMounted]);
   
 
+  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
@@ -180,6 +173,8 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     setSelectedCardId(cardId);
   }, []);
 
+  // This handleUpdateCard is stable because its dependencies are empty.
+  // It only updates the local 'cards' state. The debounced useEffect above handles saving to context.
   const handleUpdateCard = useCallback((updatedCard: CardData) => {
     setCards(prevCards => 
       prevCards.map(card => card.id === updatedCard.id ? updatedCard : card)
@@ -190,11 +185,11 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     const newCardId = `card-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const newCard: CardData = {
       id: newCardId,
-      templateId: NEW_CARD_TEMPLATE_ID_PLACEHOLDER, // Special placeholder ID
-      name: 'Untitled Card', // Generic name for newly added cards
-      description: '', // Minimal initial data
-      imageUrl: 'https://placehold.co/280x400.png',
-      dataAiHint: 'new card concept',
+      templateId: NEW_CARD_TEMPLATE_ID_PLACEHOLDER, 
+      name: 'Untitled Card', 
+      description: '', 
+      imageUrl: 'https://placehold.co/280x400.png', // Default placeholder
+      dataAiHint: 'new card art',
     };
     setCards(prevCards => [...prevCards, newCard]);
     setSelectedCardId(newCardId);
@@ -203,6 +198,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   const handleDeleteCard = useCallback((cardIdToDelete: string) => {
     setCards(currentCards => {
       const newCardsList = currentCards.filter(card => card.id !== cardIdToDelete);
+      // If the deleted card was selected, select the first card in the new list, or null if empty
       if (selectedCardId === cardIdToDelete) {
         setSelectedCardId(newCardsList.length > 0 ? newCardsList[0].id : null);
       }
@@ -232,7 +228,8 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   const handleImportData = useCallback((importedCards: CardData[]) => {
     const validImportedCards = importedCards.map(card => ({
       ...card,
-      templateId: associatedTemplateIds.includes(card.templateId as CardTemplateId) // cast because imported wont be placeholder
+      // Ensure imported cards use a templateId that is valid for the project, or a default.
+      templateId: associatedTemplateIds.includes(card.templateId as CardTemplateId) 
                     ? card.templateId as CardTemplateId
                     : (associatedTemplateIds.length > 0 ? associatedTemplateIds[0] : 'generic')
     }));
@@ -241,16 +238,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     toast({ title: "Data Imported", description: `${validImportedCards.length} cards loaded.` });
   }, [toast, associatedTemplateIds]);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const {active, over} = event;
-    if (over && active.id !== over.id) {
-      setCards((prevCards) => {
-        const oldIndex = prevCards.findIndex((card) => card.id === active.id);
-        const newIndex = prevCards.findIndex((card) => card.id === over.id);
-        return arrayMove(prevCards, oldIndex, newIndex);
-      });
-    }
-  }, []);
+  // Removed handleDragEnd as DND is temporarily disabled
 
   if (!isMounted) {
     return <EditorClientPageSkeleton />;
@@ -258,8 +246,8 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
 
   const selectedEditorCard = cards.find(card => card.id === selectedCardId);
 
+  // DndContext is removed
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <div className="flex h-full bg-muted/40">
         <div className="w-[550px] flex flex-col border-r bg-background">
           <div className="p-4 border-b">
@@ -277,7 +265,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
             <Separator orientation="vertical" />
              {selectedEditorCard ? (
               <CardDetailPanel
-                key={selectedCardId} 
+                key={selectedCardId} // Force re-mount if selectedCardId changes
                 card={selectedEditorCard}
                 onUpdateCard={handleUpdateCard} 
                 onGenerateName={handleGenerateName}
@@ -293,6 +281,5 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
         </div>
         <CardPreviewPanel card={selectedEditorCard} />
       </div>
-    </DndContext>
   );
 }
