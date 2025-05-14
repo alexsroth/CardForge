@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { Textarea } from '../ui/textarea';
+import { cn } from '@/lib/utils';
 
 export interface TemplateFieldDefinition {
   key: string;
@@ -49,40 +50,41 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
   };
 
   return (
-    <div className="p-4 border rounded-md space-y-3 bg-card shadow-sm">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 items-end">
-        <div>
-          <Label htmlFor={`field-label-${field.key}`}>Field Label (Display)</Label>
+    <div className="p-3 border rounded-md bg-card shadow-sm space-y-2">
+      {/* Main Info Row */}
+      <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+        <div className="flex-grow min-w-[200px] basis-full sm:basis-auto">
+          <Label htmlFor={`field-label-${field.key}`} className="text-sm font-medium">Field Label</Label>
           <Input
-            id={`field-label-${field.key}`} // ID can be based on a unique aspect of field, like its original key or an index
+            id={`field-label-${field.key}`}
             name="label"
             value={field.label}
             onChange={handleInputChange}
             placeholder="e.g., Card Title"
-            className="text-sm"
+            className="h-9 text-sm"
             disabled={isSaving}
           />
         </div>
-        <div>
-          <Label htmlFor={`field-key-${field.key}`}>Field Key (Auto-Generated)</Label>
+        <div className="flex-grow min-w-[150px] basis-1/2 sm:basis-auto sm:flex-grow-0 sm:w-48">
+          <Label htmlFor={`field-key-${field.key}`} className="text-sm font-medium">Field Key</Label>
           <Input
             id={`field-key-${field.key}`}
             name="key"
             value={field.key}
             readOnly
-            className="text-sm bg-muted/50"
+            className="h-9 text-sm bg-muted/50"
             disabled={isSaving}
           />
         </div>
-        <div>
-          <Label htmlFor={`field-type-${field.key}`}>Field Type</Label>
+        <div className="flex-grow min-w-[120px] basis-1/2 sm:basis-auto sm:flex-grow-0 sm:w-40">
+          <Label htmlFor={`field-type-${field.key}`} className="text-sm font-medium">Field Type</Label>
           <Select
             name="type"
             value={field.type}
             onValueChange={(value) => handleSelectChange('type', value)}
             disabled={isSaving}
           >
-            <SelectTrigger id={`field-type-${field.key}`} className="text-sm">
+            <SelectTrigger id={`field-type-${field.key}`} className="h-9 text-sm">
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent>
@@ -94,22 +96,40 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
             </SelectContent>
           </Select>
         </div>
+        <Button 
+          onClick={onRemove} 
+          variant="ghost" 
+          size="icon" 
+          className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9 shrink-0" 
+          disabled={isSaving}
+          aria-label="Remove field"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-         <div>
-          <Label htmlFor={`field-placeholder-${field.key}`}>Placeholder</Label>
-          <Input
-            id={`field-placeholder-${field.key}`}
-            name="placeholder"
-            value={field.placeholder || ''}
-            onChange={handleInputChange}
-            className="text-sm"
-            disabled={isSaving}
-          />
-        </div>
+      {/* Secondary Info Section - always visible but more compact */}
+      <div className={cn(
+          "grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 pt-2 mt-1",
+          (field.type === 'select' || field.type === 'boolean' || field.placeholder || field.defaultValue) && "border-t border-dashed"
+        )}
+      >
+        {(field.type !== 'boolean' || field.placeholder) && // Show placeholder for all except boolean unless it also has a default val
+          <div className={cn(field.type === 'boolean' && "sm:col-span-1")}>
+            <Label htmlFor={`field-placeholder-${field.key}`} className="text-xs text-muted-foreground">Placeholder</Label>
+            <Input
+              id={`field-placeholder-${field.key}`}
+              name="placeholder"
+              value={field.placeholder || ''}
+              onChange={handleInputChange}
+              className="h-8 text-xs"
+              disabled={isSaving}
+            />
+          </div>
+        }
+
         {field.type === 'boolean' ? (
-          <div className="flex items-center space-x-2 pt-7">
+          <div className="flex items-center space-x-2 self-end pb-1 min-h-[2rem] mt-3 sm:mt-0"> {/* Ensure it aligns well */}
             <Input
               type="checkbox"
               id={`field-defaultValue-bool-${field.key}`}
@@ -119,50 +139,45 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
               className="h-4 w-4"
               disabled={isSaving}
             />
-            <Label htmlFor={`field-defaultValue-bool-${field.key}`} className="font-normal">
+            <Label htmlFor={`field-defaultValue-bool-${field.key}`} className="font-normal text-xs text-muted-foreground">
               Default to checked?
             </Label>
           </div>
         ) : (
-          <div>
-            <Label htmlFor={`field-defaultValue-${field.key}`}>Default Value</Label>
+          // Only show Default Value input if it's not boolean, or if it's boolean AND also has a placeholder (covered by above condition)
+          // This avoids showing Default Value input twice for boolean in some grid configs.
+          // Effectively, for non-booleans, it's always shown here.
+          <div className={cn(field.type === 'boolean' && !field.placeholder && "hidden")}> 
+            <Label htmlFor={`field-defaultValue-${field.key}`} className="text-xs text-muted-foreground">Default Value</Label>
             <Input
               id={`field-defaultValue-${field.key}`}
               name="defaultValue"
               type={field.type === 'number' ? 'number' : 'text'}
               value={field.defaultValue === undefined || field.defaultValue === null ? '' : String(field.defaultValue)}
               onChange={handleInputChange}
-              className="text-sm"
+              className="h-8 text-xs"
               disabled={isSaving}
             />
           </div>
         )}
       </div>
-
-
+      
       {field.type === 'select' && (
-        <div>
-          <Label htmlFor={`field-options-${field.key}`}>Options (comma-separated value:label pairs)</Label>
+        <div className="pt-2 border-t border-dashed mt-1">
+          <Label htmlFor={`field-options-${field.key}`} className="text-xs text-muted-foreground">Options (comma-separated value:label pairs)</Label>
           <Textarea
             id={`field-options-${field.key}`}
             name="optionsString"
             value={field.optionsString || ''}
             onChange={handleInputChange}
-            placeholder="e.g., common:Common,uncommon:Uncommon,rare:Rare"
-            className="text-sm"
-            rows={2}
+            placeholder="e.g., common:Common,rare:Rare"
+            className="text-xs min-h-[2.5rem]" // Slightly taller for better usability
+            rows={1}
             disabled={isSaving}
           />
-          <p className="text-xs text-muted-foreground mt-1">Example: <code>opt1:Option 1,opt2:Option 2</code></p>
+          <p className="text-xs text-muted-foreground mt-0.5">Ex: <code>opt1:Option 1,opt2:Option 2</code></p>
         </div>
       )}
-
-      <div className="flex justify-end">
-        <Button onClick={onRemove} variant="ghost" size="sm" className="text-destructive hover:text-destructive" disabled={isSaving}>
-          <Trash2 className="mr-1 h-4 w-4" /> Remove Field
-        </Button>
-      </div>
     </div>
   );
 }
-
