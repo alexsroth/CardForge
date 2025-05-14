@@ -1,3 +1,4 @@
+
 // src/components/template-designer/field-row.tsx
 "use client";
 
@@ -26,45 +27,50 @@ interface FieldRowProps {
 }
 
 export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldRowProps) {
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
-    let processedValue: string | number | boolean = value;
-    if (type === 'checkbox' && e.target instanceof HTMLInputElement) {
-      processedValue = e.target.checked;
-    } else if (field.type === 'number') {
-      processedValue = value === '' ? '' : Number(value)
-    }
-    onChange({ ...field, [name]: processedValue });
+  
+  const handleGenericChange = (name: keyof TemplateFieldDefinition, value: any) => {
+    onChange({ ...field, [name]: value });
   };
 
-  const handleSelectChange = (name: string, value: string) => {
-    onChange({ ...field, [name]: value });
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target as HTMLInputElement; // type assertion for checkbox
+    let processedValue: string | number | boolean = value;
+
+    if (type === 'checkbox') {
+      processedValue = e.target.checked;
+    } else if (field.type === 'number') {
+      processedValue = value === '' ? '' : (isNaN(Number(value)) ? field.defaultValue || '' : Number(value));
+    }
+    handleGenericChange(name as keyof TemplateFieldDefinition, processedValue);
+  };
+
+  const handleSelectChange = (name: keyof TemplateFieldDefinition, value: string) => {
+    handleGenericChange(name, value);
   };
 
   return (
     <div className="p-4 border rounded-md space-y-3 bg-card shadow-sm">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 items-end">
         <div>
-          <Label htmlFor={`field-key-${field.key}`}>Field Key (Programmatic)</Label>
-          <Input
-            id={`field-key-${field.key}`}
-            name="key"
-            value={field.key}
-            onChange={handleInputChange}
-            placeholder="e.g., cardTitle"
-            className="text-sm"
-            disabled={isSaving}
-          />
-        </div>
-        <div>
           <Label htmlFor={`field-label-${field.key}`}>Field Label (Display)</Label>
           <Input
-            id={`field-label-${field.key}`}
+            id={`field-label-${field.key}`} // ID can be based on a unique aspect of field, like its original key or an index
             name="label"
             value={field.label}
             onChange={handleInputChange}
             placeholder="e.g., Card Title"
             className="text-sm"
+            disabled={isSaving}
+          />
+        </div>
+        <div>
+          <Label htmlFor={`field-key-${field.key}`}>Field Key (Auto-Generated)</Label>
+          <Input
+            id={`field-key-${field.key}`}
+            name="key"
+            value={field.key}
+            readOnly
+            className="text-sm bg-muted/50"
             disabled={isSaving}
           />
         </div>
@@ -108,8 +114,8 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
               type="checkbox"
               id={`field-defaultValue-bool-${field.key}`}
               name="defaultValue"
-              checked={field.defaultValue === true || field.defaultValue === 'true'}
-              onChange={(e) => onChange({...field, defaultValue: e.target.checked })}
+              checked={field.defaultValue === true || String(field.defaultValue).toLowerCase() === 'true'}
+              onChange={handleInputChange}
               className="h-4 w-4"
               disabled={isSaving}
             />
@@ -124,7 +130,7 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
               id={`field-defaultValue-${field.key}`}
               name="defaultValue"
               type={field.type === 'number' ? 'number' : 'text'}
-              value={field.defaultValue === undefined ? '' : String(field.defaultValue)}
+              value={field.defaultValue === undefined || field.defaultValue === null ? '' : String(field.defaultValue)}
               onChange={handleInputChange}
               className="text-sm"
               disabled={isSaving}
@@ -159,3 +165,4 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
     </div>
   );
 }
+
