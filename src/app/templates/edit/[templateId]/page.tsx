@@ -370,7 +370,7 @@ export default function EditTemplatePage() {
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Form Section */}
-        <div className="lg:w-1/2 xl:w-3/5">
+        <div className="lg:w-[70%]">
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
@@ -442,7 +442,7 @@ export default function EditTemplatePage() {
                   onBlur={validateAndFormatLayoutJson}
                   placeholder='Enter JSON for card layout, e.g., { "width": "280px", "elements": [...] }'
                   rows={15}
-                  className="font-mono text-xs max-h-[350px]" // Added max-h
+                  className="font-mono text-xs max-h-[350px]" 
                   disabled={isSaving}
                 />
                 {layoutJsonError && (
@@ -499,7 +499,7 @@ export default function EditTemplatePage() {
         </div>
 
         {/* Preview Section */}
-        <div className="lg:w-1/2 xl:w-2/5">
+        <div className="lg:w-[30%]">
           <Card className="sticky top-20"> 
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center">
@@ -524,3 +524,4 @@ export default function EditTemplatePage() {
     </div>
   );
 }
+
