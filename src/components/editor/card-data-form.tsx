@@ -26,21 +26,25 @@ interface CardDataFormProps {
 function generatePlaceholderUrl(fieldConfig: TemplateField): string | undefined {
   if (fieldConfig.type !== 'placeholderImage') return undefined;
 
-  const width = fieldConfig.placeholderConfigWidth || 250; 
-  const height = fieldConfig.placeholderConfigHeight || 140; 
-  let pathSegments = `${width}x${height}`;
+  const width = fieldConfig.placeholderConfigWidth || 250;
+  const height = fieldConfig.placeholderConfigHeight || 140;
+  let path = `${width}x${height}`;
 
-  if (fieldConfig.placeholderConfigBgColor && fieldConfig.placeholderConfigBgColor.trim() !== '') {
-    pathSegments += `/${fieldConfig.placeholderConfigBgColor.replace('#', '').trim()}`;
-    if (fieldConfig.placeholderConfigTextColor && fieldConfig.placeholderConfigTextColor.trim() !== '') {
-      pathSegments += `/${fieldConfig.placeholderConfigTextColor.replace('#', '').trim()}`;
+  const bgColor = fieldConfig.placeholderConfigBgColor?.replace('#', '').trim();
+  const textColor = fieldConfig.placeholderConfigTextColor?.replace('#', '').trim();
+  const text = fieldConfig.placeholderConfigText?.trim();
+
+  if (bgColor) {
+    path += `/${bgColor}`;
+    if (textColor) {
+      path += `/${textColor}`;
     }
   }
-  
-  let fullUrl = `https://placehold.co/${pathSegments}.png`;
 
-  if (fieldConfig.placeholderConfigText && fieldConfig.placeholderConfigText.trim() !== '') {
-    fullUrl += `?text=${encodeURIComponent(fieldConfig.placeholderConfigText.trim())}`;
+  let fullUrl = `https://placehold.co/${path}`;
+
+  if (text) {
+    fullUrl += `?text=${encodeURIComponent(text)}`;
   }
   return fullUrl;
 }
@@ -58,57 +62,55 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
     if (templatesLoading || cardData.templateId === NEW_CARD_TEMPLATE_ID_PLACEHOLDER) return undefined;
     
     let initialTemplateIdToUse = cardData.templateId as CardTemplateId;
-    if (!associatedTemplateIds.includes(initialTemplateIdToUse) && associatedTemplateIds.length > 0) {
+    if (associatedTemplateIds && associatedTemplateIds.length > 0 && !associatedTemplateIds.includes(initialTemplateIdToUse) ) {
         initialTemplateIdToUse = associatedTemplateIds[0];
-    } else if (!associatedTemplateIds.includes(initialTemplateIdToUse) && associatedTemplateIds.length === 0) {
+    } else if ((!associatedTemplateIds || associatedTemplateIds.length === 0) && !getTemplateById(initialTemplateIdToUse)) {
+        const genericTemplate = getTemplateById('generic'); // Fallback to generic if available and project has no associations or current is invalid
+        if (genericTemplate) initialTemplateIdToUse = 'generic';
+        else return undefined; // No valid template found
+    } else if (!getTemplateById(initialTemplateIdToUse)) { // Current ID is invalid but project might have other associations
+      if (associatedTemplateIds && associatedTemplateIds.length > 0) {
+        initialTemplateIdToUse = associatedTemplateIds[0];
+      } else {
         const genericTemplate = getTemplateById('generic');
         if (genericTemplate) initialTemplateIdToUse = 'generic';
         else return undefined;
+      }
     }
     return getTemplateById(initialTemplateIdToUse);
   });
 
   // Effect to initialize or re-initialize form when cardData.id (from key prop) changes
-  useEffect(() => {
-    setFormData(cardData);
+   useEffect(() => {
+    setFormData(cardData); // Always set formData from cardData prop on mount/key change
+
     const newIsFinalized = cardData.templateId !== NEW_CARD_TEMPLATE_ID_PLACEHOLDER;
     setIsTemplateFinalized(newIsFinalized);
 
     if (templatesLoading) {
-        setCurrentTemplate(undefined);
-        return;
+      setCurrentTemplate(undefined);
+      return;
     }
     
     if (newIsFinalized) {
-        let templateToUse = getTemplateById(cardData.templateId as CardTemplateId);
-        // Fallback logic if current templateId isn't in associated or doesn't exist
-        if (!templateToUse || (associatedTemplateIds.length > 0 && !associatedTemplateIds.includes(cardData.templateId as CardTemplateId))) {
-            if (associatedTemplateIds.length > 0) {
-                templateToUse = getTemplateById(associatedTemplateIds[0]);
-            } else {
-                templateToUse = getTemplateById('generic') || undefined; // Last resort generic
-            }
+      let templateToUse = getTemplateById(cardData.templateId as CardTemplateId);
+      if (!templateToUse || (associatedTemplateIds.length > 0 && !associatedTemplateIds.includes(cardData.templateId as CardTemplateId))) {
+        if (associatedTemplateIds.length > 0) {
+          templateToUse = getTemplateById(associatedTemplateIds[0]);
+        } else {
+          templateToUse = getTemplateById('generic') || undefined;
         }
-        setCurrentTemplate(templateToUse);
-
-        // If template changed due to fallback, update formData's templateId
-        if (templateToUse && templateToUse.id !== cardData.templateId) {
-            setFormData(prev => ({...prev, templateId: templateToUse!.id as CardTemplateId}));
-        }
-
-    } else { // Not finalized, means it's a NEW_CARD_TEMPLATE_ID_PLACEHOLDER
-        setCurrentTemplate(undefined); 
+      }
+      setCurrentTemplate(templateToUse);
+      // If template fallback occurred, this effect might run again once formData is updated below if it changes templateId
+    } else { // Not finalized
+      setCurrentTemplate(undefined); 
     }
-  // cardData is the main prop triggering re-initialization due to key change
-  // templatesLoading and getTemplateById for context readiness
-  // associatedTemplateIds if project-level associations change while form is open (less common for *this* effect, but good for consistency)
   }, [cardData, templatesLoading, getTemplateById, associatedTemplateIds]);
 
 
   // Effect to propagate formData changes up to the parent
   useEffect(() => {
-    // Only call onUpdateCard if the template is finalized AND formData differs from the original prop
-    // This prevents loops when the parent re-renders with the same cardData after an update
     if (isTemplateFinalized && formData !== cardData) { 
       onUpdateCard(formData);
     }
@@ -148,33 +150,30 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
         id: prevExistingData.id, 
         name: prevExistingData.name || 'Untitled Card', 
         description: prevExistingData.description || '', 
-        imageUrl: prevExistingData.imageUrl, // Keep existing imageUrl initially
-        dataAiHint: prevExistingData.dataAiHint, // Keep existing hint
+        imageUrl: prevExistingData.imageUrl, 
+        dataAiHint: prevExistingData.dataAiHint, 
         templateId: newTemplateId, 
       };
       
       newSelectedTemplate.fields.forEach(field => {
         const key = field.key as keyof CardData;
         if (field.type === 'placeholderImage') {
-          // Only set placeholder URL if the existing field value is empty or matches a generic placeholder
           const currentFieldValue = (prevExistingData as any)[key];
           const isGenericPlaceholder = typeof currentFieldValue === 'string' && currentFieldValue.startsWith('https://placehold.co/');
           if (!currentFieldValue || isGenericPlaceholder) {
             (updatedFormData as any)[key] = generatePlaceholderUrl(field) || '';
           } else {
-            (updatedFormData as any)[key] = currentFieldValue; // Keep user's specific URL
+            (updatedFormData as any)[key] = currentFieldValue; 
           }
         } else if ((prevExistingData as any)[key] === undefined && field.defaultValue !== undefined) {
              (updatedFormData as any)[key] = field.defaultValue;
         } else if ((prevExistingData as any)[key] !== undefined) {
-            // Preserve existing data if it's already there
             (updatedFormData as any)[key] = (prevExistingData as any)[key];
         } else {
-            // If no existing data and no default, initialize based on type
             switch(field.type) {
                 case 'text': (updatedFormData as any)[key] = ''; break;
                 case 'textarea': (updatedFormData as any)[key] = ''; break;
-                case 'number': (updatedFormData as any)[key] = undefined; break; // Or 0, depending on desired behavior
+                case 'number': (updatedFormData as any)[key] = undefined; break;
                 case 'boolean': (updatedFormData as any)[key] = false; break;
                 case 'select': (updatedFormData as any)[key] = field.options?.[0]?.value || ''; break;
                 default: (updatedFormData as any)[key] = undefined;

@@ -163,17 +163,20 @@ export default function EditTemplatePage() {
        if (fieldDef.type === 'placeholderImage') {
           const width = fieldDef.placeholderConfigWidth || 250;
           const height = fieldDef.placeholderConfigHeight || 140;
-          let pathSegments = `${width}x${height}`;
-
-          if (fieldDef.placeholderConfigBgColor && fieldDef.placeholderConfigBgColor.trim() !== '') {
-            pathSegments += `/${fieldDef.placeholderConfigBgColor.replace('#', '').trim()}`;
-            if (fieldDef.placeholderConfigTextColor && fieldDef.placeholderConfigTextColor.trim() !== '') {
-              pathSegments += `/${fieldDef.placeholderConfigTextColor.replace('#', '').trim()}`;
+          let path = `${width}x${height}`;
+          const bgColor = fieldDef.placeholderConfigBgColor?.replace('#', '').trim();
+          const textColor = fieldDef.placeholderConfigTextColor?.replace('#', '').trim();
+          const text = fieldDef.placeholderConfigText?.trim();
+          
+          if (bgColor) {
+            path += `/${bgColor}`;
+            if (textColor) {
+                path += `/${textColor}`;
             }
           }
-          let url = `https://placehold.co/${pathSegments}.png`;
-          if (fieldDef.placeholderConfigText && fieldDef.placeholderConfigText.trim() !== '') {
-            url += `?text=${encodeURIComponent(fieldDef.placeholderConfigText.trim())}`;
+          let url = `https://placehold.co/${path}`;
+          if (text) {
+            url += `?text=${encodeURIComponent(text)}`;
           }
           (generatedSampleCard as any)[key] = url;
        } else if (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '') {
@@ -202,7 +205,7 @@ export default function EditTemplatePage() {
       if (['name', 'description', 'cost', 'attack', 'defense', 'imageUrl', 'dataAiHint', 'rarity', 'effectText', 'flavorText', 'artworkUrl', 'cardType', 'statusIcon'].includes(fieldDef.key)) {
          if ((fieldDef.type !== 'placeholderImage' && (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '')) ) {
              if((fieldDef.key === 'imageUrl' || fieldDef.key === 'artworkUrl') && typeof fieldDef.defaultValue === 'string' && !fieldDef.defaultValue.startsWith('http') && !fieldDef.defaultValue.startsWith('https')) {
-                (generatedSampleCard as any)[key] = `https://placehold.co/${fieldDef.key === 'imageUrl' ? '250x140' : '280x400'}.png`;
+                (generatedSampleCard as any)[key] = `https://placehold.co/${fieldDef.key === 'imageUrl' ? '250x140' : '280x400'}`;
              }
         } else if (fieldDef.type !== 'placeholderImage') {
             if(fieldDef.key === 'imageUrl' && !(generatedSampleCard as any)[key]) { 
