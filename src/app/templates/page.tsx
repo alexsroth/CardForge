@@ -2,17 +2,30 @@
 // src/app/templates/page.tsx
 "use client"; 
 
+import { useState } from 'react';
 import type { CardTemplate, TemplateField, CardTemplateId as ImportedCardTemplateId } from '@/lib/card-templates';
 import { useTemplates } from '@/contexts/TemplateContext'; 
-import { useProjects } from '@/contexts/ProjectContext'; // Import useProjects
+import { useProjects } from '@/contexts/ProjectContext'; 
 import type { Project } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, AlertTriangle, Info, Settings2, Loader2, Pencil } from 'lucide-react';
+import { PlusCircle, AlertTriangle, Info, Settings2, Loader2, Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 
 type CardTemplateId = ImportedCardTemplateId; 
 
@@ -41,8 +54,30 @@ function getProjectsForTemplate(templateId: CardTemplateId, allProjects: Project
 
 
 export default function TemplateLibraryPage() {
-  const { templates, isLoading: templatesLoading } = useTemplates();
+  const { templates, deleteTemplate, isLoading: templatesLoading } = useTemplates();
   const { projects, isLoading: projectsLoading } = useProjects();
+  const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState<string | null>(null); // Store ID of template being deleted
+
+
+  const handleDeleteTemplate = async (templateId: CardTemplateId) => {
+    setIsDeleting(templateId);
+    const result = await deleteTemplate(templateId);
+    if (result.success) {
+      toast({
+        title: "Template Deleted",
+        description: result.message,
+      });
+    } else {
+      toast({
+        title: "Deletion Failed",
+        description: result.message,
+        variant: "destructive",
+      });
+    }
+    setIsDeleting(null);
+  };
+
 
   if (templatesLoading || projectsLoading) {
     return (
@@ -87,6 +122,7 @@ export default function TemplateLibraryPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {templates.map((template: CardTemplate) => {
             const associatedProjects = getProjectsForTemplate(template.id as CardTemplateId, projects);
+            const isTemplateInUse = associatedProjects.length > 0;
             return (
               <Card key={template.id} className="flex flex-col">
                 <CardHeader>
@@ -123,12 +159,41 @@ export default function TemplateLibraryPage() {
                     )}
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="grid grid-cols-1 gap-2">
                   <Button variant="outline" size="sm" asChild className="w-full">
                     <Link href={`/templates/edit/${template.id}`}>
                       <Pencil className="mr-2 h-4 w-4" /> Edit Template
                     </Link>
                   </Button>
+                  {!isTemplateInUse && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="sm" className="w-full" disabled={isDeleting === template.id}>
+                          {isDeleting === template.id ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="mr-2 h-4 w-4" />
+                          )}
+                          Delete Template
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the template
+                            "{template.name}" (ID: {template.id}).
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteTemplate(template.id as CardTemplateId)}>
+                            Confirm Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </CardFooter>
               </Card>
             );
@@ -152,5 +217,4 @@ export default function TemplateLibraryPage() {
     </div>
   );
 }
-
     

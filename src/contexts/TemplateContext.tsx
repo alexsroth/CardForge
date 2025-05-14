@@ -15,6 +15,7 @@ interface TemplateContextType {
   getTemplateById: (id: CardTemplateId | undefined) => CardTemplate | undefined;
   addTemplate: (templateData: CardTemplate) => Promise<{ success: boolean; message: string }>;
   updateTemplate: (templateData: CardTemplate) => Promise<{ success: boolean; message: string }>;
+  deleteTemplate: (templateId: CardTemplateId) => Promise<{ success: boolean; message: string }>;
   getAvailableTemplatesForSelect: (allowedTemplateIds?: CardTemplateId[]) => Array<{ value: CardTemplateId; label: string }>;
   isLoading: boolean;
 }
@@ -42,7 +43,6 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
       loadedTemplates = initialSeedTemplates;
     }
     
-    // Ensure all loaded templates have necessary fields and a default layout if missing
     const validatedTemplates = loadedTemplates.map(t => ({
       ...t,
       fields: Array.isArray(t.fields) ? t.fields : [],
@@ -123,6 +123,25 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [persistTemplates]);
 
+  const deleteTemplate = useCallback(async (templateId: CardTemplateId): Promise<{ success: boolean; message: string }> => {
+    let templateName = 'Unknown Template';
+    let found = false;
+    setTemplates(prevTemplates => {
+      const templateToDelete = prevTemplates.find(t => t.id === templateId);
+      if (templateToDelete) {
+        templateName = templateToDelete.name;
+        found = true;
+      }
+      const updatedTemplates = prevTemplates.filter(t => t.id !== templateId);
+      persistTemplates(updatedTemplates);
+      return updatedTemplates;
+    });
+    if (found) {
+      return { success: true, message: `Template '${templateName}' deleted successfully.` };
+    } else {
+      return { success: false, message: `Template with ID '${templateId}' not found. Deletion failed.` };
+    }
+  }, [persistTemplates]);
 
   const getAvailableTemplatesForSelect = useCallback((allowedTemplateIds?: CardTemplateId[]) => {
     const templatesToConsider = allowedTemplateIds
@@ -136,7 +155,7 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
   }, [templates]);
 
   return (
-    <TemplateContext.Provider value={{ templates, getTemplateById, addTemplate, updateTemplate, getAvailableTemplatesForSelect, isLoading }}>
+    <TemplateContext.Provider value={{ templates, getTemplateById, addTemplate, updateTemplate, deleteTemplate, getAvailableTemplatesForSelect, isLoading }}>
       {children}
     </TemplateContext.Provider>
   );
@@ -149,5 +168,4 @@ export const useTemplates = (): TemplateContextType => {
   }
   return context;
 };
-
     
