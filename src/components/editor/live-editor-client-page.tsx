@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { DeckData, CardData, CardTemplateId } from '@/lib/types';
@@ -32,25 +33,25 @@ export default function LiveEditorClientPage({ initialDeckData }: LiveEditorClie
 
   useEffect(() => {
     setDeck(initialDeckData);
-    if (initialDeckData.cards.length > 0) {
+    if (initialDeckData.cards.length > 0 && initialDeckData.cards[0]?.id) {
       setSelectedCardId(initialDeckData.cards[0].id);
     } else {
       setSelectedCardId(null);
     }
   }, [initialDeckData]);
 
-  const handleSelectCard = (cardId: string) => {
+  const handleSelectCard = useCallback((cardId: string) => {
     setSelectedCardId(cardId);
-  };
+  }, [setSelectedCardId]);
 
-  const handleUpdateCard = (updatedCard: CardData) => {
+  const handleUpdateCard = useCallback((updatedCard: CardData) => {
     setDeck(prevDeck => ({
       ...prevDeck,
       cards: prevDeck.cards.map(card => card.id === updatedCard.id ? updatedCard : card)
     }));
-  };
+  }, [setDeck]);
 
-  const handleAddCard = () => {
+  const handleAddCard = useCallback(() => {
     const newCardId = `card-${Date.now()}`;
     const newCard: CardData = {
       id: newCardId,
@@ -63,19 +64,19 @@ export default function LiveEditorClientPage({ initialDeckData }: LiveEditorClie
       cards: [...prevDeck.cards, newCard]
     }));
     setSelectedCardId(newCardId);
-  };
+  }, [setDeck, setSelectedCardId]);
 
-  const handleDeleteCard = (cardId: string) => {
-    setDeck(prevDeck => ({
-      ...prevDeck,
-      cards: prevDeck.cards.filter(card => card.id !== cardId)
-    }));
-    if (selectedCardId === cardId) {
-      setSelectedCardId(prevDeck.cards.length > 1 ? prevDeck.cards.find(c => c.id !== cardId)!.id : null);
-    }
-  };
+  const handleDeleteCard = useCallback((cardIdToDelete: string) => {
+    setDeck(currentDeck => {
+      const newCards = currentDeck.cards.filter(card => card.id !== cardIdToDelete);
+      if (selectedCardId === cardIdToDelete) {
+        setSelectedCardId(newCards.length > 0 ? newCards[0].id : null);
+      }
+      return { ...currentDeck, cards: newCards };
+    });
+  }, [selectedCardId, setDeck, setSelectedCardId]);
   
-  const handleGenerateName = async (description: string): Promise<string> => {
+  const handleGenerateName = useCallback(async (description: string): Promise<string> => {
     if (!description.trim()) {
       toast({ title: "Cannot generate name", description: "Card description is empty.", variant: "destructive" });
       return '';
@@ -92,15 +93,15 @@ export default function LiveEditorClientPage({ initialDeckData }: LiveEditorClie
     } finally {
       setIsLoadingName(false);
     }
-  };
+  }, [toast, setIsLoadingName]);
 
-  const handleImportData = (importedCards: CardData[]) => {
+  const handleImportData = useCallback((importedCards: CardData[]) => {
     setDeck(prevDeck => ({ ...prevDeck, cards: importedCards }));
     setSelectedCardId(importedCards.length > 0 ? importedCards[0].id : null);
     toast({ title: "Data Imported", description: `${importedCards.length} cards loaded.` });
-  };
+  }, [setDeck, setSelectedCardId, toast]);
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
     const {active, over} = event;
     if (over && active.id !== over.id) {
       setDeck((prevDeck) => {
@@ -112,7 +113,7 @@ export default function LiveEditorClientPage({ initialDeckData }: LiveEditorClie
         };
       });
     }
-  };
+  }, [setDeck]);
 
   const selectedEditorCard = deck.cards.find(card => card.id === selectedCardId);
 
@@ -125,7 +126,7 @@ export default function LiveEditorClientPage({ initialDeckData }: LiveEditorClie
             <h2 className="text-xl font-semibold">{deck.name}</h2>
              <DataControls cards={deck.cards} onImport={handleImportData} />
           </div>
-          <div className="flex flex-grow min-h-0">
+          <div className="flex flex-grow min-h-0"> {/* min-h-0 is important for flex children with scroll */}
             <CardListPanel
               cards={deck.cards}
               selectedCardId={selectedCardId}
@@ -136,7 +137,7 @@ export default function LiveEditorClientPage({ initialDeckData }: LiveEditorClie
             <Separator orientation="vertical" />
              {selectedEditorCard ? (
               <CardDetailPanel
-                key={selectedCardId} // Force re-render on card selection to reset form state if needed
+                key={selectedCardId} 
                 card={selectedEditorCard}
                 onUpdateCard={handleUpdateCard}
                 onGenerateName={handleGenerateName}
