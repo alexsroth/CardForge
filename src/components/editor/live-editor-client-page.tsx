@@ -2,6 +2,7 @@
 "use client";
 
 import type { EditorProjectData, CardData, CardTemplateId, Project } from '@/lib/types';
+import { NEW_CARD_TEMPLATE_ID_PLACEHOLDER } from '@/lib/types';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import CardListPanel from './card-list-panel';
 import CardDetailPanel from './card-detail-panel';
@@ -83,14 +84,16 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   const [isMounted, setIsMounted] = useState(false);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const initialCardsRef = useRef<CardData[] | null>(null); // To store initial cards from props
+  const initialCardsRef = useRef<CardData[] | null>(null); 
 
   useEffect(() => {
     setIsMounted(true);
-    // Store the initial cards from props when the component mounts or initialProjectData.id changes
-    // This helps the save useEffect to know if cards have actually changed from their initial state.
     initialCardsRef.current = initialProjectData.cards || [];
-  }, [initialProjectData.id]); // Rerun only if project ID changes
+     // Select the first card if available, after initial mount and data load
+    if (initialProjectData.cards && initialProjectData.cards.length > 0 && !selectedCardId) {
+      setSelectedCardId(initialProjectData.cards[0].id);
+    }
+  }, [initialProjectData.id]); // Rerun only if project ID changes, initial select logic moved from effect below
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -101,43 +104,48 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
 
   useEffect(() => {
     if (initialProjectData.id !== editorProjectId) {
+      // Switched to a new project
       setEditorProjectId(initialProjectData.id);
       setProjectName(initialProjectData.name);
       const currentCards = initialProjectData.cards || [];
       setCards(currentCards);
-      initialCardsRef.current = currentCards; // Update initialCardsRef for new project
+      initialCardsRef.current = currentCards;
       setAssociatedTemplateIds(initialProjectData.associatedTemplateIds || []);
       setSelectedCardId(currentCards.length > 0 && currentCards[0]?.id ? currentCards[0].id : null);
     } else {
+      // Potentially an update to the current project's metadata (name, associated templates)
+      // from context, but not the cards themselves if editor is active.
       setProjectName(initialProjectData.name);
       setAssociatedTemplateIds(initialProjectData.associatedTemplateIds || []);
-      // Do not reset cards here, as they are managed internally by this component
-      // unless the project ID itself has changed.
+      // Critical: Do not reset 'cards' or 'selectedCardId' here if editorProjectId is the same.
+      // This component's internal 'cards' state is the source of truth while editing.
+      // If initialProjectData.cards is different, it implies an external update.
+      // A more sophisticated merge or conflict resolution might be needed for a multi-user scenario.
+      // For single-user, we assume this component's 'cards' state is king.
     }
   }, [initialProjectData, editorProjectId]);
 
+
   // Debounced save effect
   useEffect(() => {
-    if (!isMounted) {
+    if (!isMounted || !editorProjectId) { // Ensure project ID is set
       return; 
     }
-    // Optional: A more sophisticated check to see if cards have meaningfully changed
-    // from initialCardsRef.current could be added here to avoid saving if only references changed
-    // but content is identical to what was initially loaded.
-    // For now, any change to 'cards', 'projectName', or 'associatedTemplateIds' reference will trigger the debounce.
-
+    
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
     debounceTimerRef.current = setTimeout(() => {
-      const projectToUpdate = getProjectById(editorProjectId);
+      const projectToUpdate = getProjectById(editorProjectId); // Get the latest version from context
       if (projectToUpdate) {
+        // Construct the full project object to save, ensuring all parts are current
         const updatedFullProject: Project = {
-          ...projectToUpdate,
-          name: projectName, 
-          cards: cards, 
-          associatedTemplateIds: associatedTemplateIds, 
+          ...projectToUpdate, // Start with current project data from context (includes ID, potentially other metadata)
+          name: projectName,  // Use current editor's project name state
+          cards: cards,       // Use current editor's cards state
+          associatedTemplateIds: associatedTemplateIds, // Use current editor's associated templates state
+          // lastModified will be updated by updateProject in context
         };
         updateProject(updatedFullProject).then(result => {
           if (!result.success) {
@@ -147,8 +155,10 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
           //   toast({ title: "Project Saved", description: "Changes saved to local storage." });
           // }
         });
+      } else {
+        console.warn(`Debounced save: Project with ID ${editorProjectId} not found in context.`);
       }
-    }, 750); // 750ms debounce
+    }, 750); 
 
     return () => {
       if (debounceTimerRef.current) {
@@ -170,29 +180,25 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     setSelectedCardId(cardId);
   }, []);
 
-  // This function is now stable as its dependencies are empty.
   const handleUpdateCard = useCallback((updatedCard: CardData) => {
     setCards(prevCards => 
       prevCards.map(card => card.id === updatedCard.id ? updatedCard : card)
     );
-    // The debounced save is now handled by the useEffect watching 'cards', 'projectName', etc.
   }, []);
 
   const handleAddCard = useCallback(() => {
-    const newCardId = `card-${Date.now()}`;
-    const defaultTemplateIdForNewCard = associatedTemplateIds.length > 0 ? associatedTemplateIds[0] : 'generic';
+    const newCardId = `card-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const newCard: CardData = {
       id: newCardId,
-      templateId: defaultTemplateIdForNewCard,
-      name: 'New Card',
-      description: '',
+      templateId: NEW_CARD_TEMPLATE_ID_PLACEHOLDER, // Special placeholder ID
+      name: 'Untitled Card', // Generic name for newly added cards
+      description: '', // Minimal initial data
       imageUrl: 'https://placehold.co/280x400.png',
       dataAiHint: 'new card concept',
     };
     setCards(prevCards => [...prevCards, newCard]);
     setSelectedCardId(newCardId);
-    // The debounced save will be triggered by the useEffect watching 'cards'.
-  }, [associatedTemplateIds]);
+  }, []);
 
   const handleDeleteCard = useCallback((cardIdToDelete: string) => {
     setCards(currentCards => {
@@ -202,7 +208,6 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
       }
       return newCardsList;
     });
-    // The debounced save will be triggered by the useEffect watching 'cards'.
   }, [selectedCardId]);
   
   const handleGenerateName = useCallback(async (description: string): Promise<string> => {
@@ -227,14 +232,13 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   const handleImportData = useCallback((importedCards: CardData[]) => {
     const validImportedCards = importedCards.map(card => ({
       ...card,
-      templateId: associatedTemplateIds.includes(card.templateId) 
-                    ? card.templateId 
+      templateId: associatedTemplateIds.includes(card.templateId as CardTemplateId) // cast because imported wont be placeholder
+                    ? card.templateId as CardTemplateId
                     : (associatedTemplateIds.length > 0 ? associatedTemplateIds[0] : 'generic')
     }));
     setCards(validImportedCards);
     setSelectedCardId(validImportedCards.length > 0 ? validImportedCards[0].id : null);
     toast({ title: "Data Imported", description: `${validImportedCards.length} cards loaded.` });
-    // The debounced save will be triggered by the useEffect watching 'cards'.
   }, [toast, associatedTemplateIds]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
@@ -245,7 +249,6 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
         const newIndex = prevCards.findIndex((card) => card.id === over.id);
         return arrayMove(prevCards, oldIndex, newIndex);
       });
-      // The debounced save will be triggered by the useEffect watching 'cards'.
     }
   }, []);
 
@@ -276,7 +279,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
               <CardDetailPanel
                 key={selectedCardId} 
                 card={selectedEditorCard}
-                onUpdateCard={handleUpdateCard} // This prop is now stable
+                onUpdateCard={handleUpdateCard} 
                 onGenerateName={handleGenerateName}
                 isGeneratingName={isLoadingName}
                 associatedTemplateIds={associatedTemplateIds}
