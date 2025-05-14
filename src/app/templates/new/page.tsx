@@ -13,7 +13,7 @@ import FieldRow, { type TemplateFieldDefinition } from '@/components/template-de
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates } from '@/contexts/TemplateContext';
 import type { TemplateField, CardTemplate, CardTemplateId } from '@/lib/card-templates';
-import { DEFAULT_CARD_LAYOUT_JSON_STRING } from '@/lib/card-templates'; 
+import { DEFAULT_CARD_LAYOUT_JSON_STRING } from '@/lib/card-templates';
 import type { CardData } from '@/lib/types';
 import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-renderer';
 import { useRouter } from 'next/navigation';
@@ -54,21 +54,21 @@ function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): Templa
 const toCamelCase = (str: string): string => {
   if (!str) return '';
   const cleaned = str
-    .replace(/[^a-zA-Z0-9\s_-]/g, '') 
-    .replace(/\s+/g, ' '); 
-  
+    .replace(/[^a-zA-Z0-9\s_-]/g, '')
+    .replace(/\s+/g, ' ');
+
   const words = cleaned.split(/[\s_-]+/).filter(Boolean);
 
-  if (words.length === 0) return 'untitled'; 
+  if (words.length === 0) return 'untitled';
 
   const firstWord = words[0].toLowerCase();
-  const restWords = words.slice(1).map(word => 
+  const restWords = words.slice(1).map(word =>
     word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
   );
-  
+
   let result = [firstWord, ...restWords].join('');
-  
-  if (!result) return 'untitled'; 
+
+  if (!result) return 'untitled';
 
   if (/^[0-9]/.test(result)) {
     result = '_' + result;
@@ -81,11 +81,11 @@ export default function TemplateDesignerPage() {
   const [templateId, setTemplateId] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<TemplateFieldDefinition[]>([]);
-  const [layoutDefinition, setLayoutDefinition] = useState<string>(DEFAULT_CARD_LAYOUT_JSON_STRING); 
+  const [layoutDefinition, setLayoutDefinition] = useState<string>(DEFAULT_CARD_LAYOUT_JSON_STRING);
   const [layoutJsonError, setLayoutJsonError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [sampleCardForPreview, setSampleCardForPreview] = useState<CardData | null>(null);
-  
+
   const { toast } = useToast();
   const { addTemplate: saveTemplateToContext, templates: existingTemplates, isLoading: templatesLoading } = useTemplates();
   const router = useRouter();
@@ -112,7 +112,7 @@ export default function TemplateDesignerPage() {
       rarity: 'common',
       effectText: 'Sample effect: Draw a card. This unit gets +1/+1 until end of turn. This text might be long to test scrolling in a textarea layout element.',
       flavorText: 'This is some italicized flavor text.',
-      artworkUrl: 'https://placehold.co/280x400.png', 
+      artworkUrl: 'https://placehold.co/280x400.png',
       cardType: 'Creature - Goblin',
       ...fields.reduce((acc, fieldDef) => {
         const key = fieldDef.key as keyof CardData;
@@ -131,9 +131,9 @@ export default function TemplateDesignerPage() {
               case 'textarea': (acc as any)[key] = `Sample content for ${fieldDef.label}.`; break;
               case 'number': (acc as any)[key] = 0; break;
               case 'boolean': (acc as any)[key] = false; break;
-              case 'select': 
+              case 'select':
                 const firstOptionValue = fieldDef.optionsString?.split(',')[0]?.split(':')[0]?.trim();
-                (acc as any)[key] = firstOptionValue || ''; 
+                (acc as any)[key] = firstOptionValue || '';
                 break;
               default: (acc as any)[key] = `Sample ${fieldDef.label}`;
             }
@@ -145,9 +145,9 @@ export default function TemplateDesignerPage() {
                if((fieldDef.key === 'imageUrl' || fieldDef.key === 'artworkUrl') && typeof fieldDef.defaultValue === 'string' && !fieldDef.defaultValue.startsWith('http')) {
                   (acc as any)[key] = `https://placehold.co/${fieldDef.key === 'imageUrl' ? '250x140' : '280x400'}.png`;
                }
-          } else if(fieldDef.key === 'imageUrl' && !(generatedSampleCard as any)[key]) { 
+          } else if(fieldDef.key === 'imageUrl' && !(generatedSampleCard as any)[key]) {
              (generatedSampleCard as any)[key] = 'https://placehold.co/250x140.png';
-          } else if(fieldDef.key === 'artworkUrl' && !(generatedSampleCard as any)[key]) { 
+          } else if(fieldDef.key === 'artworkUrl' && !(generatedSampleCard as any)[key]) {
              (generatedSampleCard as any)[key] = 'https://placehold.co/280x400.png';
           }
         }
@@ -176,7 +176,7 @@ export default function TemplateDesignerPage() {
 
     let baseKey = toCamelCase(newFieldLabel);
     if (!baseKey) baseKey = `newField`;
-    
+
     let newKey = baseKey;
     let keyCounter = 1;
     while (fields.some(f => f.key === newKey)) {
@@ -186,13 +186,13 @@ export default function TemplateDesignerPage() {
 
     setFields([
       ...fields,
-      { 
-        key: newKey, 
-        label: newFieldLabel, 
-        type: 'text', 
-        placeholder: '', 
-        defaultValue: '', 
-        optionsString: '' 
+      {
+        key: newKey,
+        label: newFieldLabel,
+        type: 'text',
+        placeholder: '',
+        defaultValue: '',
+        optionsString: ''
       }
     ]);
   };
@@ -204,12 +204,12 @@ export default function TemplateDesignerPage() {
   const handleFieldChange = (index: number, updatedFieldDefinition: TemplateFieldDefinition) => {
     const newFields = [...fields];
     const oldField = newFields[index];
-    
+
     let modifiedField = { ...oldField, ...updatedFieldDefinition };
 
     if (updatedFieldDefinition.label !== undefined && updatedFieldDefinition.label !== oldField.label) {
         let baseKey = toCamelCase(updatedFieldDefinition.label);
-        if (!baseKey) { 
+        if (!baseKey) {
             const prefix = 'field';
             let fallbackCounter = 1;
             let potentialKey = `${prefix}${fallbackCounter}`;
@@ -228,11 +228,11 @@ export default function TemplateDesignerPage() {
         }
         modifiedField.key = newKey;
     }
-    
+
     newFields[index] = modifiedField;
     setFields(newFields);
   };
-  
+
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
     setLayoutDefinition(newLayoutDef);
@@ -271,7 +271,7 @@ export default function TemplateDesignerPage() {
       return;
     }
 
-    const finalTemplateId = toCamelCase(templateName); 
+    const finalTemplateId = toCamelCase(templateName);
      if (existingTemplates.some(t => t.id === finalTemplateId)) {
         toast({
             title: "Duplicate ID",
@@ -290,7 +290,7 @@ export default function TemplateDesignerPage() {
         });
         return;
     }
-    
+
     if (layoutDefinition.trim() && !validateAndFormatLayoutJson()) {
         toast({
           title: "Invalid Layout JSON",
@@ -303,7 +303,7 @@ export default function TemplateDesignerPage() {
     setIsSaving(true);
 
     const newTemplate: CardTemplate = {
-      id: finalTemplateId as CardTemplateId, 
+      id: finalTemplateId as CardTemplateId,
       name: templateName.trim(),
       fields: fields.map(mapFieldDefinitionToTemplateField),
       layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : DEFAULT_CARD_LAYOUT_JSON_STRING,
@@ -318,7 +318,7 @@ export default function TemplateDesignerPage() {
         variant: "default",
         duration: 7000,
       });
-      router.push('/templates'); 
+      router.push('/templates');
     } else {
       toast({
         title: "Save Failed",
@@ -329,7 +329,7 @@ export default function TemplateDesignerPage() {
     }
     setIsSaving(false);
   };
-  
+
   if (templatesLoading) {
     return (
       <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center">
@@ -378,13 +378,13 @@ export default function TemplateDesignerPage() {
                 </div>
               </div>
 
-              <div className="space-y-2"> {/* Reduced space-y for tighter layout */}
+              <div className="space-y-2">
                 <h3 className="text-lg font-semibold">Data Fields</h3>
                 <ScrollArea className="h-auto max-h-[300px] pr-3 border rounded-md">
                   <div className="p-2 space-y-3">
                     {fields.map((field, index) => (
                       <FieldRow
-                        key={index} 
+                        key={index}
                         field={field}
                         onChange={(updatedField) => handleFieldChange(index, updatedField)}
                         onRemove={() => handleRemoveField(index)}
@@ -412,7 +412,7 @@ export default function TemplateDesignerPage() {
                   onBlur={validateAndFormatLayoutJson}
                   placeholder='Enter JSON for card layout or use the default provided.'
                   rows={15}
-                  className="font-mono text-xs max-h-[350px]" 
+                  className="font-mono text-xs max-h-[350px]"
                   disabled={isSaving}
                 />
                 {layoutJsonError && (
@@ -453,9 +453,9 @@ export default function TemplateDesignerPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button 
-                onClick={handleSaveTemplate} 
-                className="w-full md:w-auto" 
+              <Button
+                onClick={handleSaveTemplate}
+                className="w-full md:w-auto"
                 disabled={isSaving || !templateName.trim() || fields.length === 0}
               >
                 {isSaving ? (
@@ -470,14 +470,14 @@ export default function TemplateDesignerPage() {
 
         {/* Preview Section */}
         <div className="lg:w-[30%]">
-          <Card className="sticky top-20"> 
+          <Card className="sticky top-20">
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center">
                 <Eye className="mr-2 h-5 w-5" />
                 Live Layout Preview
               </CardTitle>
               <CardDescription>
-                This preview updates as you modify the Layout Definition JSON or template fields. 
+                This preview updates as you modify the Layout Definition JSON or template fields.
                 Uses sample data based on your field definitions.
               </CardDescription>
             </CardHeader>
