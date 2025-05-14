@@ -19,6 +19,7 @@ import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-rend
 import { useRouter } from 'next/navigation';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Helper to convert TemplateFieldDefinition (from UI) to TemplateField (for storage)
 function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
@@ -377,25 +378,29 @@ export default function TemplateDesignerPage() {
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-2"> {/* Reduced space-y for tighter layout */}
                 <h3 className="text-lg font-semibold">Data Fields</h3>
-                {fields.map((field, index) => (
-                  <FieldRow
-                    key={index} 
-                    field={field}
-                    onChange={(updatedField) => handleFieldChange(index, updatedField)}
-                    onRemove={() => handleRemoveField(index)}
-                    isSaving={isSaving}
-                  />
-                ))}
-                <Button onClick={handleAddField} variant="outline" size="sm" disabled={isSaving}>
+                <ScrollArea className="h-auto max-h-[300px] pr-3 border rounded-md">
+                  <div className="p-2 space-y-3">
+                    {fields.map((field, index) => (
+                      <FieldRow
+                        key={index} 
+                        field={field}
+                        onChange={(updatedField) => handleFieldChange(index, updatedField)}
+                        onRemove={() => handleRemoveField(index)}
+                        isSaving={isSaving}
+                      />
+                    ))}
+                    {fields.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                            No fields added yet. Click "Add Field" to begin.
+                        </p>
+                    )}
+                  </div>
+                </ScrollArea>
+                <Button onClick={handleAddField} variant="outline" size="sm" disabled={isSaving} className="mt-2">
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Field
                 </Button>
-                {fields.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                        No fields added yet. Click "Add Field" to begin.
-                    </p>
-                )}
               </div>
 
               <div>
@@ -407,7 +412,7 @@ export default function TemplateDesignerPage() {
                   onBlur={validateAndFormatLayoutJson}
                   placeholder='Enter JSON for card layout or use the default provided.'
                   rows={15}
-                  className="font-mono text-xs"
+                  className="font-mono text-xs max-h-[350px]" // Added max-h
                   disabled={isSaving}
                 />
                 {layoutJsonError && (
