@@ -407,7 +407,7 @@ export default function EditTemplatePage() {
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Data Fields</h3>
-              <ScrollArea className="h-auto max-h-[300px] pr-3 border rounded-md">
+              <ScrollArea className="h-auto pr-3 border rounded-md"> {/* Removed max-h-[300px] */}
                 <div className="p-2 space-y-3">
                   {fields.map((field, index) => (
                     <FieldRow
@@ -430,13 +430,12 @@ export default function EditTemplatePage() {
               </Button>
             </div>
           </CardContent>
-          {/* Save button is moved to the Layout Definition card's footer */}
         </Card>
 
         {/* Bottom Section: Layout Editor (Left) and Preview (Right) */}
         <div className="flex flex-col md:flex-row gap-8">
           {/* Left Column: Layout Definition Editor */}
-          <Card className="md:w-[65%] flex flex-col"> {/* Ensure this card can flex its content vertically */}
+          <Card className="md:w-[65%] flex flex-col">
             <CardHeader>
               <CardTitle className="text-xl font-bold">Layout Definition (JSON)</CardTitle>
               <CardDescription>
@@ -444,7 +443,7 @@ export default function EditTemplatePage() {
                  Field keys in the JSON must match the keys from your "Data Fields" section.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-grow space-y-2 flex flex-col"> {/* Allow CardContent to grow and be a flex column */}
+            <CardContent className="flex-grow space-y-2 flex flex-col">
               <Textarea
                 id="layoutDefinition"
                 value={layoutDefinition}
@@ -491,7 +490,7 @@ export default function EditTemplatePage() {
                 </AccordionItem>
               </Accordion>
             </CardContent>
-            <CardFooter className="mt-auto"> {/* Ensure footer is at the bottom */}
+            <CardFooter className="mt-auto">
               <Button
                 onClick={handleSaveTemplate}
                 className="w-full md:w-auto"
@@ -531,3 +530,4 @@ export default function EditTemplatePage() {
     </div>
   );
 }
+
