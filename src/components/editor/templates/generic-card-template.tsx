@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { CardData } from '@/lib/types';
@@ -16,7 +17,7 @@ export default function GenericCardTemplate({ card }: GenericCardTemplateProps) 
         <CardTitle className="text-lg leading-tight truncate">
           {card.name || "Untitled Card"}
         </CardTitle>
-        {card.cost !== undefined && (
+        {card.cost !== undefined && ( // Though generic template doesn't define cost, it might be on data
           <div className="absolute top-2 right-2 bg-primary text-primary-foreground h-7 w-7 rounded-full flex items-center justify-center text-sm font-bold">
             {card.cost}
           </div>
@@ -28,8 +29,8 @@ export default function GenericCardTemplate({ card }: GenericCardTemplateProps) 
           <Image
             src={card.imageUrl}
             alt={card.name || 'Card image'}
-            layout="fill"
-            objectFit="cover"
+            fill
+            style={{ objectFit: 'cover' }}
             className="rounded"
             data-ai-hint={card.dataAiHint || 'card art'}
           />
@@ -44,7 +45,7 @@ export default function GenericCardTemplate({ card }: GenericCardTemplateProps) 
       <CardContent className="p-3 text-sm flex-grow min-h-[80px]">
         <ScrollArea className="h-full max-h-[120px]">
           <CardDescription className="whitespace-pre-wrap">
-            {card.description || "No description."}
+            {card.description || card.effectText || card.flavorText || "No description."}
           </CardDescription>
         </ScrollArea>
       </CardContent>

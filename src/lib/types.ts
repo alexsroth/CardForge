@@ -1,25 +1,31 @@
+
+// Import CardTemplateId from the new definitions file
+import type { CardTemplateId as ImportedCardTemplateId } from './card-templates';
+
 export interface Project {
   id: string;
   name: string;
-  thumbnailUrl: string; // URL to an image, e.g., placeholder
-  lastModified: string; // ISO date string
+  thumbnailUrl: string;
+  dataAiHint?: string; // Added for project thumbnail AI hint
+  lastModified: string;
 }
 
-export type CardTemplateId = 'creature' | 'spell' | 'item' | 'generic';
+// This type alias ensures we use the centrally defined IDs
+export type CardTemplateId = ImportedCardTemplateId;
 
 export interface CardData {
   id: string;
   templateId: CardTemplateId;
   name: string;
-  description: string;
+  description: string; // General description, mainly for 'generic' or as fallback
   cost?: number;
   attack?: number;
   defense?: number;
   imageUrl?: string;
+  dataAiHint?: string; // For AI image generation hint for the card image
   rarity?: 'common' | 'uncommon' | 'rare' | 'mythic';
-  effectText?: string;
-  flavorText?: string;
-  // For any other template-specific fields not covered above
+  effectText?: string; // Primary rules text
+  flavorText?: string; // Italicized, non-rules text (previously part of description in some templates)
   customFields?: Record<string, string | number | boolean>;
 }
 
@@ -29,10 +35,4 @@ export interface DeckData {
   cards: CardData[];
 }
 
-// Represents the structure of how a template's fields should be edited
-export interface TemplateFieldDefinition {
-  key: keyof CardData | `customFields.${string}`;
-  label: string;
-  type: 'text' | 'textarea' | 'number' | 'select';
-  options?: Array<{value: string; label: string}>; // For select type
-}
+// TemplateFieldDefinition is removed as its role is taken over by TemplateField in card-templates.ts

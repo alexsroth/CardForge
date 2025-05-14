@@ -1,6 +1,9 @@
+
 import LiveEditorClientPage from '@/components/editor/live-editor-client-page';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { CardData } from '@/lib/types'; // Import CardData
+import { CARD_TEMPLATE_IDS } from '@/lib/card-templates'; // Import card template IDs
 
 interface EditorPageProps {
   params: {
@@ -12,31 +15,51 @@ interface EditorPageProps {
 async function getProjectData(projectId: string) {
   // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 500)); 
-  if (projectId === 'new-project') { // Example for a new, empty project
+  
+  const defaultCards: CardData[] = [
+    { id: 'card-1', templateId: 'creature', name: 'Grizzly Bear', description: '', flavorText: 'A fearsome bear from the northern wilds.', cost: 2, attack: 2, defense: 2, imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'bear illustration', effectText: 'Roars loudly when it enters the battlefield.' , rarity: 'common'},
+    { id: 'card-2', templateId: 'spell', name: 'Fireball', description: '', flavorText: 'Hotter than a summer day.', cost: 3, effectText: 'Deals 3 damage to any target.', imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'fire magic', rarity: 'uncommon' },
+    { id: 'card-3', templateId: 'item', name: 'Healing Potion', description: '', flavorText: 'Gulp it down!', cost: 1, effectText: 'Heal 2 damage from a creature or player.', imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'potion bottle', rarity: 'common' },
+  ];
+  
+  if (projectId === 'new-project') { 
     return {
       id: 'new-project',
       name: 'New Project',
-      cards: [],
+      cards: [
+        { // Start a new project with one generic card
+          id: `card-${Date.now()}`,
+          templateId: 'generic',
+          name: 'My First Card',
+          description: 'This is a generic card. Change its template and edit its properties!',
+          imageUrl: 'https://placehold.co/280x400.png',
+          dataAiHint: 'card game concept',
+        }
+      ],
     };
   }
-  // For existing projects, you would fetch from a database or file
-  // For this example, let's return some mock data for a specific ID
+  
   if (projectId === 'project-alpha') {
     return {
       id: 'project-alpha',
       name: 'Alpha Beasts Deck',
-      cards: [
-        { id: 'card-1', templateId: 'creature', name: 'Grizzly Bear', description: 'A fearsome bear from the northern wilds.', cost: 2, attack: 2, defense: 2, imageUrl: 'https://placehold.co/280x400.png?text=Bear', dataAiHint: 'bear illustration' },
-        { id: 'card-2', templateId: 'spell', name: 'Fireball', description: 'Hurls a searing ball of fire.', cost: 3, effectText: 'Deals 3 damage to any target.', imageUrl: 'https://placehold.co/280x400.png?text=Fireball', dataAiHint: 'fire magic' },
-        { id: 'card-3', templateId: 'item', name: 'Healing Potion', description: 'Restores a small amount of health.', cost: 1, effectText: 'Heal 2 damage from a creature or player.', imageUrl: 'https://placehold.co/280x400.png?text=Potion', dataAiHint: 'potion bottle' },
-      ],
+      cards: defaultCards,
     };
   }
-  // Default fallback or error handling
+  // Default fallback or error handling for other project IDs
   return {
     id: projectId,
     name: `Project ${projectId}`,
-    cards: [],
+    cards: [ // Provide a default card if no specific project matches
+        {
+          id: `card-default-${Date.now()}`,
+          templateId: 'generic',
+          name: 'Sample Card',
+          description: 'This is a sample card for this project.',
+          imageUrl: 'https://placehold.co/280x400.png',
+          dataAiHint: 'sample abstract',
+        }
+    ],
   };
 }
 

@@ -1,62 +1,15 @@
+
 "use client";
 
-import type { CardData, CardTemplateId, TemplateFieldDefinition } from '@/lib/types';
-import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import type { CardData } from '@/lib/types';
+import { useState, useEffect, ChangeEvent, FormEvent, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import NameGeneratorButton from './name-generator-button';
-
-// Define field configurations for each template
-// This could be moved to a more centralized config if it grows large
-const templateFieldsConfig: Record<CardTemplateId, TemplateFieldDefinition[]> = {
-  generic: [
-    { key: 'name', label: 'Name', type: 'text' },
-    { key: 'description', label: 'Description', type: 'textarea' },
-    { key: 'imageUrl', label: 'Image URL', type: 'text' },
-  ],
-  creature: [
-    { key: 'name', label: 'Name', type: 'text' },
-    { key: 'description', label: 'Description (Flavor Text)', type: 'textarea' },
-    { key: 'imageUrl', label: 'Image URL', type: 'text' },
-    { key: 'cost', label: 'Cost', type: 'number' },
-    { key: 'attack', label: 'Attack', type: 'number' },
-    { key: 'defense', label: 'Defense', type: 'number' },
-    { key: 'effectText', label: 'Effect Text', type: 'textarea' },
-    { key: 'rarity', label: 'Rarity', type: 'select', options: [
-        {value: 'common', label: 'Common'}, {value: 'uncommon', label: 'Uncommon'},
-        {value: 'rare', label: 'Rare'}, {value: 'mythic', label: 'Mythic'}
-      ]
-    },
-  ],
-  spell: [
-    { key: 'name', label: 'Name', type: 'text' },
-    { key: 'description', label: 'Description (Flavor Text)', type: 'textarea' },
-    { key: 'imageUrl', label: 'Image URL', type: 'text' },
-    { key: 'cost', label: 'Cost', type: 'number' },
-    { key: 'effectText', label: 'Effect Text', type: 'textarea' },
-    { key: 'rarity', label: 'Rarity', type: 'select', options: [
-        {value: 'common', label: 'Common'}, {value: 'uncommon', label: 'Uncommon'},
-        {value: 'rare', label: 'Rare'}, {value: 'mythic', label: 'Mythic'}
-      ]
-    },
-  ],
-  item: [
-    { key: 'name', label: 'Name', type: 'text' },
-    { key: 'description', label: 'Description (Flavor Text)', type: 'textarea' },
-    { key: 'imageUrl', label: 'Image URL', type: 'text' },
-    { key: 'cost', label: 'Cost', type: 'number' },
-    { key: 'effectText', label: 'Effect Text', type: 'textarea' },
-     { key: 'rarity', label: 'Rarity', type: 'select', options: [
-        {value: 'common', label: 'Common'}, {value: 'uncommon', label: 'Uncommon'},
-        {value: 'rare', label: 'Rare'}, {value: 'mythic', label: 'Mythic'}
-      ]
-    },
-  ],
-};
-
+import { getTemplateById, getAvailableTemplatesForSelect, type CardTemplate, type TemplateField, type CardTemplateId } from '@/lib/card-templates';
 
 interface CardDataFormProps {
   cardData: CardData;
@@ -67,82 +20,105 @@ interface CardDataFormProps {
 
 export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, isGeneratingName }: CardDataFormProps) {
   const [formData, setFormData] = useState<CardData>(cardData);
+  const [currentTemplate, setCurrentTemplate] = useState<CardTemplate | undefined>(undefined);
 
   useEffect(() => {
     setFormData(cardData);
+    setCurrentTemplate(getTemplateById(cardData.templateId));
   }, [cardData]);
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    const fieldType = (templateFieldsConfig[formData.templateId] || templateFieldsConfig.generic).find(f => f.key === name)?.type;
+    const fieldDefinition = currentTemplate?.fields.find(f => f.key === name);
     
     setFormData(prev => ({
       ...prev,
-      [name]: fieldType === 'number' ? (value === '' ? undefined : Number(value)) : value,
+      [name]: fieldDefinition?.type === 'number' ? (value === '' ? undefined : Number(value)) : value,
     }));
-  };
+  }, [currentTemplate]);
   
-  const handleSelectChange = (name: string, value: string) => {
+  const handleSelectChange = useCallback((name: string, value: string) => {
     setFormData(prev => ({
       ...prev,
       [name]: value,
     }));
-  };
+  }, []);
 
-  const handleTemplateChange = (newTemplateId: CardTemplateId) => {
-    setFormData(prev => ({
-      ...prev,
-      templateId: newTemplateId,
-      // Optionally, clear or migrate fields when template changes
-    }));
-  };
+  const handleTemplateChange = useCallback((newTemplateId: CardTemplateId) => {
+    const newTemplate = getTemplateById(newTemplateId);
+    if (!newTemplate) return;
+
+    setCurrentTemplate(newTemplate);
+    setFormData(prev => {
+      const updatedFormData: Partial<CardData> = { ...prev };
+      
+      // Apply default values from the new template
+      newTemplate.fields.forEach(field => {
+        if (field.defaultValue !== undefined && updatedFormData[field.key as keyof CardData] === undefined) {
+          (updatedFormData as any)[field.key] = field.defaultValue;
+        }
+      });
+
+      // Preserve essential fields if they exist, or set them if not
+      updatedFormData.id = prev.id;
+      updatedFormData.name = prev.name || ''; // Ensure name is preserved or empty string
+      updatedFormData.description = prev.description || ''; // Ensure description is preserved or empty string
+
+      return {
+        ...(updatedFormData as CardData), // Cast back to CardData
+        templateId: newTemplateId,
+      };
+    });
+  }, []);
   
-  // Debounced update or on blur/submit to avoid too many re-renders if typing fast
-  // For simplicity, we'll update on every change for now.
   useEffect(() => {
     onUpdateCard(formData);
   }, [formData, onUpdateCard]);
 
-  const fieldsToRender = templateFieldsConfig[formData.templateId] || templateFieldsConfig.generic;
+  const availableTemplates = getAvailableTemplatesForSelect();
+  const fieldsToRender = currentTemplate?.fields || [];
+  
+  const nameGenerationSourceText = formData.effectText || formData.flavorText || formData.description || '';
 
   return (
     <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
       <div>
         <Label htmlFor="templateId">Card Template</Label>
-        <Select value={formData.templateId} onValueChange={(value: CardTemplateId) => handleTemplateChange(value)}>
+        <Select 
+          value={formData.templateId} 
+          onValueChange={(value) => handleTemplateChange(value as CardTemplateId)}
+        >
           <SelectTrigger id="templateId">
             <SelectValue placeholder="Select template" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="generic">Generic</SelectItem>
-            <SelectItem value="creature">Creature</SelectItem>
-            <SelectItem value="spell">Spell</SelectItem>
-            <SelectItem value="item">Item</SelectItem>
+            {availableTemplates.map(template => (
+              <SelectItem key={template.value} value={template.value}>{template.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
       {fieldsToRender.map(field => {
-        // Skip templateId as it's handled by the Select above
-        if (field.key === 'templateId') return null;
-        
-        const value = formData[field.key as keyof CardData] ?? '';
+        const fieldKey = field.key as keyof CardData;
+        const value = formData[fieldKey] ?? field.defaultValue ?? '';
 
         return (
-          <div key={field.key as string}>
-            <Label htmlFor={field.key as string}>{field.label}</Label>
+          <div key={field.key}>
+            <Label htmlFor={field.key}>{field.label}</Label>
             {field.key === 'name' && (
               <div className="flex items-center gap-2">
                 <Input
-                  id={field.key as string}
-                  name={field.key as string}
-                  type={field.type === 'number' ? 'number' : 'text'}
-                  value={value as string | number}
+                  id={field.key}
+                  name={field.key}
+                  type="text" // Name is always text
+                  value={value as string | number} // Keep as is for controlled input
                   onChange={handleChange}
+                  placeholder={field.placeholder}
                   className="flex-grow"
                 />
                 <NameGeneratorButton
-                  currentDescription={formData.description}
+                  currentDescription={nameGenerationSourceText}
                   onGenerateName={onGenerateName}
                   isLoading={isGeneratingName}
                   onNameGenerated={(newName) => setFormData(prev => ({...prev, name: newName}))}
@@ -151,38 +127,41 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
             )}
             {field.key !== 'name' && field.type === 'textarea' && (
               <Textarea
-                id={field.key as string}
-                name={field.key as string}
+                id={field.key}
+                name={field.key}
                 value={value as string}
                 onChange={handleChange}
-                rows={field.key === 'description' ? 3 : 5}
+                placeholder={field.placeholder}
+                rows={field.key === 'description' || field.key === 'flavorText' ? 3 : 5}
               />
             )}
             {field.key !== 'name' && field.type === 'text' && (
               <Input
-                id={field.key as string}
-                name={field.key as string}
+                id={field.key}
+                name={field.key}
                 type="text"
                 value={value as string}
                 onChange={handleChange}
+                placeholder={field.placeholder}
               />
             )}
              {field.key !== 'name' && field.type === 'number' && (
               <Input
-                id={field.key as string}
-                name={field.key as string}
+                id={field.key}
+                name={field.key}
                 type="number"
                 value={value as number}
                 onChange={handleChange}
+                placeholder={field.placeholder}
               />
             )}
             {field.key !== 'name' && field.type === 'select' && field.options && (
               <Select
                 value={value as string}
-                onValueChange={(selectValue) => handleSelectChange(field.key as string, selectValue)}
+                onValueChange={(selectValue) => handleSelectChange(field.key, selectValue)}
               >
-                <SelectTrigger id={field.key as string}>
-                  <SelectValue placeholder={`Select ${field.label}`} />
+                <SelectTrigger id={field.key}>
+                  <SelectValue placeholder={field.placeholder || `Select ${field.label}`} />
                 </SelectTrigger>
                 <SelectContent>
                   {field.options.map(option => (
@@ -190,6 +169,21 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
                   ))}
                 </SelectContent>
               </Select>
+            )}
+             {field.key !== 'name' && field.type === 'boolean' && (
+              <div className="flex items-center space-x-2 mt-2">
+                 <Input
+                    type="checkbox"
+                    id={field.key}
+                    name={field.key}
+                    checked={value as boolean}
+                    onChange={(e) => setFormData(prev => ({...prev, [field.key]: e.target.checked }))}
+                    className="h-4 w-4"
+                  />
+                <Label htmlFor={field.key} className="font-normal">
+                  {field.placeholder || field.label} 
+                </Label>
+              </div>
             )}
           </div>
         )

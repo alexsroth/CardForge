@@ -1,9 +1,10 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Project } from '@/lib/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FolderKanban, Edit3, ArrowRight } from 'lucide-react';
+import { Edit3, ArrowRight } from 'lucide-react'; // Removed FolderKanban as it's not used
 import { formatDistanceToNow } from 'date-fns';
 
 interface ProjectCardProps {
@@ -17,12 +18,12 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
       <CardHeader className="p-0">
-        <Link href={`/project/${project.id}/editor`} className="block aspect-[3/2] relative">
+        <Link href={`/project/${project.id}/editor`} className="block aspect-[3/2] relative group"> {/* Added group class */}
           <Image
-            src={project.thumbnailUrl}
+            src={project.thumbnailUrl || 'https://placehold.co/300x200.png'} // Fallback image
             alt={`${project.name} thumbnail`}
-            layout="fill"
-            objectFit="cover"
+            fill
+            style={{ objectFit: 'cover' }}
             className="transition-transform duration-300 group-hover:scale-105"
             data-ai-hint={project.dataAiHint || 'abstract game'}
           />

@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { CardData } from '@/lib/types';
@@ -30,9 +31,9 @@ export default function CreatureCardTemplate({ card }: CreatureCardTemplateProps
           <Image
             src={card.imageUrl}
             alt={card.name || 'Creature image'}
-            layout="fill"
-            objectFit="cover"
-            data-ai-hint={card.dataAiHint as string || "fantasy creature art"}
+            fill // Replaced layout="fill" and objectFit="cover"
+            style={{ objectFit: 'cover' }} // Explicit style for objectFit
+            data-ai-hint={card.dataAiHint || "fantasy creature art"}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-muted">
@@ -50,8 +51,9 @@ export default function CreatureCardTemplate({ card }: CreatureCardTemplateProps
       <CardContent className="p-3 text-xs flex-grow min-h-[70px] bg-slate-50 dark:bg-slate-900/50">
         <ScrollArea className="h-full max-h-[100px]">
           {card.effectText && <p className="mb-1 whitespace-pre-wrap">{card.effectText}</p>}
-          {card.description && <p className="italic text-muted-foreground whitespace-pre-wrap">{card.description}</p>}
-          {!card.effectText && !card.description && <p className="text-muted-foreground">No special abilities or description.</p>}
+          {card.flavorText && <p className="italic text-muted-foreground whitespace-pre-wrap">{card.flavorText}</p>}
+          {!card.effectText && !card.flavorText && !card.description && <p className="text-muted-foreground">No special abilities or description.</p>}
+          {!card.effectText && !card.flavorText && card.description && <p className="whitespace-pre-wrap">{card.description}</p>}
         </ScrollArea>
       </CardContent>
       

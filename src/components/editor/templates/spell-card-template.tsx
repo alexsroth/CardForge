@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { CardData } from '@/lib/types';
@@ -29,9 +30,9 @@ export default function SpellCardTemplate({ card }: SpellCardTemplateProps) {
           <Image
             src={card.imageUrl}
             alt={card.name || 'Spell image'}
-            layout="fill"
-            objectFit="cover"
-            data-ai-hint={card.dataAiHint as string || "magic spell art"}
+            fill
+            style={{ objectFit: 'cover' }}
+            data-ai-hint={card.dataAiHint || "magic spell art"}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-muted">
@@ -49,8 +50,9 @@ export default function SpellCardTemplate({ card }: SpellCardTemplateProps) {
       <CardContent className="p-3 text-xs flex-grow min-h-[120px] bg-purple-50 dark:bg-purple-900/50">
         <ScrollArea className="h-full max-h-[150px]">
           {card.effectText && <p className="mb-1 whitespace-pre-wrap">{card.effectText}</p>}
-          {card.description && <p className="italic text-muted-foreground whitespace-pre-wrap">{card.description}</p>}
-          {!card.effectText && !card.description && <p className="text-muted-foreground">No spell effect or description.</p>}
+          {card.flavorText && <p className="italic text-muted-foreground whitespace-pre-wrap">{card.flavorText}</p>}
+          {!card.effectText && !card.flavorText && !card.description && <p className="text-muted-foreground">No spell effect or description.</p>}
+          {!card.effectText && !card.flavorText && card.description && <p className="whitespace-pre-wrap">{card.description}</p>}
         </ScrollArea>
       </CardContent>
       
