@@ -4,8 +4,8 @@
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { CardTemplate as ImportedCardTemplate, CardTemplateId as ImportedCardTemplateId } from '@/lib/card-templates'; // Assuming this is where CardTemplate is defined
-import { cardTemplates as initialSeedTemplates } from '@/lib/card-templates'; // The seed data
+import type { CardTemplate as ImportedCardTemplate, CardTemplateId as ImportedCardTemplateId } from '@/lib/card-templates';
+import { cardTemplates as initialSeedTemplates, DEFAULT_CARD_LAYOUT_JSON_STRING } from '@/lib/card-templates'; // The seed data and default layout
 
 export type CardTemplate = ImportedCardTemplate;
 export type CardTemplateId = ImportedCardTemplateId;
@@ -28,36 +28,31 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let loadedTemplates: CardTemplate[];
     try {
       const storedTemplates = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (storedTemplates) {
-        const parsedTemplates: CardTemplate[] = JSON.parse(storedTemplates);
-        const validatedTemplates = parsedTemplates.map(t => ({
-          ...t,
-          fields: Array.isArray(t.fields) ? t.fields : [],
-          layoutDefinition: typeof t.layoutDefinition === 'string' ? t.layoutDefinition : undefined,
-        }));
-        setTemplates(validatedTemplates);
+        loadedTemplates = JSON.parse(storedTemplates);
       } else {
-        const validatedSeedTemplates = initialSeedTemplates.map(t => ({
-          ...t,
-          fields: Array.isArray(t.fields) ? t.fields : [],
-          layoutDefinition: typeof t.layoutDefinition === 'string' ? t.layoutDefinition : undefined,
-        }));
-        setTemplates(validatedSeedTemplates);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(validatedSeedTemplates));
+        loadedTemplates = initialSeedTemplates;
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(loadedTemplates));
       }
     } catch (error) {
       console.error("Failed to load templates from localStorage, using initial seed:", error);
-      const validatedSeedTemplates = initialSeedTemplates.map(t => ({
-          ...t,
-          fields: Array.isArray(t.fields) ? t.fields : [],
-          layoutDefinition: typeof t.layoutDefinition === 'string' ? t.layoutDefinition : undefined,
-        }));
-      setTemplates(validatedSeedTemplates);
-    } finally {
-      setIsLoading(false);
+      loadedTemplates = initialSeedTemplates;
     }
+    
+    // Ensure all loaded templates have necessary fields and a default layout if missing
+    const validatedTemplates = loadedTemplates.map(t => ({
+      ...t,
+      fields: Array.isArray(t.fields) ? t.fields : [],
+      layoutDefinition: (typeof t.layoutDefinition === 'string' && t.layoutDefinition.trim() !== '') 
+                          ? t.layoutDefinition 
+                          : DEFAULT_CARD_LAYOUT_JSON_STRING,
+    }));
+
+    setTemplates(validatedTemplates);
+    setIsLoading(false);
   }, []);
 
   const persistTemplates = useCallback((updatedTemplates: CardTemplate[]) => {
@@ -77,17 +72,20 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
     if (templates.some(t => t.id === templateData.id)) {
       return { success: false, message: `Template ID '${templateData.id}' already exists.` };
     }
-    // Ensure layoutDefinition is either a string or undefined
+    
     const newTemplateData = {
       ...templateData,
-      layoutDefinition: typeof templateData.layoutDefinition === 'string' ? templateData.layoutDefinition : undefined,
+      layoutDefinition: (typeof templateData.layoutDefinition === 'string' && templateData.layoutDefinition.trim() !== '')
+                          ? templateData.layoutDefinition
+                          : DEFAULT_CARD_LAYOUT_JSON_STRING,
     };
+
     setTemplates(prevTemplates => {
       const updatedTemplates = [...prevTemplates, newTemplateData];
       persistTemplates(updatedTemplates);
       return updatedTemplates;
     });
-    return { success: true, message: `Template '${templateData.name}' saved successfully.` };
+    return { success: true, message: `Template '${newTemplateData.name}' saved successfully.` };
   }, [templates, persistTemplates]);
 
   const updateTemplate = useCallback(async (templateData: CardTemplate): Promise<{ success: boolean; message: string }> => {
@@ -95,11 +93,14 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
       return { success: false, message: "Template ID is missing, cannot update." };
     }
     let found = false;
-    // Ensure layoutDefinition is either a string or undefined before saving
+    
     const updatedTemplateData = {
       ...templateData,
-      layoutDefinition: typeof templateData.layoutDefinition === 'string' ? templateData.layoutDefinition : undefined,
+      layoutDefinition: (typeof templateData.layoutDefinition === 'string' && templateData.layoutDefinition.trim() !== '')
+                          ? templateData.layoutDefinition
+                          : DEFAULT_CARD_LAYOUT_JSON_STRING,
     };
+
     setTemplates(prevTemplates => {
       const updatedTemplates = prevTemplates.map(t => {
         if (t.id === updatedTemplateData.id) {
@@ -148,3 +149,5 @@ export const useTemplates = (): TemplateContextType => {
   }
   return context;
 };
+
+    

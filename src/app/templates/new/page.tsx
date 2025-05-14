@@ -13,6 +13,7 @@ import FieldRow, { type TemplateFieldDefinition } from '@/components/template-de
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates } from '@/contexts/TemplateContext';
 import type { TemplateField, CardTemplate, CardTemplateId } from '@/lib/card-templates';
+import { DEFAULT_CARD_LAYOUT_JSON_STRING } from '@/lib/card-templates'; // Import the default layout
 import type { CardData } from '@/lib/types';
 import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-renderer';
 import { useRouter } from 'next/navigation';
@@ -73,57 +74,12 @@ const toCamelCase = (str: string): string => {
   return result;
 };
 
-const defaultLayoutJson = `{
-  "width": "280px",
-  "height": "400px",
-  "backgroundColor": "hsl(var(--card))",
-  "borderColor": "hsl(var(--border))",
-  "borderRadius": "calc(var(--radius) - 2px)",
-  "backgroundImageField": "artworkUrl", 
-  "elements": [
-    {
-      "fieldKey": "name", "type": "text",
-      "style": { "position": "absolute", "top": "15px", "left": "15px", "right": "60px", "fontSize": "1.1em", "fontWeight": "bold", "lineHeight": "1.2", "maxHeight": "40px", "overflow": "hidden", "textOverflow": "ellipsis" },
-      "className": "text-card-foreground"
-    },
-    {
-      "fieldKey": "cost", "type": "iconValue", "icon": "Coins",
-      "style": { "position": "absolute", "top": "15px", "right": "15px", "fontSize": "1.1em", "fontWeight": "bold", "padding": "5px", "backgroundColor": "hsla(var(--primary-foreground), 0.1)", "borderRadius": "9999px", "border": "1px solid hsla(var(--primary), 0.5)" },
-      "className": "text-primary"
-    },
-    {
-      "fieldKey": "imageUrl", "type": "image",
-      "style": { "position": "absolute", "top": "60px", "left": "15px", "right": "15px", "height": "140px", "objectFit": "cover", "borderRadius": "calc(var(--radius) - 4px)" }
-    },
-    {
-        "fieldKey": "cardType", "type": "text",
-        "style": { "position": "absolute", "top": "210px", "left": "15px", "right": "15px", "fontSize": "0.8em", "fontStyle": "italic", "textAlign": "center", "padding": "2px 0", "borderTop": "1px solid hsl(var(--border))", "borderBottom": "1px solid hsl(var(--border))" },
-        "className": "text-muted-foreground"
-    },
-    {
-      "fieldKey": "effectText", "type": "textarea",
-      "style": { "position": "absolute", "top": "240px", "left": "15px", "right": "15px", "bottom": "55px", "fontSize": "0.85em", "lineHeight": "1.4" },
-      "className": "text-card-foreground"
-    },
-    {
-      "fieldKey": "attack", "type": "iconValue", "icon": "Sword",
-      "style": { "position": "absolute", "bottom": "15px", "left": "15px", "fontSize": "1em", "fontWeight": "bold" },
-      "className": "text-destructive"
-    },
-    {
-      "fieldKey": "defense", "type": "iconValue", "icon": "Shield",
-      "style": { "position": "absolute", "bottom": "15px", "right": "15px", "fontSize": "1em", "fontWeight": "bold" },
-      "className": "text-blue-500"
-    }
-  ]
-}`;
-
 
 export default function TemplateDesignerPage() {
   const [templateId, setTemplateId] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<TemplateFieldDefinition[]>([]);
-  const [layoutDefinition, setLayoutDefinition] = useState<string>(defaultLayoutJson); 
+  const [layoutDefinition, setLayoutDefinition] = useState<string>(DEFAULT_CARD_LAYOUT_JSON_STRING); 
   const [isSaving, setIsSaving] = useState(false);
   const [sampleCardForPreview, setSampleCardForPreview] = useState<CardData | null>(null);
   
@@ -192,10 +148,10 @@ export default function TemplateDesignerPage() {
                if((fieldDef.key === 'imageUrl' || fieldDef.key === 'artworkUrl') && typeof fieldDef.defaultValue === 'string' && !fieldDef.defaultValue.startsWith('http')) {
                   (acc as any)[key] = `https://placehold.co/${fieldDef.key === 'imageUrl' ? '250x140' : '280x400'}.png`; // Fallback for invalid image default
                }
-          } else if(fieldDef.key === 'imageUrl') {
-               (acc as any)[key] = 'https://placehold.co/250x140.png';
-          } else if(fieldDef.key === 'artworkUrl') {
-               (acc as any)[key] = 'https://placehold.co/280x400.png';
+          } else if(fieldDef.key === 'imageUrl' && !(generatedSampleCard as any)[key]) { // Check if key exists in sample and is falsy
+             (generatedSampleCard as any)[key] = 'https://placehold.co/250x140.png';
+          } else if(fieldDef.key === 'artworkUrl' && !(generatedSampleCard as any)[key]) { // Check if key exists in sample and is falsy
+             (generatedSampleCard as any)[key] = 'https://placehold.co/280x400.png';
           }
         }
         return acc;
@@ -338,7 +294,7 @@ export default function TemplateDesignerPage() {
       id: finalTemplateId as CardTemplateId, 
       name: templateName.trim(),
       fields: fields.map(mapFieldDefinitionToTemplateField),
-      layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : undefined,
+      layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : DEFAULT_CARD_LAYOUT_JSON_STRING, // Ensure default if empty
     };
 
     const result = await saveTemplateToContext(newTemplate);
@@ -382,7 +338,7 @@ export default function TemplateDesignerPage() {
               <CardDescription>
                 Define the structure for a new card template. Template ID is auto-generated from the name.
                 Field Keys are auto-generated from Field Labels. Templates are saved to browser local storage.
-                Use the live preview on the right to test your layout JSON. The default layout is a starting point.
+                A default layout is provided; customize it using the live preview on the right.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

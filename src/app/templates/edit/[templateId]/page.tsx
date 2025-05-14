@@ -13,6 +13,7 @@ import FieldRow, { type TemplateFieldDefinition } from '@/components/template-de
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates, type CardTemplateId } from '@/contexts/TemplateContext';
 import type { TemplateField, CardTemplate } from '@/lib/card-templates';
+import { DEFAULT_CARD_LAYOUT_JSON_STRING } from '@/lib/card-templates'; // Import default layout
 import type { CardData } from '@/lib/types';
 import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-renderer';
 import { useParams, useRouter } from 'next/navigation';
@@ -116,7 +117,8 @@ export default function EditTemplatePage() {
       setOriginalTemplateId(templateToEdit.id as CardTemplateId); 
       setTemplateName(templateToEdit.name);
       setFields(templateToEdit.fields.map(mapTemplateFieldToFieldDefinition));
-      setLayoutDefinition(templateToEdit.layoutDefinition || ''); // Default to empty string if undefined
+      // Ensure layoutDefinition is never empty, fall back to default if necessary
+      setLayoutDefinition(templateToEdit.layoutDefinition?.trim() ? templateToEdit.layoutDefinition : DEFAULT_CARD_LAYOUT_JSON_STRING);
       setErrorLoading(null);
     } else {
       setErrorLoading(`Template with ID "${templateIdToEdit}" not found.`);
@@ -310,7 +312,7 @@ export default function EditTemplatePage() {
       id: originalTemplateId, 
       name: templateName.trim(),
       fields: fields.map(mapFieldDefinitionToTemplateField),
-      layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : undefined,
+      layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : DEFAULT_CARD_LAYOUT_JSON_STRING, // Ensure default if empty
     };
 
     const result = await updateTemplate(updatedTemplateData);
@@ -444,7 +446,7 @@ export default function EditTemplatePage() {
                       </ul>
                       <p className="font-semibold mb-1"><code>elements</code> array (each object defines one visual piece):</p>
                       <ul className="list-disc list-inside pl-2 space-y-0.5">
-                        <li><code>fieldKey</code>: String that **must exactly match a 'Field Key'** from your "Data Fields" section above (e.g., if you have a field labeled "Card Title" with an auto-generated key "cardTitle", you would use <code>"cardTitle"</code> here).</li>
+                        <li><code>fieldKey</code>: String that **must exactly match a 'Field Key'** from your "Data Fields" section above (e.g., if you have a field labeled "Card Title" with an auto-generated key "cardTitle", you would use <code>"cardTitle"</code> here). The default layout uses common examples like "name", "cost", "imageUrl".</li>
                         <li><code>type</code>: "text", "textarea", "image", or "iconValue".</li>
                         <li><code>style</code>: CSS-in-JS object (e.g., <code>{'{ "position": "absolute", "top": "10px", "fontSize": "1.2em" }'}</code>). Use camelCase for CSS properties (<code>fontSize</code> not <code>font-size</code>).</li>
                         <li><code>className</code>: (Optional) Tailwind CSS classes.</li>
