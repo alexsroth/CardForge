@@ -1,3 +1,4 @@
+
 import Link from 'next/link';
 import ProjectCard from '@/components/project-card';
 import type { Project } from '@/lib/types';
@@ -5,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 
 // Mock data for projects - replace with actual data fetching later
-const mockProjects: Project[] = [
+export const mockProjects: Project[] = [
   {
     id: 'project-alpha',
     name: 'Alpha Beasts',
     thumbnailUrl: 'https://placehold.co/300x200.png',
     dataAiHint: 'fantasy creature',
     lastModified: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
+    associatedTemplateIds: ['creature', 'spell', 'generic'],
   },
   {
     id: 'project-beta',
@@ -19,6 +21,7 @@ const mockProjects: Project[] = [
     thumbnailUrl: 'https://placehold.co/300x200.png',
     dataAiHint: 'abstract technology',
     lastModified: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(), // 5 days ago
+    associatedTemplateIds: ['spell', 'item', 'generic'],
   },
   {
     id: 'project-gamma',
@@ -26,6 +29,7 @@ const mockProjects: Project[] = [
     thumbnailUrl: 'https://placehold.co/300x200.png',
     dataAiHint: 'medieval weapon',
     lastModified: new Date().toISOString(),
+    associatedTemplateIds: ['item', 'creature', 'generic'],
   },
 ];
 

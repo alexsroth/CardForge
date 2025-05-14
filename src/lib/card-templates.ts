@@ -1,5 +1,5 @@
 
-import type { CardData } from './types';
+import type { CardData, CardTemplateId as ImportedCardTemplateId } from './types'; // Use new CardTemplateId alias
 
 // Define the structure for a field within a card template
 export interface TemplateField {
@@ -14,15 +14,20 @@ export interface TemplateField {
 
 // Define the structure for a card template
 export interface CardTemplate {
-  id: string; // Unique ID for the template
+  id: ImportedCardTemplateId; // Unique ID for the template, using the aliased type
   name: string; // User-friendly name (e.g., "Creature Card")
   fields: TemplateField[];
   // Optional: defaultImageUrl, defaultDataAiHint for this template
 }
 
 // Define available template IDs - this ensures consistency
+// This is still valuable for defining *all* possible templates in the system.
 export const CARD_TEMPLATE_IDS = ['generic', 'creature', 'spell', 'item'] as const;
+// The CardTemplateId type from ./types.ts is now the source of truth for this.
+// This specific export might become redundant if CardTemplateId from types.ts is used everywhere,
+// but it's good for defining the master list of what templates *can* exist.
 export type CardTemplateId = typeof CARD_TEMPLATE_IDS[number];
+
 
 // Centralized array of all card template definitions
 export const cardTemplates: CardTemplate[] = [
@@ -98,14 +103,19 @@ export const cardTemplates: CardTemplate[] = [
 ];
 
 // Helper function to get a template definition by its ID
-export function getTemplateById(templateId?: CardTemplateId): CardTemplate | undefined {
+export function getTemplateById(templateId?: ImportedCardTemplateId): CardTemplate | undefined {
   if (!templateId) return undefined;
   return cardTemplates.find(t => t.id === templateId);
 }
 
-// Helper to get all available template IDs and names for select dropdowns
-export function getAvailableTemplatesForSelect() {
-  return cardTemplates.map(template => ({
+// Helper to get available template IDs and names for select dropdowns
+// Updated to filter by allowedTemplateIds if provided
+export function getAvailableTemplatesForSelect(allowedTemplateIds?: ImportedCardTemplateId[]) {
+  const templatesToConsider = allowedTemplateIds
+    ? cardTemplates.filter(template => allowedTemplateIds.includes(template.id))
+    : cardTemplates;
+
+  return templatesToConsider.map(template => ({
     value: template.id,
     label: template.name,
   }));

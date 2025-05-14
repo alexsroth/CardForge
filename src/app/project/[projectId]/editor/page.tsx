@@ -2,7 +2,7 @@
 import LiveEditorClientPage from '@/components/editor/live-editor-client-page';
 import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { CardData } from '@/lib/types'; // Import CardData
+import type { CardData, EditorProjectData, CardTemplateId } from '@/lib/types'; // Import EditorProjectData
 import { CARD_TEMPLATE_IDS } from '@/lib/card-templates'; // Import card template IDs
 
 interface EditorPageProps {
@@ -12,7 +12,7 @@ interface EditorPageProps {
 }
 
 // Mock project data fetching - replace with actual data source later
-async function getProjectData(projectId: string) {
+async function getProjectData(projectId: string): Promise<EditorProjectData> {
   // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 500)); 
   
@@ -27,51 +27,77 @@ async function getProjectData(projectId: string) {
       id: 'new-project',
       name: 'New Project',
       cards: [
-        { // Start a new project with one generic card
+        { 
           id: `card-${Date.now()}`,
-          templateId: 'generic',
+          templateId: 'generic', // Ensure new cards start with a valid default template
           name: 'My First Card',
           description: 'This is a generic card. Change its template and edit its properties!',
           imageUrl: 'https://placehold.co/280x400.png',
           dataAiHint: 'card game concept',
         }
       ],
+      associatedTemplateIds: ['generic', 'creature'], // Example: new projects can use generic and creature
     };
   }
   
+  // Example project data matching mockProjects in app/page.tsx for consistency
   if (projectId === 'project-alpha') {
     return {
       id: 'project-alpha',
       name: 'Alpha Beasts Deck',
       cards: defaultCards,
+      associatedTemplateIds: ['creature', 'spell', 'generic'],
     };
   }
+  if (projectId === 'project-beta') {
+    return {
+      id: 'project-beta',
+      name: 'Cyber Spells Deck',
+      cards: [ /* different set of cards or filter defaultCards */ 
+        { id: 'card-cb1', templateId: 'spell', name: 'Plasma Bolt', description: '', flavorText: 'Zap!', cost: 2, effectText: 'Deals 2 damage, draws a card.', imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'energy blast', rarity: 'common'},
+        { id: 'card-cb2', templateId: 'item', name: 'Cybernetic Arm', description: '', flavorText: 'Enhance your reach.', cost: 4, effectText: '+2 Attack to equipped creature.', imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'robotic arm', rarity: 'uncommon' },
+      ],
+      associatedTemplateIds: ['spell', 'item', 'generic'],
+    };
+  }
+   if (projectId === 'project-gamma') {
+    return {
+      id: 'project-gamma',
+      name: 'Medieval Items Deck',
+      cards: [
+        { id: 'card-mg1', templateId: 'item', name: 'Longsword', description: '', flavorText: 'A trusty blade.', cost: 3, effectText: 'Equipped creature gets +2/+1.', imageUrl: 'https://placehold.co/280x400.png', dataAiHint: 'sword medieval', rarity: 'common'},
+      ],
+      associatedTemplateIds: ['item', 'creature', 'generic'],
+    };
+  }
+
   // Default fallback or error handling for other project IDs
   return {
     id: projectId,
     name: `Project ${projectId}`,
-    cards: [ // Provide a default card if no specific project matches
+    cards: [ 
         {
           id: `card-default-${Date.now()}`,
-          templateId: 'generic',
+          templateId: 'generic', // Default to generic
           name: 'Sample Card',
           description: 'This is a sample card for this project.',
           imageUrl: 'https://placehold.co/280x400.png',
           dataAiHint: 'sample abstract',
         }
     ],
+    associatedTemplateIds: ['generic'], // Fallback project only gets generic
   };
 }
 
 
 export default async function EditorPage({ params }: EditorPageProps) {
   const { projectId } = params;
-  const initialDeckData = await getProjectData(projectId);
+  const initialProjectData = await getProjectData(projectId);
 
   return (
     <div className="h-[calc(100vh-3.5rem)] overflow-hidden"> {/* Adjust height based on header */}
        <Suspense fallback={<EditorLoadingSkeleton />}>
-        <LiveEditorClientPage initialDeckData={initialDeckData} />
+        <LiveEditorClientPage initialProjectData={initialProjectData} />
       </Suspense>
     </div>
   );

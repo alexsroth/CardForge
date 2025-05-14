@@ -1,6 +1,7 @@
+
 "use client";
 
-import type { CardData } from '@/lib/types';
+import type { CardData, CardTemplateId } from '@/lib/types';
 import CardDataForm from './card-data-form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -9,9 +10,10 @@ interface CardDetailPanelProps {
   onUpdateCard: (updatedCard: CardData) => void;
   onGenerateName: (description: string) => Promise<string>;
   isGeneratingName: boolean;
+  associatedTemplateIds: CardTemplateId[]; // Added prop
 }
 
-export default function CardDetailPanel({ card, onUpdateCard, onGenerateName, isGeneratingName }: CardDetailPanelProps) {
+export default function CardDetailPanel({ card, onUpdateCard, onGenerateName, isGeneratingName, associatedTemplateIds }: CardDetailPanelProps) {
   return (
     <ScrollArea className="flex-grow p-1"> {/* Reduced padding here */}
       <div className="p-3"> {/* Added inner div for padding */}
@@ -22,6 +24,7 @@ export default function CardDetailPanel({ card, onUpdateCard, onGenerateName, is
           onUpdateCard={onUpdateCard}
           onGenerateName={onGenerateName}
           isGeneratingName={isGeneratingName}
+          associatedTemplateIds={associatedTemplateIds} // Pass down
         />
       </div>
     </ScrollArea>

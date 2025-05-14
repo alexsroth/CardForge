@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { DeckData, CardData, CardTemplateId } from '@/lib/types';
+import type { EditorProjectData, CardData, CardTemplateId } from '@/lib/types';
 import { useState, useEffect, useCallback } from 'react';
 import CardListPanel from './card-list-panel';
 import CardDetailPanel from './card-detail-panel';
@@ -16,7 +16,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface LiveEditorClientPageProps {
-  initialDeckData: DeckData;
+  initialProjectData: EditorProjectData;
 }
 
 function EditorClientPageSkeleton() {
@@ -70,8 +70,10 @@ function EditorClientPageSkeleton() {
 }
 
 
-export default function LiveEditorClientPage({ initialDeckData }: LiveEditorClientPageProps) {
-  const [deck, setDeck] = useState<DeckData>(initialDeckData);
+export default function LiveEditorClientPage({ initialProjectData }: LiveEditorClientPageProps) {
+  const [projectName, setProjectName] = useState<string>(initialProjectData.name);
+  const [cards, setCards] = useState<CardData[]>(initialProjectData.cards);
+  const [associatedTemplateIds, setAssociatedTemplateIds] = useState<CardTemplateId[]>(initialProjectData.associatedTemplateIds);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [isLoadingName, setIsLoadingName] = useState(false);
   const { toast } = useToast();
@@ -89,53 +91,51 @@ export default function LiveEditorClientPage({ initialDeckData }: LiveEditorClie
   );
 
   useEffect(() => {
-    setDeck(initialDeckData);
-    if (initialDeckData.cards.length > 0 && initialDeckData.cards[0]?.id) {
-      setSelectedCardId(initialDeckData.cards[0].id);
+    setProjectName(initialProjectData.name);
+    setCards(initialProjectData.cards);
+    setAssociatedTemplateIds(initialProjectData.associatedTemplateIds);
+
+    if (initialProjectData.cards.length > 0 && initialProjectData.cards[0]?.id) {
+      setSelectedCardId(initialProjectData.cards[0].id);
     } else {
       setSelectedCardId(null);
     }
-  }, [initialDeckData]);
+  }, [initialProjectData]);
 
   const handleSelectCard = useCallback((cardId: string) => {
     setSelectedCardId(cardId);
-  }, []); // No external dependencies needed for setSelectedCardId
+  }, []);
 
   const handleUpdateCard = useCallback((updatedCard: CardData) => {
-    setDeck(prevDeck => ({
-      ...prevDeck,
-      cards: prevDeck.cards.map(card => card.id === updatedCard.id ? updatedCard : card)
-    }));
-  }, []); // No external dependencies needed for setDeck
+    setCards(prevCards => prevCards.map(card => card.id === updatedCard.id ? updatedCard : card));
+  }, []);
 
   const handleAddCard = useCallback(() => {
     const newCardId = `card-${Date.now()}`;
+    // Use the first associated template ID as default, or 'generic' if none are associated (though this shouldn't happen with proper setup)
+    const defaultTemplateIdForNewCard = associatedTemplateIds.length > 0 ? associatedTemplateIds[0] : 'generic';
     const newCard: CardData = {
       id: newCardId,
-      templateId: 'generic',
+      templateId: defaultTemplateIdForNewCard,
       name: 'New Card',
       description: '',
     };
-    setDeck(prevDeck => ({
-      ...prevDeck,
-      cards: [...prevDeck.cards, newCard]
-    }));
+    setCards(prevCards => [...prevCards, newCard]);
     setSelectedCardId(newCardId);
-  }, []); // No external dependencies needed for setDeck, setSelectedCardId
+  }, [associatedTemplateIds]);
 
   const handleDeleteCard = useCallback((cardIdToDelete: string) => {
-    setDeck(currentDeck => {
-      const newCards = currentDeck.cards.filter(card => card.id !== cardIdToDelete);
-      // Use functional update for setSelectedCardId if it depends on previous state
+    setCards(currentCards => {
+      const newCardsList = currentCards.filter(card => card.id !== cardIdToDelete);
       setSelectedCardId(prevSelectedId => {
         if (prevSelectedId === cardIdToDelete) {
-          return newCards.length > 0 ? newCards[0].id : null;
+          return newCardsList.length > 0 ? newCardsList[0].id : null;
         }
         return prevSelectedId;
       });
-      return { ...currentDeck, cards: newCards };
+      return newCardsList;
     });
-  }, []); // No external dependencies needed for setDeck, setSelectedCardId
+  }, []);
   
   const handleGenerateName = useCallback(async (description: string): Promise<string> => {
     if (!description.trim()) {
@@ -154,33 +154,37 @@ export default function LiveEditorClientPage({ initialDeckData }: LiveEditorClie
     } finally {
       setIsLoadingName(false);
     }
-  }, [toast]); // setIsLoadingName is stable, toast is from context
+  }, [toast]);
 
   const handleImportData = useCallback((importedCards: CardData[]) => {
-    setDeck(prevDeck => ({ ...prevDeck, cards: importedCards }));
-    setSelectedCardId(importedCards.length > 0 ? importedCards[0].id : null);
-    toast({ title: "Data Imported", description: `${importedCards.length} cards loaded.` });
-  }, [toast]); // setDeck, setSelectedCardId are stable
+    // Ensure imported cards use templates available to this project
+    const validImportedCards = importedCards.map(card => ({
+      ...card,
+      templateId: associatedTemplateIds.includes(card.templateId) 
+                    ? card.templateId 
+                    : (associatedTemplateIds.length > 0 ? associatedTemplateIds[0] : 'generic')
+    }));
+    setCards(validImportedCards);
+    setSelectedCardId(validImportedCards.length > 0 ? validImportedCards[0].id : null);
+    toast({ title: "Data Imported", description: `${validImportedCards.length} cards loaded.` });
+  }, [toast, associatedTemplateIds]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const {active, over} = event;
     if (over && active.id !== over.id) {
-      setDeck((prevDeck) => {
-        const oldIndex = prevDeck.cards.findIndex((card) => card.id === active.id);
-        const newIndex = prevDeck.cards.findIndex((card) => card.id === over.id);
-        return {
-          ...prevDeck,
-          cards: arrayMove(prevDeck.cards, oldIndex, newIndex),
-        };
+      setCards((prevCards) => {
+        const oldIndex = prevCards.findIndex((card) => card.id === active.id);
+        const newIndex = prevCards.findIndex((card) => card.id === over.id);
+        return arrayMove(prevCards, oldIndex, newIndex);
       });
     }
-  }, []); // setDeck is stable
+  }, []);
 
   if (!isMounted) {
     return <EditorClientPageSkeleton />;
   }
 
-  const selectedEditorCard = deck.cards.find(card => card.id === selectedCardId);
+  const selectedEditorCard = cards.find(card => card.id === selectedCardId);
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -188,12 +192,12 @@ export default function LiveEditorClientPage({ initialDeckData }: LiveEditorClie
         {/* Left Panel: Card List and Details */}
         <div className="w-[550px] flex flex-col border-r bg-background">
           <div className="p-4 border-b">
-            <h2 className="text-xl font-semibold">{deck.name}</h2>
-             <DataControls cards={deck.cards} onImport={handleImportData} />
+            <h2 className="text-xl font-semibold">{projectName}</h2>
+             <DataControls cards={cards} onImport={handleImportData} />
           </div>
           <div className="flex flex-grow min-h-0"> {/* min-h-0 is important for flex children with scroll */}
             <CardListPanel
-              cards={deck.cards}
+              cards={cards}
               selectedCardId={selectedCardId}
               onSelectCard={handleSelectCard}
               onAddCard={handleAddCard}
@@ -207,6 +211,7 @@ export default function LiveEditorClientPage({ initialDeckData }: LiveEditorClie
                 onUpdateCard={handleUpdateCard}
                 onGenerateName={handleGenerateName}
                 isGeneratingName={isLoadingName}
+                associatedTemplateIds={associatedTemplateIds} // Pass down associated templates
               />
             ) : (
               <div className="p-4 text-center text-muted-foreground flex-grow flex items-center justify-center">
@@ -222,4 +227,3 @@ export default function LiveEditorClientPage({ initialDeckData }: LiveEditorClie
     </DndContext>
   );
 }
-
