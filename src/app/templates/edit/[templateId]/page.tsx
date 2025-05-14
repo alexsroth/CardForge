@@ -161,15 +161,19 @@ export default function EditTemplatePage() {
     fields.forEach(fieldDef => {
       const key = fieldDef.key as keyof CardData;
        if (fieldDef.type === 'placeholderImage') {
-          let url = `https://placehold.co/${fieldDef.placeholderConfigWidth || 250}x${fieldDef.placeholderConfigHeight || 140}.png`;
-          if (fieldDef.placeholderConfigBgColor) {
-            url += `/${fieldDef.placeholderConfigBgColor.replace('#', '')}`;
-            if (fieldDef.placeholderConfigTextColor) {
-              url += `/${fieldDef.placeholderConfigTextColor.replace('#', '')}`;
+          const width = fieldDef.placeholderConfigWidth || 250;
+          const height = fieldDef.placeholderConfigHeight || 140;
+          let pathSegments = `${width}x${height}`;
+
+          if (fieldDef.placeholderConfigBgColor && fieldDef.placeholderConfigBgColor.trim() !== '') {
+            pathSegments += `/${fieldDef.placeholderConfigBgColor.replace('#', '').trim()}`;
+            if (fieldDef.placeholderConfigTextColor && fieldDef.placeholderConfigTextColor.trim() !== '') {
+              pathSegments += `/${fieldDef.placeholderConfigTextColor.replace('#', '').trim()}`;
             }
           }
-          if (fieldDef.placeholderConfigText) {
-            url += `?text=${encodeURIComponent(fieldDef.placeholderConfigText)}`;
+          let url = `https://placehold.co/${pathSegments}.png`;
+          if (fieldDef.placeholderConfigText && fieldDef.placeholderConfigText.trim() !== '') {
+            url += `?text=${encodeURIComponent(fieldDef.placeholderConfigText.trim())}`;
           }
           (generatedSampleCard as any)[key] = url;
        } else if (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '') {
@@ -195,7 +199,6 @@ export default function EditTemplatePage() {
           }
         }
       }
-      // Ensure specific default fields for preview are set if not overridden
       if (['name', 'description', 'cost', 'attack', 'defense', 'imageUrl', 'dataAiHint', 'rarity', 'effectText', 'flavorText', 'artworkUrl', 'cardType', 'statusIcon'].includes(fieldDef.key)) {
          if ((fieldDef.type !== 'placeholderImage' && (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '')) ) {
              if((fieldDef.key === 'imageUrl' || fieldDef.key === 'artworkUrl') && typeof fieldDef.defaultValue === 'string' && !fieldDef.defaultValue.startsWith('http') && !fieldDef.defaultValue.startsWith('https')) {
@@ -251,8 +254,8 @@ export default function EditTemplatePage() {
         placeholder: '',
         defaultValue: '',
         optionsString: '',
-        placeholderConfigWidth: 250, // Default for new placeholderImage
-        placeholderConfigHeight: 140, // Default for new placeholderImage
+        placeholderConfigWidth: 250, 
+        placeholderConfigHeight: 140, 
       }
     ]);
   };
@@ -288,7 +291,6 @@ export default function EditTemplatePage() {
         }
         modifiedField.key = newKey;
     }
-    // Ensure default config for placeholderImage if type changes to it
     if (updatedFieldDefinition.type === 'placeholderImage' && oldField.type !== 'placeholderImage') {
         modifiedField.placeholderConfigWidth = modifiedField.placeholderConfigWidth || 250;
         modifiedField.placeholderConfigHeight = modifiedField.placeholderConfigHeight || 140;
