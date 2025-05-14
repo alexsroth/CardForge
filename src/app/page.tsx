@@ -6,9 +6,11 @@ import ProjectCard from '@/components/project-card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Loader2 } from 'lucide-react';
 import { useProjects } from '@/contexts/ProjectContext'; 
+import type { Project } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import CreateProjectDialog from '@/components/project/create-project-dialog'; // Import the dialog
-import { useState } from 'react';
+import CreateProjectDialog from '@/components/project/create-project-dialog';
+import EditProjectDialog from '@/components/project/edit-project-dialog'; // Import EditProjectDialog
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
@@ -21,30 +23,37 @@ function DashboardLoadingSkeleton() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {[...Array(4)].map((_, i) => (
-          <Card key={i} className="flex flex-col overflow-hidden">
-            <Skeleton className="aspect-[3/2] w-full" />
-            <CardContent className="p-4 flex-grow">
-              <Skeleton className="h-6 w-3/4 mb-2" />
-              <Skeleton className="h-4 w-1/2" />
-            </CardContent>
-            <CardFooter className="p-4 border-t">
-              <Skeleton className="h-9 w-full" />
-            </CardFooter>
-          </Card>
+          <CardSkeleton key={i} />
         ))}
       </div>
     </div>
   );
 }
-// Dummy Card and CardContent for Skeleton
-const Card = ({className, children}: {className?: string, children: React.ReactNode}) => <div className={className}>{children}</div>;
-const CardContent =  ({className, children}: {className?: string, children: React.ReactNode}) => <div className={className}>{children}</div>;
-const CardFooter =  ({className, children}: {className?: string, children: React.ReactNode}) => <div className={className}>{children}</div>;
+
+function CardSkeleton() {
+  return (
+    <div className="flex flex-col overflow-hidden rounded-lg border bg-card shadow-sm">
+      <Skeleton className="aspect-[3/2] w-full" />
+      <div className="p-4 flex-grow">
+        <Skeleton className="h-6 w-3/4 mb-2" />
+        <Skeleton className="h-4 w-1/2 mb-3" />
+        <Skeleton className="h-3 w-full mb-1" />
+        <Skeleton className="h-3 w-3/4" />
+      </div>
+      <div className="p-3 border-t grid grid-cols-2 gap-2">
+        <Skeleton className="h-9 w-full" />
+        <Skeleton className="h-9 w-full" />
+      </div>
+    </div>
+  )
+}
 
 
 export default function DashboardPage() {
-  const { projects, isLoading, addProject } = useProjects();
+  const { projects, isLoading, addProject, updateProject, getProjectById } = useProjects();
   const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] = useState(false);
+  const [isEditProjectDialogOpen, setIsEditProjectDialogOpen] = useState(false);
+  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -75,6 +84,47 @@ export default function DashboardPage() {
     }
   };
 
+  const handleOpenEditDialog = (project: Project) => {
+    setProjectToEdit(project);
+    setIsEditProjectDialogOpen(true);
+  };
+
+  const handleEditProject = async (updatedData: Partial<Omit<Project, 'id' | 'cards' | 'lastModified' | 'associatedTemplateIds'>>) => {
+    if (!projectToEdit) return;
+
+    // Retrieve the full project data from context to ensure we don't overwrite cards or other non-editable fields
+    const fullProjectData = getProjectById(projectToEdit.id);
+    if (!fullProjectData) {
+      toast({ title: "Error", description: "Original project data not found.", variant: "destructive" });
+      return;
+    }
+
+    const projectWithUpdates: Project = {
+      ...fullProjectData, // Start with all original data
+      name: updatedData.name || fullProjectData.name,
+      thumbnailUrl: updatedData.thumbnailUrl || fullProjectData.thumbnailUrl,
+      dataAiHint: updatedData.dataAiHint || fullProjectData.dataAiHint,
+      // lastModified will be updated by the updateProject function in the context
+    };
+
+    const result = await updateProject(projectWithUpdates);
+    if (result.success) {
+      toast({
+        title: "Project Updated!",
+        description: `Project "${projectWithUpdates.name}" has been successfully updated.`,
+      });
+      setIsEditProjectDialogOpen(false);
+      setProjectToEdit(null);
+    } else {
+      toast({
+        title: "Update Failed",
+        description: result.message || "Could not update the project.",
+        variant: "destructive",
+      });
+    }
+  };
+
+
   if (isLoading) {
     return <DashboardLoadingSkeleton />;
   }
@@ -92,7 +142,11 @@ export default function DashboardPage() {
         {projects.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
+              <ProjectCard 
+                key={project.id} 
+                project={project} 
+                onEditDetailsClick={() => handleOpenEditDialog(project)}
+              />
             ))}
           </div>
         ) : (
@@ -111,6 +165,17 @@ export default function DashboardPage() {
         onClose={() => setIsCreateProjectDialogOpen(false)}
         onSubmit={handleCreateProject}
       />
+      {projectToEdit && (
+        <EditProjectDialog
+          isOpen={isEditProjectDialogOpen}
+          onClose={() => {
+            setIsEditProjectDialogOpen(false);
+            setProjectToEdit(null);
+          }}
+          onSubmit={handleEditProject}
+          projectToEdit={projectToEdit}
+        />
+      )}
     </>
   );
 }
