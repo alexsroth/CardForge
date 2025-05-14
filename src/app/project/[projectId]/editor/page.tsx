@@ -21,7 +21,7 @@ export default function EditorPage({ }: EditorPageProps) {
   const { toast } = useToast();
   const projectId = typeof params.projectId === 'string' ? params.projectId : undefined;
 
-  const { getProjectById, isLoading: projectsLoading } = useProjects();
+  const { projects, isLoading: projectsLoading } = useProjects(); // Get projects array directly
   const [projectData, setProjectData] = useState<EditorProjectData | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [pageStatus, setPageStatus] = useState<'loading' | 'loaded' | 'error' | 'not_found'>('loading');
@@ -30,6 +30,8 @@ export default function EditorPage({ }: EditorPageProps) {
     if (!projectId) {
       setError("Project ID is missing from the URL.");
       setPageStatus('error');
+      toast({ title: "Error", description: "Project ID missing.", variant: "destructive" });
+      router.push('/'); // Redirect if no project ID
       return;
     }
 
@@ -38,39 +40,33 @@ export default function EditorPage({ }: EditorPageProps) {
       return;
     }
     
-    if (projectId === 'new-project') { // Should ideally not happen if navigation is correct
-        toast({
-            title: "Redirecting",
-            description: "Please use the 'New Project' button on the dashboard to start.",
-            variant: "default",
-        });
-        router.push('/');
-        return;
-    }
-
-    const foundProject = getProjectById(projectId);
+    const foundProject = projects.find(p => p.id === projectId);
 
     if (foundProject) {
-      // Only set projectData if the projectId has changed (meaning navigating to a new project's editor page)
-      // or if projectData is not yet set for the current projectId (initial load for this project).
-      // This prevents re-setting initialProjectData for LiveEditorClientPage if the project object reference
-      // changes in ProjectContext due to an update *to the same project*.
-      if (!projectData || projectData.id !== projectId) {
-        setProjectData({
-          id: foundProject.id,
-          name: foundProject.name,
-          cards: foundProject.cards || [], // Ensure cards is an array
-          associatedTemplateIds: foundProject.associatedTemplateIds || [], // Ensure associatedTemplateIds is an array
-        });
-      }
+      // Pass the latest foundProject data to LiveEditorClientPage.
+      // LiveEditorClientPage's internal useEffect will handle whether to fully re-initialize
+      // or just update parts like name/associatedTemplates based on its own editorProjectId state.
+      setProjectData({
+        id: foundProject.id,
+        name: foundProject.name,
+        cards: foundProject.cards || [], 
+        associatedTemplateIds: foundProject.associatedTemplateIds || [],
+      });
       setPageStatus('loaded');
       setError(null);
     } else {
+      // This means the project ID is in the URL, but no such project exists in the context
       setError(`Project with ID "${projectId}" not found.`);
       setProjectData(undefined); 
       setPageStatus('not_found');
     }
-  }, [projectId, projectsLoading, getProjectById, router, toast]); // projectData is NOT in dependencies
+  // Key dependencies:
+  // - projectId: If the route changes to a new project.
+  // - projectsLoading: To wait until projects are loaded from context.
+  // - projects: The actual array of projects. If this array reference changes in the context
+  //   (e.g., a project was updated), this effect should re-run to get the latest data for `foundProject`.
+  }, [projectId, projectsLoading, projects, router, toast]);
+
 
   if (pageStatus === 'loading') {
     return <EditorLoadingSkeleton title="Loading project data..." />;
@@ -85,19 +81,18 @@ export default function EditorPage({ }: EditorPageProps) {
       </div>
     );
   }
-
-  // projectData should be defined if pageStatus is 'loaded'
+  
   if (projectData && pageStatus === 'loaded') {
     return (
       <div className="h-[calc(100vh-3.5rem)] overflow-hidden">
         <Suspense fallback={<EditorLoadingSkeleton title="Initializing Editor..." />}>
+          {/* Pass projectData which will serve as initialProjectData */}
           <LiveEditorClientPage initialProjectData={projectData} />
         </Suspense>
       </div>
     );
   }
   
-  // Fallback, should ideally be covered by other statuses
   return <EditorLoadingSkeleton title={`Preparing editor for project "${projectId}"...`} showContentSkeleton={false} />;
 }
 
@@ -128,3 +123,4 @@ function EditorLoadingSkeleton({ title = "Loading Editor...", showContentSkeleto
     </div>
   );
 }
+

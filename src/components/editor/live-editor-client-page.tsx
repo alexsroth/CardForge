@@ -2,7 +2,7 @@
 "use client";
 
 import type { EditorProjectData, CardData, CardTemplateId, Project } from '@/lib/types';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'; // Added useRef
 import CardListPanel from './card-list-panel';
 import CardDetailPanel from './card-detail-panel';
 import CardPreviewPanel from './card-preview-panel';
@@ -14,10 +14,10 @@ import { useToast } from '@/hooks/use-toast';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useProjects } from '@/contexts/ProjectContext'; // Import useProjects
+import { useProjects } from '@/contexts/ProjectContext'; 
 
 interface LiveEditorClientPageProps {
-  initialProjectData: EditorProjectData; // This will come from the parent page, already resolved by ProjectContext
+  initialProjectData: EditorProjectData; 
 }
 
 function EditorClientPageSkeleton() {
@@ -72,15 +72,18 @@ function EditorClientPageSkeleton() {
 
 
 export default function LiveEditorClientPage({ initialProjectData }: LiveEditorClientPageProps) {
-  const { updateProjectCards, getProjectById, updateProject } = useProjects(); // Get updateProject for full project saves
-  const [projectId, setProjectId] = useState<string>(initialProjectData.id);
+  const { updateProject, getProjectById } = useProjects(); 
+  const [editorProjectId, setEditorProjectId] = useState<string>(initialProjectData.id); // Tracks the ID this editor instance is for
   const [projectName, setProjectName] = useState<string>(initialProjectData.name);
-  const [cards, setCards] = useState<CardData[]>(initialProjectData.cards || []); // Ensure cards is initialized
+  const [cards, setCards] = useState<CardData[]>(initialProjectData.cards || []);
   const [associatedTemplateIds, setAssociatedTemplateIds] = useState<CardTemplateId[]>(initialProjectData.associatedTemplateIds || []);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [isLoadingName, setIsLoadingName] = useState(false);
   const { toast } = useToast();
   const [isMounted, setIsMounted] = useState(false);
+
+  // Debounce timer ref
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -93,45 +96,67 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     })
   );
 
-  // Effect to re-initialize state if initialProjectData changes (e.g., navigating between projects)
+  // Effect to re-initialize state ONLY if initialProjectData.id changes (navigating to a new project)
   useEffect(() => {
-    setProjectId(initialProjectData.id);
-    setProjectName(initialProjectData.name);
-    const currentCards = initialProjectData.cards || [];
-    setCards(currentCards);
-    setAssociatedTemplateIds(initialProjectData.associatedTemplateIds || []);
+    // If the project ID from props is different from the one this editor instance is currently managing,
+    // then it's a navigation to a new project, so reset the editor state.
+    if (initialProjectData.id !== editorProjectId) {
+      setEditorProjectId(initialProjectData.id);
+      setProjectName(initialProjectData.name);
+      const currentCards = initialProjectData.cards || [];
+      setCards(currentCards);
+      setAssociatedTemplateIds(initialProjectData.associatedTemplateIds || []);
 
-    if (currentCards.length > 0 && currentCards[0]?.id) {
-      setSelectedCardId(currentCards[0].id);
+      if (currentCards.length > 0 && currentCards[0]?.id) {
+        setSelectedCardId(currentCards[0].id);
+      } else {
+        setSelectedCardId(null);
+        // If navigating to a new project that has no cards (e.g. just created)
+        // we might want to add a default card here if the context didn't already.
+        // However, addProject in context already adds one.
+      }
     } else {
-      setSelectedCardId(null);
+      // If it's the same project ID, but other details (like name or associated templates) might have changed
+      // from an external update (e.g., assignments page), update those.
+      // Cards are managed internally by this component after initial load for this project ID.
+      setProjectName(initialProjectData.name);
+      setAssociatedTemplateIds(initialProjectData.associatedTemplateIds || []);
     }
-  }, [initialProjectData]);
+  }, [initialProjectData, editorProjectId]); // editorProjectId helps detect actual project navigation
 
-  // Debounced save function
-  const debouncedSaveToContext = useCallback(
-    (newCards: CardData[]) => {
-      const projectToUpdate = getProjectById(projectId);
+  const saveProjectToContext = useCallback((updatedCards: CardData[]) => {
+    // Clear any existing debounce timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    // Set a new debounce timer
+    debounceTimerRef.current = setTimeout(() => {
+      const projectToUpdate = getProjectById(editorProjectId); // Use editorProjectId
       if (projectToUpdate) {
         const updatedFullProject: Project = {
           ...projectToUpdate,
-          cards: newCards,
-          // Potentially update lastModified here if that field is part of Project type
-          // lastModified: new Date().toISOString(), 
+          name: projectName, // Ensure current project name is saved
+          cards: updatedCards,
+          associatedTemplateIds: associatedTemplateIds, // Ensure current associations are saved
         };
-        updateProject(updatedFullProject).then(result => { // Using full updateProject
+        updateProject(updatedFullProject).then(result => {
           if (!result.success) {
             toast({ title: "Save Error", description: `Failed to save project changes: ${result.message}`, variant: "destructive" });
-          } else {
-            // Subtle save confirmation, or rely on auto-save nature
-            // toast({ title: "Project Saved", description: "Changes saved to local storage.", duration: 2000 });
           }
         });
       }
-    },
-    [projectId, getProjectById, updateProject, toast]
-  );
+    }, 500); // 500ms debounce
+  }, [editorProjectId, projectName, associatedTemplateIds, getProjectById, updateProject, toast]);
   
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleSelectCard = useCallback((cardId: string) => {
     setSelectedCardId(cardId);
@@ -140,10 +165,10 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   const handleUpdateCard = useCallback((updatedCard: CardData) => {
     setCards(prevCards => {
       const newCards = prevCards.map(card => card.id === updatedCard.id ? updatedCard : card);
-      debouncedSaveToContext(newCards); // Save updated cards list to context
+      saveProjectToContext(newCards); 
       return newCards;
     });
-  }, [debouncedSaveToContext]);
+  }, [saveProjectToContext]);
 
   const handleAddCard = useCallback(() => {
     const newCardId = `card-${Date.now()}`;
@@ -158,25 +183,22 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     };
     setCards(prevCards => {
       const newCards = [...prevCards, newCard];
-      debouncedSaveToContext(newCards);
+      saveProjectToContext(newCards);
       return newCards;
     });
     setSelectedCardId(newCardId);
-  }, [associatedTemplateIds, debouncedSaveToContext]);
+  }, [associatedTemplateIds, saveProjectToContext]);
 
   const handleDeleteCard = useCallback((cardIdToDelete: string) => {
     setCards(currentCards => {
       const newCardsList = currentCards.filter(card => card.id !== cardIdToDelete);
-      debouncedSaveToContext(newCardsList);
-      setSelectedCardId(prevSelectedId => {
-        if (prevSelectedId === cardIdToDelete) {
-          return newCardsList.length > 0 ? newCardsList[0].id : null;
-        }
-        return prevSelectedId;
-      });
+      saveProjectToContext(newCardsList);
+      if (selectedCardId === cardIdToDelete) {
+        setSelectedCardId(newCardsList.length > 0 ? newCardsList[0].id : null);
+      }
       return newCardsList;
     });
-  }, [debouncedSaveToContext]);
+  }, [selectedCardId, saveProjectToContext]);
   
   const handleGenerateName = useCallback(async (description: string): Promise<string> => {
     if (!description.trim()) {
@@ -205,10 +227,10 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
                     : (associatedTemplateIds.length > 0 ? associatedTemplateIds[0] : 'generic')
     }));
     setCards(validImportedCards);
-    debouncedSaveToContext(validImportedCards);
+    saveProjectToContext(validImportedCards);
     setSelectedCardId(validImportedCards.length > 0 ? validImportedCards[0].id : null);
     toast({ title: "Data Imported", description: `${validImportedCards.length} cards loaded.` });
-  }, [toast, associatedTemplateIds, debouncedSaveToContext]);
+  }, [toast, associatedTemplateIds, saveProjectToContext]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const {active, over} = event;
@@ -217,11 +239,11 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
         const oldIndex = prevCards.findIndex((card) => card.id === active.id);
         const newIndex = prevCards.findIndex((card) => card.id === over.id);
         const newSortedCards = arrayMove(prevCards, oldIndex, newIndex);
-        debouncedSaveToContext(newSortedCards);
+        saveProjectToContext(newSortedCards);
         return newSortedCards;
       });
     }
-  }, [debouncedSaveToContext]);
+  }, [saveProjectToContext]);
 
   if (!isMounted) {
     return <EditorClientPageSkeleton />;
@@ -267,3 +289,4 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     </DndContext>
   );
 }
+
