@@ -22,6 +22,27 @@ interface CardDataFormProps {
   associatedTemplateIds: CardTemplateId[];
 }
 
+// Helper function to generate placehold.co URL
+function generatePlaceholderUrl(fieldConfig: TemplateField): string | undefined {
+  if (fieldConfig.type !== 'placeholderImage') return undefined;
+
+  const width = fieldConfig.placeholderConfigWidth || 300; // Default width
+  const height = fieldConfig.placeholderConfigHeight || 200; // Default height
+  let url = `https://placehold.co/${width}x${height}.png`;
+
+  if (fieldConfig.placeholderConfigBgColor) {
+    url += `/${fieldConfig.placeholderConfigBgColor.replace('#', '')}`;
+    if (fieldConfig.placeholderConfigTextColor) {
+      url += `/${fieldConfig.placeholderConfigTextColor.replace('#', '')}`;
+    }
+  }
+  if (fieldConfig.placeholderConfigText) {
+    url += `?text=${encodeURIComponent(fieldConfig.placeholderConfigText)}`;
+  }
+  return url;
+}
+
+
 export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, isGeneratingName, associatedTemplateIds }: CardDataFormProps) {
   const [formData, setFormData] = useState<CardData>(cardData);
   const { getTemplateById, getAvailableTemplatesForSelect: getContextTemplatesForSelect, isLoading: templatesLoading } = useTemplates();
@@ -32,41 +53,51 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
   
   const [currentTemplate, setCurrentTemplate] = useState<CardTemplate | undefined>(() => {
     if (templatesLoading || cardData.templateId === NEW_CARD_TEMPLATE_ID_PLACEHOLDER) return undefined;
-    let initialId = cardData.templateId as CardTemplateId; 
-    if (!associatedTemplateIds.includes(initialId)) {
-        initialId = associatedTemplateIds.length > 0 ? associatedTemplateIds[0] : 'generic';
+    
+    let initialTemplateIdToUse = cardData.templateId as CardTemplateId;
+    if (!associatedTemplateIds.includes(initialTemplateIdToUse) && associatedTemplateIds.length > 0) {
+        initialTemplateIdToUse = associatedTemplateIds[0];
+    } else if (!associatedTemplateIds.includes(initialTemplateIdToUse) && associatedTemplateIds.length === 0) {
+        // No associated templates, and the current one isn't valid.
+        // This is a problematic state, perhaps fall back to 'generic' if it exists globally or show an error.
+        // For now, try 'generic', or leave currentTemplate undefined.
+        const genericTemplate = getTemplateById('generic');
+        if (genericTemplate) initialTemplateIdToUse = 'generic';
+        else return undefined; // Or handle error: no suitable template
     }
-    return getTemplateById(initialId);
+    return getTemplateById(initialTemplateIdToUse);
   });
 
+  // Effect to initialize or re-initialize form when cardData (from prop) changes
   useEffect(() => {
-    // This effect runs when the cardData prop changes (i.e., a new card is selected)
-    // It resets the form's internal state.
     setFormData(cardData);
     const newIsFinalized = cardData.templateId !== NEW_CARD_TEMPLATE_ID_PLACEHOLDER;
     setIsTemplateFinalized(newIsFinalized);
 
-    if (templatesLoading || cardData.templateId === NEW_CARD_TEMPLATE_ID_PLACEHOLDER) {
-      setCurrentTemplate(undefined);
-    } else {
-      let newTemplateDefinition = getTemplateById(cardData.templateId as CardTemplateId);
-      if (!newTemplateDefinition && associatedTemplateIds.length > 0) {
-        // If specific template not found but associated ones exist, try the first associated one
-        // This case should be rare if data is consistent.
-        newTemplateDefinition = getTemplateById(associatedTemplateIds[0]);
-      } else if (!newTemplateDefinition) {
-        // Fallback to 'generic' if no other option
-        newTemplateDefinition = getTemplateById('generic');
-      }
-      setCurrentTemplate(newTemplateDefinition);
+    if (templatesLoading) {
+        setCurrentTemplate(undefined);
+        return;
     }
+    
+    if (newIsFinalized) {
+        let templateToUse = getTemplateById(cardData.templateId as CardTemplateId);
+        if (!templateToUse && associatedTemplateIds.includes(cardData.templateId as CardTemplateId)) {
+             templateToUse = getTemplateById(cardData.templateId as CardTemplateId);
+        } else if (!templateToUse && associatedTemplateIds.length > 0) {
+            templateToUse = getTemplateById(associatedTemplateIds[0]);
+        } else if (!templateToUse) {
+            templateToUse = getTemplateById('generic') || undefined;
+        }
+        setCurrentTemplate(templateToUse);
+    } else {
+        setCurrentTemplate(undefined); // Not finalized, no current template yet
+    }
+
   }, [cardData, templatesLoading, getTemplateById, associatedTemplateIds]);
 
 
+  // Effect to propagate formData changes up to the parent, only if template is finalized
   useEffect(() => {
-    // This effect propagates formData changes up to the parent.
-    // It should only run if formData is different from cardData to avoid loops
-    // and only if the template is finalized (or if it just became finalized by selecting a real template).
     if (isTemplateFinalized && formData !== cardData) { 
       onUpdateCard(formData);
     }
@@ -99,30 +130,27 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
       return;
     }
     
-    setCurrentTemplate(newSelectedTemplate); // Update current template definition
+    setCurrentTemplate(newSelectedTemplate); 
 
-    // Update formData with the new templateId and apply defaults from the new template.
-    // Crucially, keep existing ID and essential fields like name.
     setFormData(prevExistingData => {
       const updatedFormData: Partial<CardData> = {
-        id: prevExistingData.id, // Keep existing ID
-        name: prevExistingData.name || 'Untitled Card', // Keep existing name or default
-        description: prevExistingData.description || '', // Keep existing description
+        id: prevExistingData.id, 
+        name: prevExistingData.name || 'Untitled Card', 
+        description: prevExistingData.description || '', 
         imageUrl: prevExistingData.imageUrl,
         dataAiHint: prevExistingData.dataAiHint,
-        templateId: newTemplateId, // This is the new template ID
+        templateId: newTemplateId, 
       };
       
       newSelectedTemplate.fields.forEach(field => {
         const key = field.key as keyof CardData;
-         // Apply default from new template ONLY if the field doesn't exist or is undefined in current PREVIOUS form data.
-        if ((prevExistingData as any)[key] === undefined && field.defaultValue !== undefined) {
+        if (field.type === 'placeholderImage') {
+          (updatedFormData as any)[key] = generatePlaceholderUrl(field) || prevExistingData[key] || '';
+        } else if ((prevExistingData as any)[key] === undefined && field.defaultValue !== undefined) {
              (updatedFormData as any)[key] = field.defaultValue;
         } else if ((prevExistingData as any)[key] !== undefined) {
-            // If field existed in previous data, retain its value.
             (updatedFormData as any)[key] = (prevExistingData as any)[key];
         } else {
-            // Field is new, has no previous value, and no default. Set to sensible blank.
             switch(field.type) {
                 case 'text': (updatedFormData as any)[key] = ''; break;
                 case 'textarea': (updatedFormData as any)[key] = ''; break;
@@ -136,9 +164,7 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
       return updatedFormData as CardData;
     });
 
-    setIsTemplateFinalized(true); // Lock the template choice and reveal other fields.
-    // The onUpdateCard will be triggered by the useEffect watching formData and isTemplateFinalized.
-
+    setIsTemplateFinalized(true); 
   }, [getTemplateById, templatesLoading]);
   
   const availableTemplatesForProject = getContextTemplatesForSelect(associatedTemplateIds);
@@ -146,7 +172,7 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
   const fieldsToRender: TemplateField[] = isTemplateFinalized && currentTemplate ? currentTemplate.fields : [];
   const nameGenerationSourceText = formData.effectText || formData.flavorText || formData.description || '';
 
-  if (templatesLoading && !currentTemplate && isTemplateFinalized) { 
+  if (templatesLoading && !currentTemplate && cardData.templateId !== NEW_CARD_TEMPLATE_ID_PLACEHOLDER) { 
     return <p>Loading template definitions...</p>;
   }
 
@@ -204,6 +230,9 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
             else value = '';
         }
 
+        // For placeholderImage type, it's treated as a text input showing the URL
+        const inputType = field.type === 'placeholderImage' ? 'text' : field.type;
+
         return (
           <div key={field.key}>
             <Label htmlFor={field.key}>{field.label}</Label>
@@ -226,7 +255,7 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
                 />
               </div>
             )}
-            {field.key !== 'name' && field.type === 'textarea' && (
+            {field.key !== 'name' && inputType === 'textarea' && (
               <Textarea
                 id={field.key}
                 name={field.key}
@@ -236,17 +265,17 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
                 rows={field.key === 'description' || field.key === 'flavorText' ? 3 : 5}
               />
             )}
-            {field.key !== 'name' && field.type === 'text' && (
+            {field.key !== 'name' && (inputType === 'text' || inputType === 'placeholderImage') && (
               <Input
                 id={field.key}
                 name={field.key}
-                type="text"
+                type="text" // Even for placeholderImage, it's a text URL input
                 value={value as string}
                 onChange={handleChange}
                 placeholder={field.placeholder}
               />
             )}
-             {field.key !== 'name' && field.type === 'number' && (
+             {field.key !== 'name' && inputType === 'number' && (
               <Input
                 id={field.key}
                 name={field.key}
@@ -256,7 +285,7 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
                 placeholder={field.placeholder}
               />
             )}
-            {field.key !== 'name' && field.type === 'select' && field.options && (
+            {field.key !== 'name' && inputType === 'select' && field.options && (
               <Select
                 value={String(value)}
                 onValueChange={(selectValue) => handleSelectChange(field.key, selectValue)}
@@ -271,7 +300,7 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
                 </SelectContent>
               </Select>
             )}
-             {field.key !== 'name' && field.type === 'boolean' && (
+             {field.key !== 'name' && inputType === 'boolean' && (
               <div className="flex items-center space-x-2 mt-2">
                  <Input
                     type="checkbox"

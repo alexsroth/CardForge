@@ -5,16 +5,22 @@ import type { CardData } from './types';
 export interface TemplateField {
   key: keyof Omit<CardData, 'id' | 'templateId' | 'customFields'> | string;
   label: string;
-  type: 'text' | 'textarea' | 'number' | 'select' | 'boolean';
+  type: 'text' | 'textarea' | 'number' | 'select' | 'boolean' | 'placeholderImage';
   defaultValue?: string | number | boolean;
   placeholder?: string;
   options?: Array<{ value: string; label: string }>;
+  // Specific config for 'placeholderImage' type
+  placeholderConfigWidth?: number;
+  placeholderConfigHeight?: number;
+  placeholderConfigBgColor?: string; // Hex without #
+  placeholderConfigTextColor?: string; // Hex without #
+  placeholderConfigText?: string;
 }
 
 // Basic structure for a layout element
 export interface LayoutElement {
   fieldKey: string; // Key from CardData
-  type: 'text' | 'textarea' | 'image' | 'iconValue'; // Type of element to render
+  type: 'text' | 'textarea' | 'image' | 'iconValue' | 'iconFromData'; // Type of element to render
   style?: React.CSSProperties; // Inline styles
   className?: string; // Tailwind classes
   prefix?: string; // For text elements, e.g., "Cost: "
@@ -29,7 +35,7 @@ export interface LayoutDefinition {
   backgroundColor?: string;
   borderColor?: string;
   borderRadius?: string;
-  backgroundImageField?: keyof CardData | string; // Field key for background image URL
+  // backgroundImageField?: keyof CardData | string; // Field key for background image URL - REMOVED
   elements: LayoutElement[];
 }
 
@@ -54,7 +60,6 @@ export type CardTemplateId = string;
 // Remember:
 // - `fieldKey` values MUST match the "Field Key" you define in your "Data Fields" section.
 // - For `style` objects, use camelCase for CSS properties (e.g., `fontSize`, not `font-size`).
-// - Comments (like these) will be visible in the textarea but stripped when the JSON is parsed and formatted.
 export const DEFAULT_CARD_LAYOUT_JSON_STRING = `{
   // Overall card dimensions and appearance
   "width": "280px",
@@ -62,6 +67,7 @@ export const DEFAULT_CARD_LAYOUT_JSON_STRING = `{
   "backgroundColor": "hsl(var(--card))", // Uses CSS variables from globals.css
   "borderColor": "hsl(var(--border))",
   "borderRadius": "calc(var(--radius) - 2px)",
+  // Example: "backgroundImageField": "artworkUrl", // Field key for background image. REMOVED. Add if needed.
 
   // Array of visual elements to render on the card
   "elements": [
@@ -178,9 +184,13 @@ export const DEFAULT_CARD_LAYOUT_JSON_STRING = `{
       },
       "className": "text-blue-500" // Example specific color for defense
     }
-    // Add more elements as needed for your specific card design
-    // e.g., rarity, flavor text, set symbols, etc.
-    // Remember to define corresponding fields in the "Data Fields" section of your template!
+    // Example for iconFromData (assumes you have a 'statusIcon' field in your CardData):
+    // {
+    //   "fieldKey": "statusIcon", // This field in CardData holds "Zap" or "ShieldAlert"
+    //   "type": "iconFromData",
+    //   "style": { "position": "absolute", "bottom": "15px", "left": "calc(50% - 8px)" },
+    //   "className": "h-4 w-4 text-yellow-400"
+    // }
   ]
 }`;
 
@@ -193,16 +203,17 @@ export const cardTemplates: CardTemplate[] = [
     name: 'Generic Card (Seed)',
     fields: [
       { key: 'name', label: 'Name', type: 'text', placeholder: 'Card Name', defaultValue: 'Generic Card' },
-      { key: 'artworkUrl', label: 'Full Card Art URL', type: 'text', placeholder: 'https://placehold.co/280x400.png', defaultValue: 'https://placehold.co/280x400.png' },
+      { key: 'artworkUrl', label: 'Background Art URL', type: 'text', placeholder: 'https://placehold.co/280x400.png', defaultValue: 'https://placehold.co/280x400.png' },
       { key: 'imageUrl', label: 'Main Image URL', type: 'text', placeholder: 'https://placehold.co/250x140.png', defaultValue: 'https://placehold.co/250x140.png' },
       { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., abstract pattern', defaultValue: 'abstract pattern' },
-      { key: 'description', label: 'Description (fallback)', type: 'textarea', placeholder: 'General card text if specific fields are not used.', defaultValue: 'This is a generic card description.' },
+      { key: 'description', label: 'Description', type: 'textarea', placeholder: 'General card text if specific fields are not used.', defaultValue: 'This is a generic card description.' },
       { key: 'cardType', label: 'Card Type Line', type: 'text', placeholder: 'e.g., Basic Unit', defaultValue: 'Unit' },
       { key: 'cost', label: 'Cost', type: 'number', defaultValue: 0 },
       { key: 'attack', label: 'Attack', type: 'number', defaultValue: 1 },
       { key: 'defense', label: 'Defense', type: 'number', defaultValue: 1 },
       { key: 'effectText', label: 'Effect Text', type: 'textarea', placeholder: 'Main card text, abilities, rules.', defaultValue: 'This card has a generic effect.' },
       { key: 'flavorText', label: 'Flavor Text', type: 'textarea', placeholder: 'Italicized thematic text.' },
+      { key: 'statusIcon', label: 'Status Icon Name', type: 'text', placeholder: 'e.g. Zap, ShieldAlert', defaultValue: 'ShieldCheck' },
       {
         key: 'rarity', label: 'Rarity', type: 'select', defaultValue: 'common',
         options: [ { value: 'common', label: 'Common' }, { value: 'uncommon', label: 'Uncommon' }, { value: 'rare', label: 'Rare' } ],
@@ -215,7 +226,7 @@ export const cardTemplates: CardTemplate[] = [
     name: 'Creature Card (Seed)',
     fields: [
       { key: 'name', label: 'Name', type: 'text', placeholder: 'Grizzly Bear', defaultValue: 'Creature Sample' },
-      { key: 'artworkUrl', label: 'Full Card Art URL', type: 'text', placeholder: 'https://placehold.co/280x400.png', defaultValue: 'https://placehold.co/280x400.png' },
+      { key: 'artworkUrl', label: 'Background Art URL', type: 'text', placeholder: 'https://placehold.co/280x400.png', defaultValue: 'https://placehold.co/280x400.png' },
       { key: 'imageUrl', label: 'Main Image URL', type: 'text', placeholder: 'https://placehold.co/250x140.png', defaultValue: 'https://placehold.co/250x140.png' },
       { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., forest beast', defaultValue: 'forest beast' },
       { key: 'cost', label: 'Cost', type: 'number', defaultValue: 3, placeholder: '3' },
@@ -224,6 +235,7 @@ export const cardTemplates: CardTemplate[] = [
       { key: 'cardType', label: 'Card Type Line', type: 'text', defaultValue: 'Creature - Bear', placeholder: 'e.g., Creature - Bear' },
       { key: 'effectText', label: 'Effect Text', type: 'textarea', placeholder: 'Abilities and rules text...', defaultValue: 'This creature has a standard effect.' },
       { key: 'flavorText', label: 'Flavor Text', type: 'textarea', placeholder: 'A short, evocative quote or description...' },
+      { key: 'statusIcon', label: 'Status Icon Name', type: 'text', placeholder: 'e.g. Zap, ShieldAlert', defaultValue: 'ShieldCheck' },
       {
         key: 'rarity', label: 'Rarity', type: 'select', defaultValue: 'common',
         options: [
@@ -239,13 +251,14 @@ export const cardTemplates: CardTemplate[] = [
     name: 'Spell Card (Seed)',
     fields: [
       { key: 'name', label: 'Name', type: 'text', placeholder: 'Fireball', defaultValue: 'Spell Sample' },
-      { key: 'artworkUrl', label: 'Full Card Art URL', type: 'text', placeholder: 'https://placehold.co/280x400.png', defaultValue: 'https://placehold.co/280x400.png' },
+      { key: 'artworkUrl', label: 'Background Art URL', type: 'text', placeholder: 'https://placehold.co/280x400.png', defaultValue: 'https://placehold.co/280x400.png' },
       { key: 'imageUrl', label: 'Main Image URL', type: 'text', placeholder: 'https://placehold.co/250x140.png', defaultValue: 'https://placehold.co/250x140.png' },
       { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., magical explosion', defaultValue: 'magical explosion' },
       { key: 'cost', label: 'Cost', type: 'number', defaultValue: 1, placeholder: '1' },
       { key: 'cardType', label: 'Card Type Line', type: 'text', defaultValue: 'Spell - Instant', placeholder: 'e.g., Instant Spell' },
       { key: 'effectText', label: 'Effect Text', type: 'textarea', placeholder: 'Spell effects and rules text...', defaultValue: 'This spell has a magical effect.' },
       { key: 'flavorText', label: 'Flavor Text', type: 'textarea', placeholder: 'A short, evocative quote or description...' },
+      { key: 'statusIcon', label: 'Status Icon Name', type: 'text', placeholder: 'e.g. Zap, ShieldAlert', defaultValue: 'Zap' },
       {
         key: 'rarity', label: 'Rarity', type: 'select', defaultValue: 'common',
         options: [
@@ -261,13 +274,14 @@ export const cardTemplates: CardTemplate[] = [
     name: 'Item Card (Seed)',
     fields: [
       { key: 'name', label: 'Name', type: 'text', placeholder: 'Healing Potion', defaultValue: 'Item Sample' },
-      { key: 'artworkUrl', label: 'Full Card Art URL', type: 'text', placeholder: 'https://placehold.co/280x400.png', defaultValue: 'https://placehold.co/280x400.png' },
+      { key: 'artworkUrl', label: 'Background Art URL', type: 'text', placeholder: 'https://placehold.co/280x400.png', defaultValue: 'https://placehold.co/280x400.png' },
       { key: 'imageUrl', label: 'Main Image URL', type: 'text', placeholder: 'https://placehold.co/250x140.png', defaultValue: 'https://placehold.co/250x140.png' },
       { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., glowing artifact', defaultValue: 'glowing artifact' },
       { key: 'cost', label: 'Cost', type: 'number', defaultValue: 2, placeholder: '2' },
       { key: 'cardType', label: 'Card Type Line', type: 'text', defaultValue: 'Item - Equipment', placeholder: 'e.g., Equipment' },
       { key: 'effectText', label: 'Effect Text', type: 'textarea', placeholder: 'Item effects and rules text...', defaultValue: 'This item provides a benefit.' },
       { key: 'flavorText', label: 'Flavor Text', type: 'textarea', placeholder: 'A short, evocative quote or description...' },
+      { key: 'statusIcon', label: 'Status Icon Name', type: 'text', placeholder: 'e.g. Zap, ShieldAlert', defaultValue: 'PlusCircle' },
       {
         key: 'rarity', label: 'Rarity', type: 'select', defaultValue: 'common',
         options: [
@@ -279,3 +293,4 @@ export const cardTemplates: CardTemplate[] = [
     layoutDefinition: DEFAULT_CARD_LAYOUT_JSON_STRING,
   },
 ];
+

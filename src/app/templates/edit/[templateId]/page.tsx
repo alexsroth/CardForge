@@ -30,6 +30,11 @@ function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldD
         type: field.type,
         placeholder: field.placeholder || '',
         defaultValue: field.defaultValue,
+        placeholderConfigWidth: field.placeholderConfigWidth,
+        placeholderConfigHeight: field.placeholderConfigHeight,
+        placeholderConfigBgColor: field.placeholderConfigBgColor,
+        placeholderConfigTextColor: field.placeholderConfigTextColor,
+        placeholderConfigText: field.placeholderConfigText,
     };
     if (field.type === 'select' && field.options) {
         definition.optionsString = field.options.map(opt => `${opt.value}:${opt.label}`).join(',');
@@ -43,6 +48,11 @@ function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): Templa
         key: def.key,
         label: def.label,
         type: def.type,
+        placeholderConfigWidth: def.placeholderConfigWidth,
+        placeholderConfigHeight: def.placeholderConfigHeight,
+        placeholderConfigBgColor: def.placeholderConfigBgColor,
+        placeholderConfigTextColor: def.placeholderConfigTextColor,
+        placeholderConfigText: def.placeholderConfigText,
     };
     if (def.placeholder) field.placeholder = def.placeholder;
     if (def.defaultValue !== undefined && def.defaultValue !== '') {
@@ -145,12 +155,24 @@ export default function EditTemplatePage() {
       flavorText: 'This is some italicized flavor text.',
       artworkUrl: 'https://placehold.co/280x400.png', 
       cardType: 'Creature - Goblin', 
-      statusIcon: 'ShieldCheck', // Example for iconFromData
+      statusIcon: 'ShieldCheck', 
     };
 
     fields.forEach(fieldDef => {
       const key = fieldDef.key as keyof CardData;
-       if (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '') {
+       if (fieldDef.type === 'placeholderImage') {
+          let url = `https://placehold.co/${fieldDef.placeholderConfigWidth || 250}x${fieldDef.placeholderConfigHeight || 140}.png`;
+          if (fieldDef.placeholderConfigBgColor) {
+            url += `/${fieldDef.placeholderConfigBgColor.replace('#', '')}`;
+            if (fieldDef.placeholderConfigTextColor) {
+              url += `/${fieldDef.placeholderConfigTextColor.replace('#', '')}`;
+            }
+          }
+          if (fieldDef.placeholderConfigText) {
+            url += `?text=${encodeURIComponent(fieldDef.placeholderConfigText)}`;
+          }
+          (generatedSampleCard as any)[key] = url;
+       } else if (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '') {
         if (fieldDef.type === 'number') {
           (generatedSampleCard as any)[key] = Number(fieldDef.defaultValue);
         } else if (fieldDef.type === 'boolean') {
@@ -175,17 +197,18 @@ export default function EditTemplatePage() {
       }
       // Ensure specific default fields for preview are set if not overridden
       if (['name', 'description', 'cost', 'attack', 'defense', 'imageUrl', 'dataAiHint', 'rarity', 'effectText', 'flavorText', 'artworkUrl', 'cardType', 'statusIcon'].includes(fieldDef.key)) {
-        if (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '') {
-            (generatedSampleCard as any)[key] = fieldDef.defaultValue;
-             if((fieldDef.key === 'imageUrl' || fieldDef.key === 'artworkUrl') && typeof fieldDef.defaultValue === 'string' && !fieldDef.defaultValue.startsWith('http')) {
+         if ((fieldDef.type !== 'placeholderImage' && (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '')) ) {
+             if((fieldDef.key === 'imageUrl' || fieldDef.key === 'artworkUrl') && typeof fieldDef.defaultValue === 'string' && !fieldDef.defaultValue.startsWith('http') && !fieldDef.defaultValue.startsWith('https')) {
                 (generatedSampleCard as any)[key] = `https://placehold.co/${fieldDef.key === 'imageUrl' ? '250x140' : '280x400'}.png`;
              }
-        } else if(fieldDef.key === 'imageUrl' && !(generatedSampleCard as any)[key]) { // Check generatedSampleCard to avoid overwriting its own defaults
-            (generatedSampleCard as any)[key] = 'https://placehold.co/250x140.png';
-        } else if(fieldDef.key === 'artworkUrl' && !(generatedSampleCard as any)[key]) {
-            (generatedSampleCard as any)[key] = 'https://placehold.co/280x400.png';
-        } else if(fieldDef.key === 'statusIcon' && !(generatedSampleCard as any)[key]) {
-            (generatedSampleCard as any)[key] = 'ShieldCheck';
+        } else if (fieldDef.type !== 'placeholderImage') {
+            if(fieldDef.key === 'imageUrl' && !(generatedSampleCard as any)[key]) { 
+                (generatedSampleCard as any)[key] = 'https://placehold.co/250x140.png';
+            } else if(fieldDef.key === 'artworkUrl' && !(generatedSampleCard as any)[key]) {
+                (generatedSampleCard as any)[key] = 'https://placehold.co/280x400.png';
+            } else if(fieldDef.key === 'statusIcon' && !(generatedSampleCard as any)[key]) {
+                (generatedSampleCard as any)[key] = 'ShieldCheck';
+            }
         }
       }
     });
@@ -227,7 +250,9 @@ export default function EditTemplatePage() {
         type: 'text',
         placeholder: '',
         defaultValue: '',
-        optionsString: ''
+        optionsString: '',
+        placeholderConfigWidth: 250, // Default for new placeholderImage
+        placeholderConfigHeight: 140, // Default for new placeholderImage
       }
     ]);
   };
@@ -263,6 +288,12 @@ export default function EditTemplatePage() {
         }
         modifiedField.key = newKey;
     }
+    // Ensure default config for placeholderImage if type changes to it
+    if (updatedFieldDefinition.type === 'placeholderImage' && oldField.type !== 'placeholderImage') {
+        modifiedField.placeholderConfigWidth = modifiedField.placeholderConfigWidth || 250;
+        modifiedField.placeholderConfigHeight = modifiedField.placeholderConfigHeight || 140;
+    }
+
 
     newFields[index] = modifiedField;
     setFields(newFields);
@@ -598,4 +629,3 @@ export default function EditTemplatePage() {
     </div>
   );
 }
-
