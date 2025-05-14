@@ -20,8 +20,7 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_KEY = 'cardForgeProjects';
 
-// Seed data is now an empty array, or could be a single "Example Project" if desired.
-// For a truly blank start, an empty array is best.
+// Seed data is now an empty array.
 const seedProjectsData: Project[] = [];
 
 
@@ -36,14 +35,14 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       if (storedProjects) {
         initialData = JSON.parse(storedProjects);
       } else {
-        initialData = seedProjectsData.map(p => ({ ...p })); 
+        initialData = seedProjectsData.map(p => ({ ...p }));
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialData));
       }
     } catch (error) {
       console.error("Failed to load projects from localStorage, using initial seed:", error);
-      initialData = seedProjectsData.map(p => ({ ...p })); 
+      initialData = seedProjectsData.map(p => ({ ...p }));
     }
-    
+
     setProjects(initialData);
     setIsLoading(false);
 
@@ -65,17 +64,16 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const addProject = useCallback(async (
     projectData: { name: string; associatedTemplateIds?: CardTemplateId[] }
   ): Promise<{ success: boolean; message: string; newProject?: Project }> => {
-    
+
     const newProject: Project = {
       id: `project-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       name: projectData.name.trim() || "Untitled Project",
-      thumbnailUrl: 'https://placehold.co/300x200.png', // Default thumbnail
-      dataAiHint: 'abstract game concept', // Default hint
+      thumbnailUrl: 'https://placehold.co/300x200.png',
+      dataAiHint: 'abstract game concept',
       lastModified: new Date().toISOString(),
       associatedTemplateIds: projectData.associatedTemplateIds || [],
       cards: [
-        // Add a default starter card for new projects
-        { 
+        {
           id: `card-${Date.now()}`,
           templateId: (projectData.associatedTemplateIds && projectData.associatedTemplateIds.length > 0) ? projectData.associatedTemplateIds[0] : 'generic',
           name: 'My First Card',
@@ -100,55 +98,55 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     if (!updatedProjectData.id) {
         return { success: false, message: "Project ID is missing." };
     }
+    let projectWasFoundAndUpdated = false;
+
     setProjects(prevProjects => {
       const existingIndex = prevProjects.findIndex(p => p.id === updatedProjectData.id);
-      let updatedProjectsList;
       if (existingIndex > -1) {
-        updatedProjectsList = [...prevProjects];
+        projectWasFoundAndUpdated = true; // Mark that the project was found and will be updated
+        const updatedProjectsList = [...prevProjects];
         updatedProjectsList[existingIndex] = {
-          ...updatedProjectData,
-          lastModified: new Date().toISOString() 
+          ...updatedProjectData, // Use the incoming project data
+          lastModified: new Date().toISOString() // Always update lastModified timestamp
         };
-      } else {
-        // This case should ideally not happen if addProject is used for new ones.
-        // If it does, it means we're trying to update a non-existent project.
-        console.warn(`Project with ID ${updatedProjectData.id} not found for update. This might indicate an issue.`);
-        // To prevent data loss, we could add it, but it's better to ensure projects are added via addProject.
-        // updatedProjectsList = [...prevProjects, { ...updatedProjectData, lastModified: new Date().toISOString() }];
-        updatedProjectsList = [...prevProjects]; // Keep current list if project not found for update
-         return updatedProjectsList; // Early return if project not found to prevent altering persistProjects
+        persistProjects(updatedProjectsList);
+        return updatedProjectsList;
       }
-      persistProjects(updatedProjectsList);
-      return updatedProjectsList;
+      // Project not found, return previous state without changes
+      console.warn(`Project with ID ${updatedProjectData.id} not found for update during setProjects. No update performed.`);
+      return prevProjects; // Return prevProjects if not found to avoid changing state unnecessarily
     });
-    // This message might be misleading if the project wasn't found.
-    // Consider returning success based on whether the project was actually found and updated.
-    const projectWasFound = projects.some(p => p.id === updatedProjectData.id);
-    if (projectWasFound) {
+
+    // The success/failure message depends on whether the project was found *within the setProjects updater*.
+    // This approach makes the `updateProject` callback itself more stable by not depending on `projects` state from its outer scope.
+    if (projectWasFoundAndUpdated) {
         return { success: true, message: `Project '${updatedProjectData.name}' updated successfully.` };
     } else {
-        return { success: false, message: `Project with ID '${updatedProjectData.id}' not found for update.` };
+        // This message implies that the project ID didn't match anything in the current list.
+        return { success: false, message: `Project with ID '${updatedProjectData.id}' not found; update failed.` };
     }
-  }, [persistProjects, projects]); 
+  }, [persistProjects]);
 
 
   const updateProjectAssociatedTemplates = useCallback(async (projectId: string, associatedTemplateIds: CardTemplateId[]): Promise<{ success: boolean; message: string }> => {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) {
+    const projectToUpdate = projects.find(p => p.id === projectId);
+    if (!projectToUpdate) {
       return { success: false, message: `Project with ID '${projectId}' not found.` };
     }
-    const updatedProject = { ...project, associatedTemplateIds };
-    return updateProject(updatedProject);
+    // Create a new project object with updated associations
+    const updatedProject = { ...projectToUpdate, associatedTemplateIds };
+    return updateProject(updatedProject); // Call the main updateProject function
   }, [projects, updateProject]);
 
 
   const updateProjectCards = useCallback(async (projectId: string, cards: CardData[]): Promise<{ success: boolean; message: string }> => {
-    const project = projects.find(p => p.id === projectId);
-    if (!project) {
+    const projectToUpdate = projects.find(p => p.id === projectId);
+    if (!projectToUpdate) {
       return { success: false, message: `Project with ID '${projectId}' not found.` };
     }
-    const updatedProject = { ...project, cards };
-    return updateProject(updatedProject);
+    // Create a new project object with updated cards
+    const updatedProject = { ...projectToUpdate, cards };
+    return updateProject(updatedProject); // Call the main updateProject function
   }, [projects, updateProject]);
 
 
