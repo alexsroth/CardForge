@@ -2,30 +2,31 @@
 "use client";
 
 import type { CardData } from '@/lib/types';
-import { useState, useEffect, ChangeEvent, FormEvent, useCallback } from 'react';
+import { useState, useEffect, ChangeEvent, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import NameGeneratorButton from './name-generator-button';
-import { getTemplateById, getAvailableTemplatesForSelect, type CardTemplate, type TemplateField, type CardTemplateId } from '@/lib/card-templates';
+import type { CardTemplate, TemplateField } from '@/lib/card-templates'; // Using CardTemplate from lib
+import { useTemplates, type CardTemplateId } from '@/contexts/TemplateContext'; // Use TemplateContext
 
 interface CardDataFormProps {
   cardData: CardData;
   onUpdateCard: (updatedCard: CardData) => void;
   onGenerateName: (description: string) => Promise<string>;
   isGeneratingName: boolean;
-  associatedTemplateIds: CardTemplateId[]; // Added prop
+  associatedTemplateIds: CardTemplateId[];
 }
 
 export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, isGeneratingName, associatedTemplateIds }: CardDataFormProps) {
   const [formData, setFormData] = useState<CardData>(cardData);
   const [currentTemplate, setCurrentTemplate] = useState<CardTemplate | undefined>(undefined);
+  const { getTemplateById, getAvailableTemplatesForSelect: getContextTemplatesForSelect, isLoading: templatesLoading } = useTemplates();
 
   useEffect(() => {
-    // Ensure the card's current templateId is valid for this project, or default if not.
-    // This is important if a card is loaded with a templateId not in associatedTemplateIds.
+    if (templatesLoading) return;
+
     let effectiveTemplateId = cardData.templateId;
     if (!associatedTemplateIds.includes(cardData.templateId)) {
       effectiveTemplateId = associatedTemplateIds.length > 0 ? associatedTemplateIds[0] : 'generic';
@@ -34,7 +35,7 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
     const initialFormData = { ...cardData, templateId: effectiveTemplateId };
     setFormData(initialFormData);
     setCurrentTemplate(getTemplateById(effectiveTemplateId));
-  }, [cardData, associatedTemplateIds]);
+  }, [cardData, associatedTemplateIds, getTemplateById, templatesLoading]);
 
   const handleChange = useCallback((e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -54,9 +55,8 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
   }, []);
 
   const handleTemplateChange = useCallback((newTemplateId: CardTemplateId) => {
-    if (!associatedTemplateIds.includes(newTemplateId)) {
-      // This should not happen if the dropdown is correctly filtered, but as a safeguard:
-      console.warn(`Attempted to switch to template ID "${newTemplateId}" which is not associated with this project.`);
+    if (templatesLoading || !associatedTemplateIds.includes(newTemplateId)) {
+      console.warn(`Attempted to switch to template ID "${newTemplateId}" which is not associated or templates are loading.`);
       return;
     }
     const newTemplate = getTemplateById(newTemplateId);
@@ -64,44 +64,42 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
 
     setCurrentTemplate(newTemplate);
     setFormData(prev => {
-      const updatedFormData: Partial<CardData> = { }; // Start fresh for template-specific fields
+      const updatedFormData: Partial<CardData> = { };
       
-      // Preserve essential universal fields
       updatedFormData.id = prev.id;
       updatedFormData.name = prev.name || '';
-      updatedFormData.description = prev.description || ''; // Keep if it exists, useful for generic description
+      updatedFormData.description = prev.description || '';
       updatedFormData.imageUrl = prev.imageUrl;
       updatedFormData.dataAiHint = prev.dataAiHint;
       
-      // Apply default values from the new template for its specific fields
       newTemplate.fields.forEach(field => {
-        // Only set default if field is not one of the preserved universal ones above,
-        // or if the preserved value is undefined/empty for that key.
         const key = field.key as keyof CardData;
         if (updatedFormData[key] === undefined && field.defaultValue !== undefined) {
           (updatedFormData as any)[field.key] = field.defaultValue;
         } else if (updatedFormData[key] === undefined) {
-           // Ensure all fields from the new template exist on formData, even if undefined
           (updatedFormData as any)[field.key] = undefined;
         }
       });
 
       return {
-        ...(updatedFormData as CardData), // Cast back to CardData
+        ...(updatedFormData as CardData),
         templateId: newTemplateId,
       };
     });
-  }, [associatedTemplateIds]); // Ensure handleTemplateChange updates if associatedTemplateIds change
+  }, [associatedTemplateIds, getTemplateById, templatesLoading]);
   
   useEffect(() => {
     onUpdateCard(formData);
   }, [formData, onUpdateCard]);
 
-  // Filter available templates based on the project's associations
-  const availableTemplates = getAvailableTemplatesForSelect(associatedTemplateIds);
+  const availableTemplatesForProject = getContextTemplatesForSelect(associatedTemplateIds);
   
-  const fieldsToRender = currentTemplate?.fields || [];
+  const fieldsToRender: TemplateField[] = currentTemplate?.fields || [];
   const nameGenerationSourceText = formData.effectText || formData.flavorText || formData.description || '';
+
+  if (templatesLoading) {
+    return <p>Loading template definitions...</p>;
+  }
 
   return (
     <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
@@ -110,16 +108,16 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
         <Select 
           value={formData.templateId} 
           onValueChange={(value) => handleTemplateChange(value as CardTemplateId)}
-          disabled={availableTemplates.length <= 1} // Disable if only one or no templates available
+          disabled={availableTemplatesForProject.length <= 1}
         >
           <SelectTrigger id="templateId">
             <SelectValue placeholder="Select template" />
           </SelectTrigger>
           <SelectContent>
-            {availableTemplates.map(template => (
+            {availableTemplatesForProject.map(template => (
               <SelectItem key={template.value} value={template.value}>{template.label}</SelectItem>
             ))}
-            {availableTemplates.length === 0 && (
+            {availableTemplatesForProject.length === 0 && (
               <div className="p-2 text-sm text-muted-foreground">No templates associated with this project.</div>
             )}
           </SelectContent>
@@ -177,14 +175,14 @@ export default function CardDataForm({ cardData, onUpdateCard, onGenerateName, i
                 id={field.key}
                 name={field.key}
                 type="number"
-                value={value as number | string} // Allow string for empty input
+                value={value as number | string}
                 onChange={handleChange}
                 placeholder={field.placeholder}
               />
             )}
             {field.key !== 'name' && field.type === 'select' && field.options && (
               <Select
-                value={String(value)} // Ensure value is string for Select
+                value={String(value)}
                 onValueChange={(selectValue) => handleSelectChange(field.key, selectValue)}
               >
                 <SelectTrigger id={field.key}>

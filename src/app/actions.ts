@@ -1,11 +1,13 @@
+
 // @/app/actions.ts
 "use server";
 
 import { generateCardName as aiGenerateCardName, type GenerateCardNameInput } from '@/ai/flows/generate-card-name';
-import type { TemplateFieldDefinition } from '@/components/template-designer/field-row';
-import { generateTemplateObjectString } from '@/lib/template-code-helpers';
-import fs from 'fs/promises';
-import path from 'path';
+// TemplateFieldDefinition is primarily used by the template designer UI, not directly by server actions anymore for file writing.
+// import type { TemplateFieldDefinition } from '@/components/template-designer/field-row';
+// import { generateTemplateObjectString } from '@/lib/template-code-helpers';
+// import fs from 'fs/promises';
+// import path from 'path';
 
 export async function generateCardNameAction(input: GenerateCardNameInput): Promise<string> {
   try {
@@ -27,6 +29,10 @@ export async function generateCardNameAction(input: GenerateCardNameInput): Prom
   }
 }
 
+/*
+// This action is being deprecated in favor of client-side template management with TemplateContext and localStorage.
+// Keeping it commented out for reference or if a hybrid approach is needed later.
+
 export async function saveTemplateDefinitionAction(
   templateId: string,
   templateName: string,
@@ -38,24 +44,21 @@ export async function saveTemplateDefinitionAction(
   try {
     let content = await fs.readFile(templatesFilePath, 'utf-8');
 
-    // Check if template ID already exists in CARD_TEMPLATE_IDS
     const cardTemplateIdsRegex = /export const CARD_TEMPLATE_IDS = \[(.*?)\] as const;/s;
     const idsMatch = content.match(cardTemplateIdsRegex);
     if (idsMatch && idsMatch[1]) {
       const idsArrayString = idsMatch[1];
-      // Simple check, might need to be more robust for varied formatting
       if (idsArrayString.includes(`'${templateId}'`)) {
         return { 
           success: false, 
           message: `Template ID '${templateId}' already exists. Please choose a unique ID.`,
-          generatedCode: newTemplateObjectString // Return code for manual edit if needed
+          generatedCode: newTemplateObjectString 
         };
       }
     } else {
       console.warn("Could not reliably parse CARD_TEMPLATE_IDS. Skipping duplicate check for ID.");
     }
     
-    // Insert into cardTemplates array
     const cardTemplatesAnchor = 'export const cardTemplates: CardTemplate[] = [';
     const cardTemplatesEndAnchor = '];';
     
@@ -63,7 +66,6 @@ export async function saveTemplateDefinitionAction(
     if (content.indexOf(cardTemplatesAnchor) === -1 || insertionPoint === -1) {
         throw new Error('Could not find cardTemplates array anchor or end anchor in src/lib/card-templates.ts');
     }
-    // Check if the array is empty or needs a comma
     const arrayContentStart = content.indexOf(cardTemplatesAnchor) + cardTemplatesAnchor.length;
     const arrayContent = content.substring(arrayContentStart, insertionPoint).trim();
     const needsCommaBeforeInsert = arrayContent !== '' && !arrayContent.endsWith(',');
@@ -71,7 +73,6 @@ export async function saveTemplateDefinitionAction(
     const newTemplateEntry = `${needsCommaBeforeInsert ? ',' : ''}\n${newTemplateObjectString.split('\n').map(line => `  ${line}`).join('\n').trimStart()}${arrayContent === '' ? '' : ','}\n`;
     content = content.slice(0, insertionPoint) + newTemplateEntry + content.slice(insertionPoint);
     
-    // Insert into CARD_TEMPLATE_IDS array
     const cardTemplateIdsAnchor = 'export const CARD_TEMPLATE_IDS = [';
     insertionPoint = content.lastIndexOf('] as const;', content.indexOf(cardTemplateIdsAnchor) + cardTemplateIdsAnchor.length);
      if (content.indexOf(cardTemplateIdsAnchor) === -1 || insertionPoint === -1) {
@@ -93,7 +94,8 @@ export async function saveTemplateDefinitionAction(
     return { 
       success: false, 
       message: `Failed to save template: ${error.message}. Please see console for details.`,
-      generatedCode: newTemplateObjectString // Provide code for manual insertion
+      generatedCode: newTemplateObjectString
     };
   }
 }
+*/

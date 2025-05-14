@@ -1,26 +1,58 @@
+
 // src/app/templates/new/page.tsx
 "use client";
 
-import { useState, type ChangeEvent } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Save, ClipboardCopy, AlertTriangle, CheckCircle } from 'lucide-react';
+import { PlusCircle, Save, AlertTriangle } from 'lucide-react';
 import FieldRow, { type TemplateFieldDefinition } from '@/components/template-designer/field-row';
-import { generateTemplateCode, generateTemplateObjectString } from '@/lib/template-code-helpers';
 import { useToast } from '@/hooks/use-toast';
-import { saveTemplateDefinitionAction } from '@/app/actions';
+import { useTemplates } from '@/contexts/TemplateContext';
+import type { TemplateField, CardTemplate } from '@/lib/card-templates'; // Assuming CardTemplate type is here
+import { useRouter } from 'next/navigation';
+
+// Helper to convert TemplateFieldDefinition (from UI) to TemplateField (for storage)
+function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
+    const field: TemplateField = {
+        key: def.key,
+        label: def.label,
+        type: def.type,
+    };
+    if (def.placeholder) field.placeholder = def.placeholder;
+    if (def.defaultValue !== undefined && def.defaultValue !== '') {
+        if (def.type === 'number') {
+            field.defaultValue = Number(def.defaultValue) || 0;
+        } else if (def.type === 'boolean') {
+            field.defaultValue = def.defaultValue === true || String(def.defaultValue).toLowerCase() === 'true';
+        } else {
+            field.defaultValue = String(def.defaultValue);
+        }
+    }
+    if (def.type === 'select' && def.optionsString) {
+        field.options = def.optionsString.split(',').map(pair => {
+            const parts = pair.split(':');
+            return {
+                value: parts[0]?.trim() || '',
+                label: parts[1]?.trim() || parts[0]?.trim() || '',
+            };
+        }).filter(opt => opt.value);
+    }
+    return field;
+}
+
 
 export default function TemplateDesignerPage() {
   const [templateId, setTemplateId] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<TemplateFieldDefinition[]>([]);
-  const [generatedCode, setGeneratedCode] = useState('');
-  const [showManualInstructions, setShowManualInstructions] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
   const { toast } = useToast();
+  const { addTemplate: saveTemplateToContext, templates: existingTemplates } = useTemplates();
+  const router = useRouter();
 
   const handleAddField = () => {
     setFields([
@@ -64,82 +96,55 @@ export default function TemplateDesignerPage() {
       return;
     }
 
-    setIsSaving(true);
-    setShowManualInstructions(false);
-    setGeneratedCode('');
+    if (existingTemplates.some(t => t.id === templateId.trim())) {
+        toast({
+            title: "Duplicate ID",
+            description: `A template with ID '${templateId.trim()}' already exists. Please choose a unique ID.`,
+            variant: "destructive",
+        });
+        return;
+    }
 
-    const result = await saveTemplateDefinitionAction(templateId, templateName, fields);
+    setIsSaving(true);
+
+    const newTemplate: CardTemplate = {
+      id: templateId.trim() as any, // Cast as any for now, should align with CardTemplateId type later
+      name: templateName.trim(),
+      fields: fields.map(mapFieldDefinitionToTemplateField),
+    };
+
+    const result = await saveTemplateToContext(newTemplate);
 
     if (result.success) {
       toast({
         title: "Template Saved!",
-        description: (
-            <div>
-                <p>{result.message}</p>
-                <p className="font-semibold mt-2">Important: A server restart may be required for changes to fully apply.</p>
-            </div>
-        ),
+        description: result.message + " It's now available in your current browser session.",
         variant: "default",
-        duration: 10000, // Keep toast longer
+        duration: 7000,
       });
-      // Optionally clear the form or redirect
-      // setTemplateId('');
-      // setTemplateName('');
-      // setFields([]);
+      // Optionally clear the form or redirect to the library
+      setTemplateId('');
+      setTemplateName('');
+      setFields([]);
+      router.push('/templates'); 
     } else {
       toast({
         title: "Save Failed",
-        description: (
-            <div>
-                <p>{result.message}</p>
-                <p className="mt-2">The generated code is available below for manual addition.</p>
-            </div>
-        ),
+        description: result.message,
         variant: "destructive",
-        duration: 10000,
+        duration: 7000,
       });
-      if (result.generatedCode) {
-        // Fallback to showing generated code for manual copy
-        const fullGeneratedCode = generateTemplateCode(templateId, templateName, fields, result.generatedCode);
-        setGeneratedCode(fullGeneratedCode);
-        setShowManualInstructions(true);
-      } else {
-        // Fallback if even object string generation failed (should be rare)
-        const justObjectString = generateTemplateObjectString(templateId, templateName, fields);
-        const fullGeneratedCode = generateTemplateCode(templateId, templateName, fields, justObjectString);
-        setGeneratedCode(fullGeneratedCode);
-        setShowManualInstructions(true);
-      }
     }
     setIsSaving(false);
   };
   
-  const handleCopyToClipboard = () => {
-    if (generatedCode) {
-      navigator.clipboard.writeText(generatedCode)
-        .then(() => {
-          toast({ title: "Copied!", description: "Template code copied to clipboard." });
-        })
-        .catch(err => {
-          toast({ title: "Error", description: "Could not copy code to clipboard.", variant: "destructive" });
-          console.error('Failed to copy: ', err);
-        });
-    }
-  };
-
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <Card className="max-w-3xl mx-auto">
         <CardHeader>
           <CardTitle className="text-2xl font-bold">Template Designer</CardTitle>
           <CardDescription>
-            Define the structure for a new card template. Saving will attempt to update 
-            <code> src/lib/card-templates.ts</code> directly.
-            <br />
-            <span className="text-destructive font-medium">
-              <AlertTriangle className="inline h-4 w-4 mr-1" />
-              A server restart may be required after saving for changes to fully apply in the editor.
-            </span>
+            Define the structure for a new card template. Templates are saved to your browser's local storage.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -149,7 +154,7 @@ export default function TemplateDesignerPage() {
               <Input
                 id="templateId"
                 value={templateId}
-                onChange={(e) => setTemplateId(e.target.value.replace(/\s+/g, ''))} // Prevent spaces
+                onChange={(e) => setTemplateId(e.target.value.replace(/\s+/g, ''))}
                 placeholder="heroUnit"
                 disabled={isSaving}
               />
@@ -170,7 +175,7 @@ export default function TemplateDesignerPage() {
             <h3 className="text-lg font-semibold">Fields</h3>
             {fields.map((field, index) => (
               <FieldRow
-                key={index} // Consider more stable keys if fields can be reordered
+                key={index}
                 field={field}
                 onChange={(updatedField) => handleFieldChange(index, updatedField)}
                 onRemove={() => handleRemoveField(index)}
@@ -181,36 +186,6 @@ export default function TemplateDesignerPage() {
               <PlusCircle className="mr-2 h-4 w-4" /> Add Field
             </Button>
           </div>
-
-          {generatedCode && showManualInstructions && (
-            <div className="space-y-2 p-4 border border-destructive/50 rounded-md bg-destructive/5">
-              <h3 className="text-lg font-semibold text-destructive flex items-center">
-                <AlertTriangle className="mr-2 h-5 w-5" /> Manual Action Required
-              </h3>
-              <p className="text-sm text-destructive-foreground">
-                Automatic saving failed. Please copy the code below and manually add it to 
-                <code> src/lib/card-templates.ts</code>.
-              </p>
-              <div className="relative mt-2">
-                <Textarea
-                  value={generatedCode}
-                  readOnly
-                  rows={15}
-                  className="font-mono text-xs bg-muted/30 border-destructive/30"
-                  aria-label="Generated template code for manual addition"
-                />
-                <Button
-                  onClick={handleCopyToClipboard}
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2"
-                  aria-label="Copy code to clipboard"
-                >
-                  <ClipboardCopy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
         </CardContent>
         <CardFooter>
           <Button onClick={handleSaveTemplate} className="w-full md:w-auto" disabled={isSaving}>
@@ -220,7 +195,7 @@ export default function TemplateDesignerPage() {
               </>
             ) : (
               <>
-                <Save className="mr-2 h-4 w-4" /> Save Template to File
+                <Save className="mr-2 h-4 w-4" /> Save Template
               </>
             )}
           </Button>

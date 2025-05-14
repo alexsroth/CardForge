@@ -1,49 +1,43 @@
 
-// Import CardTemplateId from the new definitions file
-import type { CardTemplateId as ImportedCardTemplateId } from './card-templates';
+// Using CardTemplateId from the TemplateContext now as the primary source of truth for IDs at runtime
+import type { CardTemplateId as ContextCardTemplateId } from '@/contexts/TemplateContext'; 
+
+export type CardTemplateId = ContextCardTemplateId; // Alias for clarity
 
 export interface Project {
   id: string;
   name: string;
   thumbnailUrl: string;
-  dataAiHint?: string; // Added for project thumbnail AI hint
+  dataAiHint?: string;
   lastModified: string;
-  associatedTemplateIds?: ImportedCardTemplateId[]; // Templates associated with this project
+  associatedTemplateIds?: CardTemplateId[]; // Uses the context-based CardTemplateId
 }
-
-// This type alias ensures we use the centrally defined IDs
-export type CardTemplateId = ImportedCardTemplateId;
 
 export interface CardData {
   id: string;
-  templateId: CardTemplateId;
+  templateId: CardTemplateId; // Uses the context-based CardTemplateId
   name: string;
-  description: string; // General description, mainly for 'generic' or as fallback
+  description: string;
   cost?: number;
   attack?: number;
   defense?: number;
   imageUrl?: string;
-  dataAiHint?: string; // For AI image generation hint for the card image
-  rarity?: 'common' | 'uncommon' | 'rare' | 'mythic';
-  effectText?: string; // Primary rules text
-  flavorText?: string; // Italicized, non-rules text (previously part of description in some templates)
-  customFields?: Record<string, string | number | boolean>;
+  dataAiHint?: string;
+  rarity?: 'common' | 'uncommon' | 'rare' | 'mythic'; // This could also become dynamic via template
+  effectText?: string;
+  flavorText?: string;
+  customFields?: Record<string, string | number | boolean>; // For fields not in the core set
 }
 
-// Specific data structure needed for the editor page
 export interface EditorProjectData {
   id: string;
   name: string;
   cards: CardData[];
-  associatedTemplateIds: CardTemplateId[];
+  associatedTemplateIds: CardTemplateId[]; // Uses the context-based CardTemplateId
 }
 
-// This type was previously used by initialDeckData, keeping for reference or future use if needed.
-// For now, the editor uses EditorProjectData.
 export interface DeckData {
-  id: string; // Typically corresponds to projectId
-  name: string; // Name of the project/deck
+  id: string;
+  name: string;
   cards: CardData[];
 }
-
-// TemplateFieldDefinition is removed as its role is taken over by TemplateField in card-templates.ts
