@@ -95,7 +95,10 @@ export default function DeckViewPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 place-items-center">
           {project.cards.map((card) => (
-            <div key={card.id} className="transform hover:scale-105 transition-transform duration-200">
+            <div 
+              key={card.id} 
+              className="relative transform hover:scale-105 hover:z-10 transition-transform duration-200"
+            >
               <CardRenderer card={card} />
             </div>
           ))}
