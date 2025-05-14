@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Package2, PencilRuler } from 'lucide-react'; // Using Package2 as a generic app icon
+import { Package2, PencilRuler, LibrarySquare } from 'lucide-react'; // Using Package2 as a generic app icon
 
 export default function AppHeader() {
   return (
@@ -11,7 +11,11 @@ export default function AppHeader() {
             CardForge
           </span>
         </Link>
-        <nav className="flex items-center space-x-4">
+        <nav className="flex items-center space-x-6"> {/* Increased space-x for new item */}
+          <Link href="/templates" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground flex items-center">
+            <LibrarySquare className="mr-1 h-4 w-4" />
+            Template Library
+          </Link>
           <Link href="/templates/new" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground flex items-center">
             <PencilRuler className="mr-1 h-4 w-4" />
             Template Designer
