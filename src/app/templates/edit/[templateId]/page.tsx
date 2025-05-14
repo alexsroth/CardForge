@@ -143,8 +143,9 @@ export default function EditTemplatePage() {
       rarity: 'rare',
       effectText: 'Sample effect: Draw a card. This unit gets +1/+1 until end of turn. This text might be long to test scrolling in a textarea layout element.',
       flavorText: 'This is some italicized flavor text.',
-      artworkUrl: 'https://placehold.co/280x400.png', // Added for default layout
-      cardType: 'Creature - Goblin', // Added for default layout
+      artworkUrl: 'https://placehold.co/280x400.png', 
+      cardType: 'Creature - Goblin', 
+      statusIcon: 'ShieldCheck', // Example for iconFromData
     };
 
     fields.forEach(fieldDef => {
@@ -173,7 +174,7 @@ export default function EditTemplatePage() {
         }
       }
       // Ensure specific default fields for preview are set if not overridden
-      if (['name', 'description', 'cost', 'attack', 'defense', 'imageUrl', 'dataAiHint', 'rarity', 'effectText', 'flavorText', 'artworkUrl', 'cardType'].includes(fieldDef.key)) {
+      if (['name', 'description', 'cost', 'attack', 'defense', 'imageUrl', 'dataAiHint', 'rarity', 'effectText', 'flavorText', 'artworkUrl', 'cardType', 'statusIcon'].includes(fieldDef.key)) {
         if (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '') {
             (generatedSampleCard as any)[key] = fieldDef.defaultValue;
              if((fieldDef.key === 'imageUrl' || fieldDef.key === 'artworkUrl') && typeof fieldDef.defaultValue === 'string' && !fieldDef.defaultValue.startsWith('http')) {
@@ -183,6 +184,8 @@ export default function EditTemplatePage() {
             (generatedSampleCard as any)[key] = 'https://placehold.co/250x140.png';
         } else if(fieldDef.key === 'artworkUrl' && !(generatedSampleCard as any)[key]) {
             (generatedSampleCard as any)[key] = 'https://placehold.co/280x400.png';
+        } else if(fieldDef.key === 'statusIcon' && !(generatedSampleCard as any)[key]) {
+            (generatedSampleCard as any)[key] = 'ShieldCheck';
         }
       }
     });
@@ -407,7 +410,7 @@ export default function EditTemplatePage() {
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Data Fields</h3>
-              <ScrollArea className="h-auto pr-3 border rounded-md"> {/* Removed max-h-[300px] */}
+              <ScrollArea className="h-auto pr-3 border rounded-md"> 
                 <div className="p-2 space-y-3">
                   {fields.map((field, index) => (
                     <FieldRow
@@ -451,7 +454,7 @@ export default function EditTemplatePage() {
                 onBlur={validateAndFormatLayoutJson}
                 placeholder='Enter JSON for card layout, e.g., { "width": "280px", "elements": [...] }'
                 rows={15}
-                className="font-mono text-xs flex-grow min-h-[300px]" 
+                className="font-mono text-xs flex-grow min-h-[300px] max-h-[350px]" 
                 disabled={isSaving}
               />
               {layoutJsonError && (
@@ -474,18 +477,83 @@ export default function EditTemplatePage() {
                     <ul className="list-disc list-inside pl-2 mb-2 space-y-0.5">
                       <li><code>width</code>, <code>height</code>: Card dimensions (e.g., "280px").</li>
                       <li><code>backgroundColor</code>, <code>borderColor</code>, <code>borderRadius</code>: CSS values.</li>
-                      <li><code>backgroundImageField</code>: (Optional) Key of a data field (e.g., "artworkUrl") to use for the card's full background image. **This key must match one of your defined Data Field keys.**</li>
                     </ul>
-                    <p className="font-semibold mb-1"><code>elements</code> array (each object defines one visual piece):</p>
-                    <ul className="list-disc list-inside pl-2 space-y-0.5">
-                      <li><code>fieldKey</code>: String that **must exactly match a 'Field Key'** from your "Data Fields" section above (e.g., if you have a field labeled "Card Title" with an auto-generated key "cardTitle", you would use <code>"cardTitle"</code> here). The default layout uses common examples like "name", "cost", "imageUrl".</li>
-                      <li><code>type</code>: "text", "textarea", "image", or "iconValue".</li>
-                      <li><code>style</code>: CSS-in-JS object (e.g., <code>{'{ "position": "absolute", "top": "10px", "fontSize": "1.2em" }'}</code>). Use camelCase for CSS properties (<code>fontSize</code> not <code>font-size</code>).</li>
-                      <li><code>className</code>: (Optional) Tailwind CSS classes.</li>
-                      <li><code>prefix</code>, <code>suffix</code>: (Optional, for "text", "iconValue") Text to add before/after the field's value.</li>
-                      <li><code>icon</code>: (For "iconValue") Name of a Lucide icon (e.g., "Coins", "Sword"). **Ensure the icon exists in <code>lucide-react</code>.**</li>
+                     <p className="font-semibold mb-1 mt-3">Available Field Keys for this Template:</p>
+                    {fields.length > 0 ? (
+                      <ScrollArea className="max-h-[100px] bg-background/50 p-2 rounded border text-xs">
+                        <ul className="list-disc list-inside space-y-0.5">
+                          {fields.map(f => <li key={f.key}><code>{f.key}</code> ({f.label})</li>)}
+                        </ul>
+                      </ScrollArea>
+                    ) : (
+                      <p className="italic text-muted-foreground">No data fields defined yet for this template.</p>
+                    )}
+                    <p className="text-xs mt-1 mb-2">Use these keys in the <code>fieldKey</code> property of elements below.</p>
+
+                    <p className="font-semibold mb-1 mt-3"><code>elements</code> array (each object defines one visual piece):</p>
+                    <ul className="list-disc list-inside pl-2 space-y-1">
+                      <li>
+                        <strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above.
+                      </li>
+                      <li>
+                        <strong><code>type</code></strong>: (String) One of: <code>"text"</code>, <code>"textarea"</code>, <code>"image"</code>, <code>"iconValue"</code>, <code>"iconFromData"</code>.
+                         <ul className="list-['-_'] list-inside pl-4 mt-1 space-y-1 text-muted-foreground/90">
+                            <li><code>text</code>: Single line text.</li>
+                            <li><code>textarea</code>: Multi-line text, often scrollable.</li>
+                            <li><code>image</code>: Displays an image from URL in <code>fieldKey</code>.</li>
+                            <li><code>iconValue</code>: Displays text from <code>fieldKey</code> alongside a fixed <code>icon</code>.</li>
+                            <li><code>iconFromData</code>: Displays an icon whose name is stored in <code>fieldKey</code>.</li>
+                        </ul>
+                      </li>
+                      <li>
+                        <strong><code>style</code></strong>: (Object) CSS-in-JS (e.g., <code>{'{ "position": "absolute", "top": "10px", "fontSize": "1.2em" }'}</code>). Use camelCase for CSS properties.
+                      </li>
+                      <li>
+                        <strong><code>className</code></strong>: (String, Optional) Tailwind CSS classes.
+                      </li>
+                      <li>
+                        <strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue". Text added before/after the field's value.
+                      </li>
+                      <li>
+                        <strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon (e.g., "Coins", "Sword"). **Ensure the icon exists in <code>lucide-react</code>.**
+                      </li>
                     </ul>
-                     <p className="mt-2 italic">The live preview updates as you edit. Ensure your JSON is valid. Customize <code>fieldKey</code> values to match your defined data fields.</p>
+                     <p className="mt-3 italic">The live preview updates as you edit. Ensure your JSON is valid. Customize <code>fieldKey</code> values to match your defined data fields.</p>
+                    
+                     <p className="font-semibold mb-1 mt-4">Example Element Snippets:</p>
+                     <pre className="text-xs bg-background/50 p-2 rounded border whitespace-pre-wrap">
+{`// For a simple text display
+{
+  "fieldKey": "yourCardNameFieldKey", 
+  "type": "text",
+  "style": { "position": "absolute", "top": "20px", "left": "20px" }
+}
+
+// For an image
+{
+  "fieldKey": "yourImageUrlFieldKey",
+  "type": "image",
+  "style": { 
+    "position": "absolute", "top": "50px", "left": "20px", 
+    "width": "240px", "height": "120px", "objectFit": "cover" 
+  }
+}
+
+// For text with a preceding icon
+{
+  "fieldKey": "yourManaCostFieldKey",
+  "type": "iconValue",
+  "icon": "Coins", // Lucide icon name
+  "style": { "position": "absolute", "top": "20px", "right": "20px" }
+}
+
+// For an icon whose name is stored in your card data
+{
+  "fieldKey": "yourIconDataFieldKey", // This field in your card data holds "Zap" or "Shield"
+  "type": "iconFromData",
+  "style": { "position": "absolute", "bottom": "20px", "left": "20px" }
+}`}
+                     </pre>
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
