@@ -38,8 +38,6 @@ export default function EditorPage({ }: EditorPageProps) {
       return;
     }
     
-    // The "new-project" case is largely obsolete due to direct navigation with real IDs.
-    // Kept for robustness if somehow encountered.
     if (projectId === 'new-project') {
         toast({
             title: "Create a New Project",
@@ -57,29 +55,29 @@ export default function EditorPage({ }: EditorPageProps) {
         id: foundProject.id,
         name: foundProject.name,
         cards: foundProject.cards || [],
-        associatedTemplateIds: foundProject.associatedTemplateIds || [],
+        associatedTemplateIds: foundProject.associatedTemplateIds || [], // Ensure it defaults to an empty array
       };
 
       // Only update projectData state if the actual data has changed
       // This prevents re-renders if foundProject reference changes but content is the same for these fields
+      // This check is important to prevent LiveEditorClientPage from re-initializing unnecessarily
       if (
         !projectData ||
-        projectData.id !== currentEditorData.id || // Should only change if projectId changes
+        projectData.id !== currentEditorData.id || 
         projectData.name !== currentEditorData.name ||
-        projectData.cards !== currentEditorData.cards || // Compare references; context ensures new ref on change
-        projectData.associatedTemplateIds !== currentEditorData.associatedTemplateIds // Compare references
+        projectData.cards !== currentEditorData.cards || 
+        projectData.associatedTemplateIds !== currentEditorData.associatedTemplateIds
       ) {
         setProjectData(currentEditorData);
       }
       setPageStatus('loaded');
       setError(null);
     } else {
-      // Project not found for the given projectId, and projects are loaded
       setError(`Project with ID "${projectId}" not found.`);
-      setProjectData(undefined); // Clear any existing project data
+      setProjectData(undefined); 
       setPageStatus('not_found');
     }
-  }, [projectId, projectsLoading, getProjectById, router, toast, projectData]); // projectData added to dependencies
+  }, [projectId, projectsLoading, getProjectById, router, toast]); // Removed projectData from dependencies
 
   if (pageStatus === 'loading') {
     return <EditorLoadingSkeleton title="Loading project data..." />;
@@ -89,13 +87,12 @@ export default function EditorPage({ }: EditorPageProps) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)] text-destructive">
         <h2 className="text-xl font-semibold">{pageStatus === 'error' ? "Error Loading Project" : "Project Not Found"}</h2>
-        <p>{error || `The project with ID "${projectId}" could not be found or is still loading.`}</p>
+        <p>{error || `The project with ID "${projectId}" could not be found.`}</p>
         <Button onClick={() => router.push('/')} className="mt-4">Go to Dashboard</Button>
       </div>
     );
   }
 
-  // If projectData is loaded and status is 'loaded'
   if (projectData && pageStatus === 'loaded') {
     return (
       <div className="h-[calc(100vh-3.5rem)] overflow-hidden">
@@ -106,7 +103,6 @@ export default function EditorPage({ }: EditorPageProps) {
     );
   }
   
-  // Fallback for any other unexpected state, though above conditions should cover all.
   return <EditorLoadingSkeleton title={`Preparing editor for project "${projectId}"...`} showContentSkeleton={false} />;
 }
 
@@ -137,3 +133,4 @@ function EditorLoadingSkeleton({ title = "Loading Editor...", showContentSkeleto
     </div>
   );
 }
+
