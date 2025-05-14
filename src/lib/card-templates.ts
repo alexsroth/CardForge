@@ -11,15 +11,38 @@ export interface TemplateField {
   options?: Array<{ value: string; label: string }>;
 }
 
+// Basic structure for a layout element
+export interface LayoutElement {
+  fieldKey: string; // Key from CardData
+  type: 'text' | 'textarea' | 'image' | 'iconValue'; // Type of element to render
+  style?: React.CSSProperties; // Inline styles
+  className?: string; // Tailwind classes
+  prefix?: string; // For text elements, e.g., "Cost: "
+  suffix?: string; // For text elements
+  icon?: string; // Lucide icon name for iconValue type
+  // Potentially add specific props for images like 'altTextFieldKey' etc.
+}
+
+// Define the structure for a card template's layout
+export interface LayoutDefinition {
+  width?: string; // e.g., '280px'
+  height?: string; // e.g., '400px'
+  backgroundColor?: string;
+  borderColor?: string;
+  borderRadius?: string;
+  backgroundImageField?: keyof CardData | string; // Field key for background image URL
+  elements: LayoutElement[];
+}
+
 // Define the structure for a card template
 export interface CardTemplate {
-  id: string; // Changed from CardTemplateId to string for more flexibility with user-defined IDs
+  id: string;
   name: string;
   fields: TemplateField[];
+  layoutDefinition?: string; // JSON string for LayoutDefinition
 }
 
 // Define available template IDs - this now serves as the "seed" data.
-// The actual CardTemplateId type used by the context might be more dynamic.
 export const CARD_TEMPLATE_IDS_SEED = ['generic', 'creature', 'spell', 'item'] as const;
 export type CardTemplateIdSeed = typeof CARD_TEMPLATE_IDS_SEED[number];
 
@@ -39,6 +62,17 @@ export const cardTemplates: CardTemplate[] = [
       { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., abstract pattern' },
       { key: 'description', label: 'Description', type: 'textarea', placeholder: 'Card text, abilities, etc.' },
     ],
+    // Example of a very simple layoutDefinition for the generic card
+    layoutDefinition: JSON.stringify({
+      width: "280px",
+      height: "400px",
+      borderColor: "hsl(var(--primary))",
+      elements: [
+        { fieldKey: "imageUrl", type: "image", style: { position: "absolute", top: "40px", left: "10px", right: "10px", height: "120px", objectFit: "cover", borderRadius: "0.25rem"} },
+        { fieldKey: "name", type: "text", style: { position: "absolute", top: "10px", left: "10px", right: "10px", textAlign: "center", fontWeight: "bold", fontSize: "1.1rem" } },
+        { fieldKey: "description", type: "textarea", style: { position: "absolute", top: "170px", left: "10px", right: "10px", bottom: "10px", fontSize: "0.9rem", overflowY: "auto" } }
+      ]
+    } as LayoutDefinition)
   },
   {
     id: 'creature',
@@ -100,21 +134,3 @@ export const cardTemplates: CardTemplate[] = [
     ],
   },
 ];
-
-// These helper functions are now effectively replaced by methods in TemplateContext
-// but can be kept if direct use of seed data is ever needed, or for type reference.
-
-// export function getTemplateById(templateId?: CardTemplateId): CardTemplate | undefined {
-//   if (!templateId) return undefined;
-//   return cardTemplates.find(t => t.id === templateId);
-// }
-
-// export function getAvailableTemplatesForSelect(allowedTemplateIds?: CardTemplateId[]) {
-//   const templatesToConsider = allowedTemplateIds
-//     ? cardTemplates.filter(template => allowedTemplateIds.includes(template.id))
-//     : cardTemplates;
-//   return templatesToConsider.map(template => ({
-//     value: template.id,
-//     label: template.name,
-//   }));
-// }

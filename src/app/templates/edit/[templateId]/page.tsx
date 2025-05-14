@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Save, AlertTriangle, Loader2, ArrowLeft } from 'lucide-react';
 import FieldRow, { type TemplateFieldDefinition } from '@/components/template-designer/field-row';
@@ -33,7 +34,7 @@ function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldD
 // Helper to convert TemplateFieldDefinition (from UI) to TemplateField (for storage)
 function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
     const field: TemplateField = {
-        key: def.key, // Key is critical and should be stable or carefully managed if regenerated
+        key: def.key, 
         label: def.label,
         type: def.type,
     };
@@ -96,6 +97,7 @@ export default function EditTemplatePage() {
   const [originalTemplateId, setOriginalTemplateId] = useState<CardTemplateId | undefined>(templateIdToEdit);
   const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<TemplateFieldDefinition[]>([]);
+  const [layoutDefinition, setLayoutDefinition] = useState<string>(''); // Store as JSON string
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [errorLoading, setErrorLoading] = useState<string | null>(null);
@@ -109,9 +111,10 @@ export default function EditTemplatePage() {
 
     const templateToEdit = getTemplateById(templateIdToEdit);
     if (templateToEdit) {
-      setOriginalTemplateId(templateToEdit.id as CardTemplateId); // Store the original, non-derived ID
+      setOriginalTemplateId(templateToEdit.id as CardTemplateId); 
       setTemplateName(templateToEdit.name);
       setFields(templateToEdit.fields.map(mapTemplateFieldToFieldDefinition));
+      setLayoutDefinition(templateToEdit.layoutDefinition || '');
       setErrorLoading(null);
     } else {
       setErrorLoading(`Template with ID "${templateIdToEdit}" not found.`);
@@ -213,12 +216,27 @@ export default function EditTemplatePage() {
         return;
     }
 
+    let parsedLayoutDefinition: any;
+    if (layoutDefinition.trim()) {
+      try {
+        parsedLayoutDefinition = JSON.parse(layoutDefinition);
+      } catch (e) {
+        toast({
+          title: "Invalid Layout JSON",
+          description: "The Layout Definition is not valid JSON. Please correct it or leave it empty.",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setIsSaving(true);
 
     const updatedTemplateData: CardTemplate = {
-      id: originalTemplateId, // Use the original, immutable ID
+      id: originalTemplateId, 
       name: templateName.trim(),
       fields: fields.map(mapFieldDefinitionToTemplateField),
+      layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : undefined,
     };
 
     const result = await updateTemplate(updatedTemplateData);
@@ -272,7 +290,7 @@ export default function EditTemplatePage() {
             </Button>
           </div>
           <CardDescription>
-            Modify the template's name and fields. The Template ID (<code>{originalTemplateId}</code>) cannot be changed.
+            Modify the template's name, fields, and layout definition. The Template ID (<code>{originalTemplateId}</code>) cannot be changed.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -300,7 +318,7 @@ export default function EditTemplatePage() {
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Fields</h3>
+            <h3 className="text-lg font-semibold">Data Fields</h3>
             {fields.map((field, index) => (
               <FieldRow
                 key={index} 
@@ -319,6 +337,24 @@ export default function EditTemplatePage() {
                 </p>
             )}
           </div>
+
+           <div>
+            <Label htmlFor="layoutDefinition">Layout Definition (JSON)</Label>
+            <Textarea
+              id="layoutDefinition"
+              value={layoutDefinition}
+              onChange={(e) => setLayoutDefinition(e.target.value)}
+              placeholder='Enter JSON for card layout, e.g., { "width": "280px", "elements": [...] }'
+              rows={8}
+              className="font-mono text-xs"
+              disabled={isSaving}
+            />
+             <p className="text-xs text-muted-foreground mt-1">
+              Define visual elements like background, text blocks, images, and their styles/positions.
+              Refer to documentation for the expected JSON structure.
+            </p>
+          </div>
+
         </CardContent>
         <CardFooter>
           <Button 
@@ -341,5 +377,3 @@ export default function EditTemplatePage() {
     </div>
   );
 }
-
-    

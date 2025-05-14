@@ -31,18 +31,18 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
     try {
       const storedTemplates = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (storedTemplates) {
-        // Ensure fields are always arrays
         const parsedTemplates: CardTemplate[] = JSON.parse(storedTemplates);
         const validatedTemplates = parsedTemplates.map(t => ({
           ...t,
-          fields: Array.isArray(t.fields) ? t.fields : []
+          fields: Array.isArray(t.fields) ? t.fields : [],
+          layoutDefinition: typeof t.layoutDefinition === 'string' ? t.layoutDefinition : undefined,
         }));
         setTemplates(validatedTemplates);
       } else {
-        // Seed with initial templates if nothing in localStorage
         const validatedSeedTemplates = initialSeedTemplates.map(t => ({
           ...t,
-          fields: Array.isArray(t.fields) ? t.fields : []
+          fields: Array.isArray(t.fields) ? t.fields : [],
+          layoutDefinition: typeof t.layoutDefinition === 'string' ? t.layoutDefinition : undefined,
         }));
         setTemplates(validatedSeedTemplates);
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(validatedSeedTemplates));
@@ -51,7 +51,8 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to load templates from localStorage, using initial seed:", error);
       const validatedSeedTemplates = initialSeedTemplates.map(t => ({
           ...t,
-          fields: Array.isArray(t.fields) ? t.fields : []
+          fields: Array.isArray(t.fields) ? t.fields : [],
+          layoutDefinition: typeof t.layoutDefinition === 'string' ? t.layoutDefinition : undefined,
         }));
       setTemplates(validatedSeedTemplates);
     } finally {
@@ -64,7 +65,6 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedTemplates));
     } catch (error) {
       console.error("Failed to save templates to localStorage:", error);
-      // Potentially show a toast to the user
     }
   }, []);
 
@@ -77,8 +77,13 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
     if (templates.some(t => t.id === templateData.id)) {
       return { success: false, message: `Template ID '${templateData.id}' already exists.` };
     }
+    // Ensure layoutDefinition is either a string or undefined
+    const newTemplateData = {
+      ...templateData,
+      layoutDefinition: typeof templateData.layoutDefinition === 'string' ? templateData.layoutDefinition : undefined,
+    };
     setTemplates(prevTemplates => {
-      const updatedTemplates = [...prevTemplates, templateData];
+      const updatedTemplates = [...prevTemplates, newTemplateData];
       persistTemplates(updatedTemplates);
       return updatedTemplates;
     });
@@ -90,11 +95,16 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
       return { success: false, message: "Template ID is missing, cannot update." };
     }
     let found = false;
+    // Ensure layoutDefinition is either a string or undefined before saving
+    const updatedTemplateData = {
+      ...templateData,
+      layoutDefinition: typeof templateData.layoutDefinition === 'string' ? templateData.layoutDefinition : undefined,
+    };
     setTemplates(prevTemplates => {
       const updatedTemplates = prevTemplates.map(t => {
-        if (t.id === templateData.id) {
+        if (t.id === updatedTemplateData.id) {
           found = true;
-          return templateData; // Replace with new data
+          return updatedTemplateData; 
         }
         return t;
       });
@@ -102,13 +112,13 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
         persistTemplates(updatedTemplates);
         return updatedTemplates;
       }
-      return prevTemplates; // No change if not found (though should ideally not happen if called correctly)
+      return prevTemplates; 
     });
 
     if (found) {
-      return { success: true, message: `Template '${templateData.name}' updated successfully.` };
+      return { success: true, message: `Template '${updatedTemplateData.name}' updated successfully.` };
     } else {
-      return { success: false, message: `Template with ID '${templateData.id}' not found. Update failed.` };
+      return { success: false, message: `Template with ID '${updatedTemplateData.id}' not found. Update failed.` };
     }
   }, [persistTemplates]);
 
@@ -138,5 +148,3 @@ export const useTemplates = (): TemplateContextType => {
   }
   return context;
 };
-
-    
