@@ -62,12 +62,12 @@ export const DEFAULT_CARD_LAYOUT_JSON_STRING = `{
   "backgroundColor": "hsl(var(--card))", // Uses CSS variables from globals.css
   "borderColor": "hsl(var(--border))",
   "borderRadius": "calc(var(--radius) - 2px)",
-  // "backgroundImageField": "artworkUrl", // Optional: field key for a full card background image. Removed by user request.
 
   // Array of visual elements to render on the card
   "elements": [
     {
-      "fieldKey": "name", // Maps to the 'name' field in your card data
+      // fieldKey should map to a 'name' field in your card data
+      "fieldKey": "name", 
       "type": "text",
       "style": {
         "position": "absolute",
@@ -76,15 +76,16 @@ export const DEFAULT_CARD_LAYOUT_JSON_STRING = `{
         "right": "60px", // Leave space for cost or other elements
         "fontSize": "1.1em",
         "fontWeight": "bold",
-        "lineHeight": "1.2", // Ensures multi-word titles don't get too tall
-        "maxHeight": "40px", // Prevents overly long names from breaking layout
+        "lineHeight": "1.2", 
+        "maxHeight": "40px", 
         "overflow": "hidden",
-        "textOverflow": "ellipsis" // Adds '...' for overflow
+        "textOverflow": "ellipsis" 
       },
-      "className": "text-card-foreground" // Use theme's card text color
+      "className": "text-card-foreground" 
     },
     {
-      "fieldKey": "cost", // Maps to 'cost' field
+      // fieldKey should map to a 'cost' field
+      "fieldKey": "cost", 
       "type": "iconValue", // Renders an icon next to the value
       "icon": "Coins",     // Lucide icon name (ensure it exists in lucide-react)
       "style": {
@@ -94,60 +95,64 @@ export const DEFAULT_CARD_LAYOUT_JSON_STRING = `{
         "fontSize": "1.1em",
         "fontWeight": "bold",
         "padding": "5px",
-        "backgroundColor": "hsla(var(--primary-foreground), 0.1)", // Semi-transparent primary background
-        "borderRadius": "9999px", // Circular
-        "border": "1px solid hsla(var(--primary), 0.5)" // Border using primary color
+        "backgroundColor": "hsla(var(--primary-foreground), 0.1)", 
+        "borderRadius": "9999px", 
+        "border": "1px solid hsla(var(--primary), 0.5)" 
       },
-      "className": "text-primary" // Use theme's primary color for text
+      "className": "text-primary" 
     },
     {
-      "fieldKey": "imageUrl", // Maps to 'imageUrl' field for the main card art
+      // fieldKey should map to an 'imageUrl' field for the main card art
+      "fieldKey": "imageUrl", 
       "type": "image",
       "style": {
         "position": "absolute",
-        "top": "60px",    // Position below name/cost
+        "top": "60px",    
         "left": "15px",
         "right": "15px",
-        "height": "140px", // Fixed height for the image area
-        "objectFit": "cover", // How the image should fill the area
-        "borderRadius": "calc(var(--radius) - 4px)" // Slightly smaller radius than card
+        "height": "140px", 
+        "objectFit": "cover", 
+        "borderRadius": "calc(var(--radius) - 4px)" 
       }
       // "dataAiHint" for images is handled by the renderer directly from card data, not in layout
     },
     {
-      "fieldKey": "cardType", // Maps to 'cardType' field (e.g., "Creature - Goblin")
+      // fieldKey should map to a 'cardType' field (e.g., "Creature - Goblin")
+      "fieldKey": "cardType", 
       "type": "text",
       "style": {
         "position": "absolute",
-        "top": "210px", // Position below the main image
+        "top": "210px", 
         "left": "15px",
         "right": "15px",
         "fontSize": "0.8em",
         "fontStyle": "italic",
         "textAlign": "center",
         "padding": "2px 0",
-        "borderTop": "1px solid hsl(var(--border))", // Separator lines
+        "borderTop": "1px solid hsl(var(--border))", 
         "borderBottom": "1px solid hsl(var(--border))"
       },
-      "className": "text-muted-foreground" // Use theme's muted text color
+      "className": "text-muted-foreground" 
     },
     {
-      "fieldKey": "effectText", // Maps to 'effectText' field for rules or abilities
+      // fieldKey should map to an 'effectText' field for rules or abilities
+      "fieldKey": "effectText", 
       "type": "textarea",    // Allows multi-line text, renderer might add scroll
       "style": {
         "position": "absolute",
-        "top": "240px", // Position below the card type line
+        "top": "240px", 
         "left": "15px",
         "right": "15px",
         "bottom": "55px", // Leave space for stats at the bottom
         "fontSize": "0.85em",
-        "lineHeight": "1.4" // Good readability for text blocks
+        "lineHeight": "1.4" 
         // "overflowY": "auto" // Renderer might handle scroll for textarea type
       },
       "className": "text-card-foreground whitespace-pre-wrap" // Ensure text wraps and preserves whitespace
     },
     {
-      "fieldKey": "attack", // Maps to 'attack' field
+      // fieldKey should map to an 'attack' field
+      "fieldKey": "attack", 
       "type": "iconValue",
       "icon": "Sword",
       "style": {
@@ -160,7 +165,8 @@ export const DEFAULT_CARD_LAYOUT_JSON_STRING = `{
       "className": "text-destructive" // Use theme's destructive color (often red)
     },
     {
-      "fieldKey": "defense", // Maps to 'defense' field
+      // fieldKey should map to a 'defense' field
+      "fieldKey": "defense", 
       "type": "iconValue",
       "icon": "Shield",
       "style": {
@@ -174,6 +180,7 @@ export const DEFAULT_CARD_LAYOUT_JSON_STRING = `{
     }
     // Add more elements as needed for your specific card design
     // e.g., rarity, flavor text, set symbols, etc.
+    // Remember to define corresponding fields in the "Data Fields" section of your template!
   ]
 }`;
 
@@ -185,16 +192,16 @@ export const cardTemplates: CardTemplate[] = [
     id: 'generic',
     name: 'Generic Card (Seed)',
     fields: [
-      { key: 'name', label: 'Name', type: 'text', placeholder: 'Card Name' },
+      { key: 'name', label: 'Name', type: 'text', placeholder: 'Card Name', defaultValue: 'Generic Card' },
       { key: 'artworkUrl', label: 'Full Card Art URL', type: 'text', placeholder: 'https://placehold.co/280x400.png', defaultValue: 'https://placehold.co/280x400.png' },
       { key: 'imageUrl', label: 'Main Image URL', type: 'text', placeholder: 'https://placehold.co/250x140.png', defaultValue: 'https://placehold.co/250x140.png' },
-      { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., abstract pattern' },
-      { key: 'description', label: 'Description (fallback)', type: 'textarea', placeholder: 'General card text if specific fields are not used.' },
+      { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., abstract pattern', defaultValue: 'abstract pattern' },
+      { key: 'description', label: 'Description (fallback)', type: 'textarea', placeholder: 'General card text if specific fields are not used.', defaultValue: 'This is a generic card description.' },
       { key: 'cardType', label: 'Card Type Line', type: 'text', placeholder: 'e.g., Basic Unit', defaultValue: 'Unit' },
       { key: 'cost', label: 'Cost', type: 'number', defaultValue: 0 },
       { key: 'attack', label: 'Attack', type: 'number', defaultValue: 1 },
       { key: 'defense', label: 'Defense', type: 'number', defaultValue: 1 },
-      { key: 'effectText', label: 'Effect Text', type: 'textarea', placeholder: 'Main card text, abilities, rules.', defaultValue: 'Sample effect text.' },
+      { key: 'effectText', label: 'Effect Text', type: 'textarea', placeholder: 'Main card text, abilities, rules.', defaultValue: 'This card has a generic effect.' },
       { key: 'flavorText', label: 'Flavor Text', type: 'textarea', placeholder: 'Italicized thematic text.' },
       {
         key: 'rarity', label: 'Rarity', type: 'select', defaultValue: 'common',
@@ -207,10 +214,10 @@ export const cardTemplates: CardTemplate[] = [
     id: 'creature',
     name: 'Creature Card (Seed)',
     fields: [
-      { key: 'name', label: 'Name', type: 'text', placeholder: 'Grizzly Bear' },
+      { key: 'name', label: 'Name', type: 'text', placeholder: 'Grizzly Bear', defaultValue: 'Creature Sample' },
       { key: 'artworkUrl', label: 'Full Card Art URL', type: 'text', placeholder: 'https://placehold.co/280x400.png', defaultValue: 'https://placehold.co/280x400.png' },
       { key: 'imageUrl', label: 'Main Image URL', type: 'text', placeholder: 'https://placehold.co/250x140.png', defaultValue: 'https://placehold.co/250x140.png' },
-      { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., forest beast' },
+      { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., forest beast', defaultValue: 'forest beast' },
       { key: 'cost', label: 'Cost', type: 'number', defaultValue: 3, placeholder: '3' },
       { key: 'attack', label: 'Attack', type: 'number', defaultValue: 2, placeholder: '2' },
       { key: 'defense', label: 'Defense', type: 'number', defaultValue: 2, placeholder: '2' },
@@ -231,10 +238,10 @@ export const cardTemplates: CardTemplate[] = [
     id: 'spell',
     name: 'Spell Card (Seed)',
     fields: [
-      { key: 'name', label: 'Name', type: 'text', placeholder: 'Fireball' },
+      { key: 'name', label: 'Name', type: 'text', placeholder: 'Fireball', defaultValue: 'Spell Sample' },
       { key: 'artworkUrl', label: 'Full Card Art URL', type: 'text', placeholder: 'https://placehold.co/280x400.png', defaultValue: 'https://placehold.co/280x400.png' },
       { key: 'imageUrl', label: 'Main Image URL', type: 'text', placeholder: 'https://placehold.co/250x140.png', defaultValue: 'https://placehold.co/250x140.png' },
-      { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., magical explosion' },
+      { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., magical explosion', defaultValue: 'magical explosion' },
       { key: 'cost', label: 'Cost', type: 'number', defaultValue: 1, placeholder: '1' },
       { key: 'cardType', label: 'Card Type Line', type: 'text', defaultValue: 'Spell - Instant', placeholder: 'e.g., Instant Spell' },
       { key: 'effectText', label: 'Effect Text', type: 'textarea', placeholder: 'Spell effects and rules text...', defaultValue: 'This spell has a magical effect.' },
@@ -253,10 +260,10 @@ export const cardTemplates: CardTemplate[] = [
     id: 'item',
     name: 'Item Card (Seed)',
     fields: [
-      { key: 'name', label: 'Name', type: 'text', placeholder: 'Healing Potion' },
+      { key: 'name', label: 'Name', type: 'text', placeholder: 'Healing Potion', defaultValue: 'Item Sample' },
       { key: 'artworkUrl', label: 'Full Card Art URL', type: 'text', placeholder: 'https://placehold.co/280x400.png', defaultValue: 'https://placehold.co/280x400.png' },
       { key: 'imageUrl', label: 'Main Image URL', type: 'text', placeholder: 'https://placehold.co/250x140.png', defaultValue: 'https://placehold.co/250x140.png' },
-      { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., glowing artifact' },
+      { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., glowing artifact', defaultValue: 'glowing artifact' },
       { key: 'cost', label: 'Cost', type: 'number', defaultValue: 2, placeholder: '2' },
       { key: 'cardType', label: 'Card Type Line', type: 'text', defaultValue: 'Item - Equipment', placeholder: 'e.g., Equipment' },
       { key: 'effectText', label: 'Effect Text', type: 'textarea', placeholder: 'Item effects and rules text...', defaultValue: 'This item provides a benefit.' },
