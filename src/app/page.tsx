@@ -6,10 +6,10 @@ import ProjectCard from '@/components/project-card';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Loader2 } from 'lucide-react';
 import { useProjects } from '@/contexts/ProjectContext'; 
-import type { Project } from '@/lib/types';
+import type { Project, CardTemplateId } from '@/lib/types'; // Added CardTemplateId
 import { Skeleton } from '@/components/ui/skeleton';
 import CreateProjectDialog from '@/components/project/create-project-dialog';
-import EditProjectDialog from '@/components/project/edit-project-dialog'; // Import EditProjectDialog
+import EditProjectDialog from '@/components/project/edit-project-dialog'; 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -57,7 +57,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleCreateProject = async (projectName: string) => {
+  const handleCreateProject = async (projectName: string, associatedTemplateIds: CardTemplateId[]) => {
     if (!projectName.trim()) {
       toast({
         title: "Project Name Required",
@@ -67,7 +67,7 @@ export default function DashboardPage() {
       return;
     }
 
-    const result = await addProject({ name: projectName });
+    const result = await addProject({ name: projectName, associatedTemplateIds });
     if (result.success && result.newProject) {
       toast({
         title: "Project Created!",
@@ -92,7 +92,6 @@ export default function DashboardPage() {
   const handleEditProject = async (updatedData: Partial<Omit<Project, 'id' | 'cards' | 'lastModified' | 'associatedTemplateIds'>>) => {
     if (!projectToEdit) return;
 
-    // Retrieve the full project data from context to ensure we don't overwrite cards or other non-editable fields
     const fullProjectData = getProjectById(projectToEdit.id);
     if (!fullProjectData) {
       toast({ title: "Error", description: "Original project data not found.", variant: "destructive" });
@@ -100,11 +99,11 @@ export default function DashboardPage() {
     }
 
     const projectWithUpdates: Project = {
-      ...fullProjectData, // Start with all original data
+      ...fullProjectData, 
       name: updatedData.name || fullProjectData.name,
       thumbnailUrl: updatedData.thumbnailUrl || fullProjectData.thumbnailUrl,
       dataAiHint: updatedData.dataAiHint || fullProjectData.dataAiHint,
-      // lastModified will be updated by the updateProject function in the context
+      // associatedTemplateIds are managed separately or are part of fullProjectData
     };
 
     const result = await updateProject(projectWithUpdates);
