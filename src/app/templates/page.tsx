@@ -31,20 +31,32 @@ type CardTemplateId = ImportedCardTemplateId;
 
 function TemplateFieldDetail({ field }: { field: TemplateField }) {
   return (
-    <li className="text-sm py-1">
-      <span className="font-semibold">{field.label}</span> ({field.key}): <Badge variant="outline" className="ml-1">{field.type}</Badge>
+    <div className="text-sm py-1.5 px-2 rounded-sm hover:bg-muted/80 dark:hover:bg-muted/30 transition-colors group">
+      <div className="flex justify-between items-center">
+        <div>
+          <span className="font-semibold text-foreground group-hover:text-primary transition-colors">{field.label}</span>
+          <span className="text-xs text-muted-foreground ml-1">({field.key})</span>
+        </div>
+        <Badge variant="secondary" className="text-xs capitalize">{field.type}</Badge>
+      </div>
       {field.defaultValue !== undefined && (
-        <span className="text-xs text-muted-foreground ml-2">Default: {String(field.defaultValue)}</span>
-      )}
-       {field.placeholder && (
-        <span className="text-xs text-muted-foreground ml-2 italic">Placeholder: "{field.placeholder}"</span>
-      )}
-      {field.type === 'select' && field.options && (
-        <div className="text-xs text-muted-foreground ml-4">
-          Options: {field.options.map(opt => `${opt.label} (${opt.value})`).join(', ')}
+        <div className="text-xs text-muted-foreground mt-0.5">
+          Default: <code className="bg-muted text-muted-foreground px-1 py-0.5 rounded-sm text-[0.7rem]">{String(field.defaultValue)}</code>
         </div>
       )}
-    </li>
+      {field.type === 'select' && field.options && field.options.length > 0 && (
+        <div className="text-xs text-muted-foreground mt-1">
+          <span className="font-medium">Options:</span>
+          <div className="flex flex-wrap gap-1 mt-0.5">
+            {field.options.map(opt => (
+              <Badge key={opt.value} variant="outline" className="text-xs font-normal px-1.5 py-0.5">
+                {opt.label} <span className="text-muted-foreground/70 ml-0.5">({opt.value})</span>
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -108,10 +120,10 @@ export default function TemplateLibraryPage() {
         </div>
       </div>
 
-      <Alert variant="default" className="mb-6 bg-primary/5 border-primary/20">
+      <Alert variant="default" className="mb-6 bg-primary/5 border-primary/20 dark:bg-primary/10 dark:border-primary/30">
         <Info className="h-4 w-4 text-primary" />
         <AlertTitle className="text-primary">Template Management Note</AlertTitle>
-        <AlertDescription>
+        <AlertDescription className="text-primary/80 dark:text-primary/90">
           This library displays templates currently stored in your browser's local storage.
           When you create or edit templates, they are saved here.
           Project associations are managed on the "Manage Assignments" page and are also stored locally.
@@ -133,12 +145,12 @@ export default function TemplateLibraryPage() {
                   <div>
                     <h4 className="text-sm font-semibold mb-1 text-muted-foreground">Fields:</h4>
                     {template.fields.length > 0 ? (
-                      <ScrollArea className="h-[120px] pr-3 border rounded-md p-2 bg-muted/30">
-                        <ul className="list-disc list-inside pl-2 space-y-1">
+                      <ScrollArea className="h-[120px] pr-0 border rounded-md bg-muted/20 dark:bg-muted/10">
+                        <div className="p-1 space-y-0.5">
                           {template.fields.map((field) => (
                             <TemplateFieldDetail key={field.key} field={field} />
                           ))}
-                        </ul>
+                        </div>
                       </ScrollArea>
                     ) : (
                       <p className="text-sm text-muted-foreground">No fields defined for this template.</p>
