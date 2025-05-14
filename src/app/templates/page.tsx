@@ -1,13 +1,11 @@
 
 // src/app/templates/page.tsx
-"use client"; // Mark as client component
+"use client"; 
 
-import { useEffect, useState } // Import React hooks
-from 'react';
 import type { CardTemplate, TemplateField, CardTemplateId as ImportedCardTemplateId } from '@/lib/card-templates';
-// import { mockProjects } from '@/app/page'; // No longer directly used for associations here
-// import type { Project } from '@/lib/types'; // Type might be needed if showing project associations
-import { useTemplates } from '@/contexts/TemplateContext'; // Use the context
+import { useTemplates } from '@/contexts/TemplateContext'; 
+import { useProjects } from '@/contexts/ProjectContext'; // Import useProjects
+import type { Project } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -16,7 +14,6 @@ import { PlusCircle, AlertTriangle, Info, Settings2, Loader2 } from 'lucide-reac
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-// Define CardTemplateId locally if not using ProjectContext yet which might define it globally
 type CardTemplateId = ImportedCardTemplateId; 
 
 function TemplateFieldDetail({ field }: { field: TemplateField }) {
@@ -38,22 +35,20 @@ function TemplateFieldDetail({ field }: { field: TemplateField }) {
   );
 }
 
-// Placeholder - replace with actual data from ProjectContext when available
-function getProjectsForTemplate(templateId: CardTemplateId, allProjects: any[]): any[] {
-  // return allProjects.filter(project => project.associatedTemplateIds?.includes(templateId));
-  return []; // For now, return empty until ProjectContext is integrated
+function getProjectsForTemplate(templateId: CardTemplateId, allProjects: Project[]): Project[] {
+  return allProjects.filter(project => project.associatedTemplateIds?.includes(templateId));
 }
 
 
 export default function TemplateLibraryPage() {
-  const { templates, isLoading } = useTemplates();
-  // const { projects } = useProjects(); // Example for future integration
+  const { templates, isLoading: templatesLoading } = useTemplates();
+  const { projects, isLoading: projectsLoading } = useProjects();
 
-  if (isLoading) {
+  if (templatesLoading || projectsLoading) {
     return (
       <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-lg text-muted-foreground">Loading templates...</p>
+        <p className="text-lg text-muted-foreground">Loading library data...</p>
       </div>
     );
   }
@@ -84,15 +79,14 @@ export default function TemplateLibraryPage() {
         <AlertDescription>
           This library displays templates currently stored in your browser's local storage.
           When you create new templates via the "Template Designer", they are saved here.
-          The initial set of templates is loaded from the codebase if local storage is empty.
-          {/* Project associations are managed on the "Manage Assignments" page. */}
+          Project associations are managed on the "Manage Assignments" page and are also stored locally.
         </AlertDescription>
       </Alert>
 
       {templates.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {templates.map((template: CardTemplate) => {
-            // const associatedProjects = getProjectsForTemplate(template.id as CardTemplateId, []); // Pass actual projects when ProjectContext is used
+            const associatedProjects = getProjectsForTemplate(template.id as CardTemplateId, projects);
             return (
               <Card key={template.id} className="flex flex-col">
                 <CardHeader>
@@ -114,7 +108,7 @@ export default function TemplateLibraryPage() {
                       <p className="text-sm text-muted-foreground">No fields defined for this template.</p>
                     )}
                   </div>
-                  {/* <div>
+                  <div>
                     <h4 className="text-sm font-semibold mb-1 text-muted-foreground">Used by Projects:</h4>
                     {associatedProjects.length > 0 ? (
                        <ScrollArea className="h-[60px] pr-3">
@@ -125,9 +119,9 @@ export default function TemplateLibraryPage() {
                         </div>
                       </ScrollArea>
                     ) : (
-                      <p className="text-sm text-muted-foreground italic">Not explicitly used by any current projects (association data pending).</p>
+                      <p className="text-sm text-muted-foreground italic">Not currently associated with any projects.</p>
                     )}
-                  </div> */}
+                  </div>
                 </CardContent>
               </Card>
             );

@@ -4,7 +4,8 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 import AppHeader from '@/components/app-header';
-import { TemplateProvider } from '@/contexts/TemplateContext'; // Import TemplateProvider
+import { TemplateProvider } from '@/contexts/TemplateContext';
+import { ProjectProvider } from '@/contexts/ProjectContext'; // Import ProjectProvider
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -29,14 +30,16 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <TemplateProvider> {/* Wrap with TemplateProvider */}
-          <div className="flex flex-col min-h-screen">
-            <AppHeader />
-            <main className="flex-grow">
-              {children}
-            </main>
-            <Toaster />
-          </div>
+        <TemplateProvider>
+          <ProjectProvider> {/* Wrap with ProjectProvider */}
+            <div className="flex flex-col min-h-screen">
+              <AppHeader />
+              <main className="flex-grow">
+                {children}
+              </main>
+              <Toaster />
+            </div>
+          </ProjectProvider>
         </TemplateProvider>
       </body>
     </html>

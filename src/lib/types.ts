@@ -4,15 +4,6 @@ import type { CardTemplateId as ContextCardTemplateId } from '@/contexts/Templat
 
 export type CardTemplateId = ContextCardTemplateId; // Alias for clarity
 
-export interface Project {
-  id: string;
-  name: string;
-  thumbnailUrl: string;
-  dataAiHint?: string;
-  lastModified: string;
-  associatedTemplateIds?: CardTemplateId[]; // Uses the context-based CardTemplateId
-}
-
 export interface CardData {
   id: string;
   templateId: CardTemplateId; // Uses the context-based CardTemplateId
@@ -29,14 +20,23 @@ export interface CardData {
   customFields?: Record<string, string | number | boolean>; // For fields not in the core set
 }
 
-export interface EditorProjectData {
+export interface Project {
   id: string;
   name: string;
-  cards: CardData[];
-  associatedTemplateIds: CardTemplateId[]; // Uses the context-based CardTemplateId
+  thumbnailUrl: string;
+  dataAiHint?: string;
+  lastModified: string;
+  associatedTemplateIds: CardTemplateId[]; // Uses the context-based CardTemplateId. Ensure it's not optional or handle undefined.
+  cards: CardData[]; // Each project now holds its own array of cards
 }
 
-export interface DeckData {
+// This type might be simplified or removed if ProjectContext directly provides Project type with cards
+export interface EditorProjectData extends Omit<Project, 'thumbnailUrl' | 'lastModified' | 'dataAiHint'> {
+  // EditorProjectData essentially becomes the Project type from ProjectContext
+}
+
+
+export interface DeckData { // This type might be synonymous with Project now or a subset of it
   id: string;
   name: string;
   cards: CardData[];
