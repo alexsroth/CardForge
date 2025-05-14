@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Save, AlertTriangle, Loader2, ArrowLeft, Eye } from 'lucide-react';
+import { PlusCircle, Save, AlertTriangle, Loader2, ArrowLeft, Eye, HelpCircle } from 'lucide-react';
 import FieldRow, { type TemplateFieldDefinition } from '@/components/template-designer/field-row';
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates, type CardTemplateId } from '@/contexts/TemplateContext';
@@ -17,6 +17,7 @@ import type { CardData } from '@/lib/types';
 import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-renderer';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 // Helper to convert TemplateField (from storage) to TemplateFieldDefinition (for UI)
 function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldDefinition {
@@ -72,15 +73,14 @@ const toCamelCase = (str: string): string => {
   const words = cleaned.split(/[\s_-]+/).filter(Boolean);
 
   if (words.length === 0) return 'untitledField';
-  if (/^[0-9]/.test(result)) {
-    result = '_' + result;
-  }
+  
   let result = [words[0].toLowerCase(), ...words.slice(1).map(word => 
     word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
   )].join('');
   
-  if (!result) return 'untitledField';
-   if (/^[0-9]/.test(result)) {
+  if (!result) result = 'untitledField'; // Fallback if cleaning results in empty string
+
+   if (/^[0-9]/.test(result)) { // Ensure it doesn't start with a number
     result = '_' + result;
   }
   return result;
@@ -116,7 +116,7 @@ export default function EditTemplatePage() {
       setOriginalTemplateId(templateToEdit.id as CardTemplateId); 
       setTemplateName(templateToEdit.name);
       setFields(templateToEdit.fields.map(mapTemplateFieldToFieldDefinition));
-      setLayoutDefinition(templateToEdit.layoutDefinition || '');
+      setLayoutDefinition(templateToEdit.layoutDefinition || ''); // Default to empty string if undefined
       setErrorLoading(null);
     } else {
       setErrorLoading(`Template with ID "${templateIdToEdit}" not found.`);
@@ -130,18 +130,23 @@ export default function EditTemplatePage() {
     const generatedSampleCard: CardData = {
       id: 'preview-card',
       templateId: currentTemplateIdForPreview as CardTemplateId,
-      name: 'Sample Card Name',
+      // Sensible defaults for preview, especially for fields in the default layout
+      name: 'Awesome Card Name',
       description: 'This is a sample description for the card preview. It can contain multiple lines and will be used to test the layout of text areas.',
-      cost: 5,
-      attack: 3,
-      defense: 4,
-      imageUrl: 'https://placehold.co/280x180.png',
+      cost: 3,
+      attack: 2,
+      defense: 2,
+      imageUrl: 'https://placehold.co/250x140.png', // Used by default layout's image element
       dataAiHint: 'card art sample',
       rarity: 'rare',
-      effectText: 'Sample effect text: Draw a card, then discard a card.',
+      effectText: 'Sample effect: Draw a card. This unit gets +1/+1 until end of turn. This text might be long to test scrolling in a textarea layout element.',
       flavorText: 'This is some italicized flavor text.',
+      artworkUrl: 'https://placehold.co/280x400.png', // Used by default layout's backgroundImageField
+      cardType: 'Creature - Goblin', // Used by default layout's type line
+      // ... any other common fields you expect in a default layout
     };
 
+    // Override with values from defined fields
     fields.forEach(fieldDef => {
       const key = fieldDef.key as keyof CardData;
        if (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '') {
@@ -153,7 +158,8 @@ export default function EditTemplatePage() {
           (generatedSampleCard as any)[key] = fieldDef.defaultValue;
         }
       } else {
-         if (!Object.prototype.hasOwnProperty.call(generatedSampleCard, key)) {
+         // If no default value, but the key is one of our common preview fields, ensure it's not overwritten by generic placeholders
+         if (!Object.prototype.hasOwnProperty.call(generatedSampleCard, key) || generatedSampleCard[key] === undefined) {
            switch (fieldDef.type) {
             case 'text': (generatedSampleCard as any)[key] = `Sample ${fieldDef.label}`; break;
             case 'textarea': (generatedSampleCard as any)[key] = `Sample content for ${fieldDef.label}.`; break;
@@ -167,18 +173,21 @@ export default function EditTemplatePage() {
           }
         }
       }
-       if (['name', 'description', 'cost', 'attack', 'defense', 'imageUrl', 'dataAiHint', 'rarity', 'effectText', 'flavorText'].includes(fieldDef.key)) {
+       // Ensure specific known fields are correctly populated, especially image URLs
+      if (['name', 'description', 'cost', 'attack', 'defense', 'imageUrl', 'dataAiHint', 'rarity', 'effectText', 'flavorText', 'artworkUrl', 'cardType'].includes(fieldDef.key)) {
         if (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '') {
             (generatedSampleCard as any)[key] = fieldDef.defaultValue;
-             if(fieldDef.key === 'imageUrl' && typeof fieldDef.defaultValue === 'string' && !fieldDef.defaultValue.startsWith('http')) {
-                (generatedSampleCard as any)[key] = 'https://placehold.co/280x180.png';
+             if((fieldDef.key === 'imageUrl' || fieldDef.key === 'artworkUrl') && typeof fieldDef.defaultValue === 'string' && !fieldDef.defaultValue.startsWith('http')) {
+                (generatedSampleCard as any)[key] = `https://placehold.co/${fieldDef.key === 'imageUrl' ? '250x140' : '280x400'}.png`;
              }
-        } else if(fieldDef.key === 'imageUrl') {
-             (generatedSampleCard as any)[key] = 'https://placehold.co/280x180.png';
+        } else if(fieldDef.key === 'imageUrl' && !(generatedSampleCard as any)[key]) {
+             (generatedSampleCard as any)[key] = 'https://placehold.co/250x140.png';
+        } else if(fieldDef.key === 'artworkUrl' && !(generatedSampleCard as any)[key]) {
+             (generatedSampleCard as any)[key] = 'https://placehold.co/280x400.png';
         }
       }
     });
-    setSampleCardForPreview(generatedSampleCard);
+    setSampleCardForPreview(generatedSampleCard as CardData);
   }, [fields, originalTemplateId, templateName]);
 
   const templateForPreview = useMemo((): CardTemplate => ({
@@ -414,14 +423,38 @@ export default function EditTemplatePage() {
                   value={layoutDefinition}
                   onChange={(e) => setLayoutDefinition(e.target.value)}
                   placeholder='Enter JSON for card layout, e.g., { "width": "280px", "elements": [...] }'
-                  rows={10}
+                  rows={15}
                   className="font-mono text-xs"
                   disabled={isSaving}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Define visual elements like background, text blocks, images, and their styles/positions.
-                  Changes reflect in the live preview.
-                </p>
+                 <Accordion type="single" collapsible className="w-full mt-2">
+                  <AccordionItem value="layout-guide">
+                    <AccordionTrigger className="text-sm py-2 hover:no-underline">
+                      <div className="flex items-center text-muted-foreground">
+                        <HelpCircle className="mr-2 h-4 w-4" />
+                        Show Layout JSON Guide
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="text-xs p-3 border rounded-md bg-muted/30">
+                      <p className="font-semibold mb-1">Top-level properties:</p>
+                      <ul className="list-disc list-inside pl-2 mb-2 space-y-0.5">
+                        <li><code>width</code>, <code>height</code>: Card dimensions (e.g., "280px").</li>
+                        <li><code>backgroundColor</code>, <code>borderColor</code>, <code>borderRadius</code>: CSS values.</li>
+                        <li><code>backgroundImageField</code>: (Optional) Key of a data field (e.g., "artworkUrl") to use for the card's full background image.</li>
+                      </ul>
+                      <p className="font-semibold mb-1"><code>elements</code> array (each object defines one visual piece):</p>
+                      <ul className="list-disc list-inside pl-2 space-y-0.5">
+                        <li><code>fieldKey</code>: String matching a key from your "Data Fields" (e.g., "name", "cost").</li>
+                        <li><code>type</code>: "text", "textarea", "image", or "iconValue".</li>
+                        <li><code>style</code>: CSS-in-JS object (e.g., <code>{'{ "position": "absolute", "top": "10px", "fontSize": "1.2em" }'}</code>). Use camelCase for CSS properties (<code>fontSize</code> not <code>font-size</code>).</li>
+                        <li><code>className</code>: (Optional) Tailwind CSS classes.</li>
+                        <li><code>prefix</code>, <code>suffix</code>: (Optional, for "text", "iconValue") Text to add before/after the field's value.</li>
+                        <li><code>icon</code>: (For "iconValue") Name of a Lucide icon (e.g., "Coins", "Sword").</li>
+                      </ul>
+                       <p className="mt-2 italic">The live preview updates as you edit. Ensure your JSON is valid.</p>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </div>
             </CardContent>
             <CardFooter>
