@@ -1,4 +1,3 @@
-
 // src/app/templates/edit/[templateId]/page.tsx
 "use client";
 
@@ -681,7 +680,7 @@ export default function EditTemplatePage() {
                     <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border">
                        <div className={cn(
                           "grid gap-1",
-                          "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16"
+                          "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16" 
                         )}>
                         {commonLucideIconsForGuide.map(iconName => (
                           <TooltipProvider key={iconName}>
@@ -746,4 +745,3 @@ export default function EditTemplatePage() {
     </div>
   );
 }
-

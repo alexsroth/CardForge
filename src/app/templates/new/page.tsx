@@ -1,4 +1,3 @@
-
 // src/app/templates/new/page.tsx
 "use client";
 
@@ -656,30 +655,30 @@ export default function TemplateDesignerPage() {
                   <AccordionContent className="text-xs p-3 border rounded-md bg-muted/30">
                     <p className="font-semibold mb-1">Common Lucide Icons (Click to Copy Name):</p>
                       <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border">
-                        <div className={cn(
+                         <div className={cn(
                           "grid gap-1",
-                          "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16"
+                          "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16" 
                         )}>
-                          {commonLucideIconsForGuide.map(iconName => (
-                            <TooltipProvider key={iconName}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleCopyIconName(iconName)}
-                                    className="h-7 w-7 p-1"
-                                  >
-                                    <IconComponent name={iconName} className="h-4 w-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{iconName}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ))}
-                        </div>
+                        {commonLucideIconsForGuide.map(iconName => (
+                          <TooltipProvider key={iconName}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleCopyIconName(iconName)}
+                                  className="h-7 w-7 p-1"
+                                >
+                                  <IconComponent name={iconName} className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{iconName}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ))}
+                      </div>
                       </ScrollArea>
                   </AccordionContent>
                 </AccordionItem>
@@ -723,4 +722,3 @@ export default function TemplateDesignerPage() {
     </div>
   );
 }
-
