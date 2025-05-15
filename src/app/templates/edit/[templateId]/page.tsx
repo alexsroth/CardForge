@@ -22,6 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch'; // Import Switch
 import {
   Tooltip,
   TooltipContent,
@@ -126,7 +127,6 @@ function generateSamplePlaceholderUrl(config: {
   let path = `${width}x${height}`;
   const bgColor = rawBgColor?.replace('#', '').trim();
   const textColor = rawTextColor?.replace('#', '').trim();
-  const text = rawText?.trim();
 
   if (bgColor) {
     path += `/${bgColor}`;
@@ -134,9 +134,10 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  path += `.png`; // Ensure PNG format
+  path += `.png`;
 
   let fullUrl = `https://placehold.co/${path}`;
+  const text = rawText?.trim();
   if (text) {
     fullUrl += `?text=${encodeURIComponent(text)}`;
   }
@@ -181,6 +182,7 @@ export default function EditTemplatePage() {
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [errorLoading, setErrorLoading] = useState<string | null>(null);
   const [sampleCardForPreview, setSampleCardForPreview] = useState<CardData | null>(null);
+  const [showElementOutlines, setShowElementOutlines] = useState(false); // New state for outlines
 
 
   useEffect(() => {
@@ -204,7 +206,7 @@ export default function EditTemplatePage() {
 
   useEffect(() => {
     const currentTemplateIdForPreview = originalTemplateId || 'previewTemplateId';
-    const generatedSampleCard: Partial<CardData> = { 
+    const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
       templateId: currentTemplateIdForPreview as CardTemplateId,
     };
@@ -245,7 +247,7 @@ export default function EditTemplatePage() {
         } else {
           valueForPreview = fieldDef.defaultValue;
         }
-      } else { 
+      } else {
         switch (fieldDef.type) {
           case 'text': valueForPreview = `Sample ${fieldDef.label}`; break;
           case 'textarea': valueForPreview = `Sample content for ${fieldDef.label}.`; break;
@@ -260,25 +262,26 @@ export default function EditTemplatePage() {
       }
       (generatedSampleCard as any)[key] = valueForPreview;
     });
-    
+
+    // Apply generic defaults if specific fields are not yet defined by the user for the preview
     if (generatedSampleCard.name === undefined && !fields.some(f => f.key === 'name')) generatedSampleCard.name = 'Awesome Card Name';
     if (generatedSampleCard.cost === undefined && !fields.some(f => f.key === 'cost')) generatedSampleCard.cost = 3;
     if (generatedSampleCard.imageUrl === undefined && !fields.some(f => f.key === 'imageUrl')) {
-      generatedSampleCard.imageUrl = generateSamplePlaceholderUrl({width: 250, height: 140, text: 'Card Image'});
+      generatedSampleCard.imageUrl = generateSamplePlaceholderUrl({width: 250, height: 140, text: 'Main Image'});
     }
     if (generatedSampleCard.dataAiHint === undefined && !fields.some(f => f.key === 'dataAiHint')) generatedSampleCard.dataAiHint = 'card art sample';
     if (generatedSampleCard.cardType === undefined && !fields.some(f => f.key === 'cardType')) generatedSampleCard.cardType = 'Creature - Goblin';
     if (generatedSampleCard.effectText === undefined && !fields.some(f => f.key === 'effectText')) generatedSampleCard.effectText = 'Sample effect text for preview.';
     if (generatedSampleCard.attack === undefined && !fields.some(f => f.key === 'attack')) generatedSampleCard.attack = 2;
     if (generatedSampleCard.defense === undefined && !fields.some(f => f.key === 'defense')) generatedSampleCard.defense = 2;
-    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) { 
-      generatedSampleCard.artworkUrl = generateSamplePlaceholderUrl({width: 280, height: 400, text: 'Artwork'});
+    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) {
+      generatedSampleCard.artworkUrl = generateSamplePlaceholderUrl({width: 280, height: 400, text: 'Background Art'});
     }
     if (generatedSampleCard.statusIcon === undefined && !fields.some(f => f.key === 'statusIcon')) generatedSampleCard.statusIcon = 'ShieldCheck';
 
 
     setSampleCardForPreview(generatedSampleCard as CardData);
-  }, [fields, originalTemplateId, templateName]); 
+  }, [fields, originalTemplateId, templateName]);
 
   const templateForPreview = useMemo((): CardTemplate => ({
     id: (originalTemplateId || 'previewTemplateId') as CardTemplateId,
@@ -298,7 +301,7 @@ export default function EditTemplatePage() {
     }
 
     let baseKey = toCamelCase(newFieldLabel);
-    if (!baseKey) baseKey = `newField`; 
+    if (!baseKey) baseKey = `newField`;
 
     let newKey = baseKey;
     let keyCounter = 1;
@@ -315,10 +318,10 @@ export default function EditTemplatePage() {
         type: 'text',
         placeholder: '',
         defaultValue: '',
-        previewValue: '', 
+        previewValue: '',
         optionsString: '',
-        placeholderConfigWidth: 250, 
-        placeholderConfigHeight: 140, 
+        placeholderConfigWidth: 250,
+        placeholderConfigHeight: 140,
       }
     ]);
   };
@@ -335,7 +338,7 @@ export default function EditTemplatePage() {
 
     if (updatedFieldDefinition.label !== undefined && updatedFieldDefinition.label !== oldField.label) {
         let baseKey = toCamelCase(updatedFieldDefinition.label);
-        if (!baseKey) { 
+        if (!baseKey) {
             const prefix = 'field';
             let fallbackCounter = 1;
             let potentialKey = `${prefix}${fallbackCounter}`;
@@ -366,13 +369,13 @@ export default function EditTemplatePage() {
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
     setLayoutDefinition(newLayoutDef);
-    if (layoutJsonError) setLayoutJsonError(null); 
+    if (layoutJsonError) setLayoutJsonError(null);
   };
 
   const validateAndFormatLayoutJson = () => {
     try {
       const parsed = JSON.parse(layoutDefinition);
-      setLayoutDefinition(JSON.stringify(parsed, null, 2)); 
+      setLayoutDefinition(JSON.stringify(parsed, null, 2));
       setLayoutJsonError(null);
       return true;
     } catch (e: any) {
@@ -406,7 +409,7 @@ export default function EditTemplatePage() {
         return;
     }
 
-    if (layoutDefinition.trim() && !validateAndFormatLayoutJson()) { 
+    if (layoutDefinition.trim() && !validateAndFormatLayoutJson()) {
       toast({
         title: "Invalid Layout JSON",
         description: `Please correct the Layout Definition JSON. Error: ${layoutJsonError || 'Unknown JSON error.'}`,
@@ -418,7 +421,7 @@ export default function EditTemplatePage() {
     setIsSaving(true);
 
     const updatedTemplateData: CardTemplate = {
-      id: originalTemplateId, 
+      id: originalTemplateId,
       name: templateName.trim(),
       fields: fields.map(mapFieldDefinitionToTemplateField),
       layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : DEFAULT_CARD_LAYOUT_JSON_STRING,
@@ -432,7 +435,7 @@ export default function EditTemplatePage() {
         description: result.message,
         variant: "default",
       });
-      router.push('/templates'); 
+      router.push('/templates');
     } else {
       toast({
         title: "Update Failed",
@@ -485,151 +488,153 @@ export default function EditTemplatePage() {
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
+      {/* Top Section: Template Info & Data Fields */}
       <Card>
         <CardHeader>
-        <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center">
             <CardTitle className="text-2xl font-bold">Edit Template</CardTitle>
             <Button variant="outline" size="sm" asChild>
-            <Link href="/templates"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Library</Link>
+              <Link href="/templates"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Library</Link>
             </Button>
-        </div>
-        <CardDescription>
+          </div>
+          <CardDescription>
             Modify the template's name, fields, and layout definition. The Template ID (<code>{originalTemplateId}</code>) cannot be changed.
-        </CardDescription>
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-            <Label htmlFor="templateName">Template Name</Label>
-            <Input
+              <Label htmlFor="templateName">Template Name</Label>
+              <Input
                 id="templateName"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
                 placeholder="Hero Unit Card"
                 disabled={isSaving}
-            />
+              />
             </div>
             <div>
-            <Label htmlFor="templateId">Template ID (Auto-generated, Read-only)</Label>
-            <Input
+              <Label htmlFor="templateId">Template ID (Auto-generated, Read-only)</Label>
+              <Input
                 id="templateId"
                 value={originalTemplateId || ''}
                 readOnly
                 disabled={isSaving}
                 className="bg-muted/50"
-            />
+              />
             </div>
-        </div>
-        <div className="space-y-2">
+          </div>
+          <div className="space-y-2">
             <h3 className="text-lg font-semibold">Data Fields</h3>
             <ScrollArea className="h-auto pr-3 border rounded-md">
-            <div className="p-2 space-y-3">
+              <div className="p-2 space-y-3">
                 {fields.map((field, index) => (
-                <FieldRow
-                    key={index} 
+                  <FieldRow
+                    key={index}
                     field={field}
                     onChange={(updatedField) => handleFieldChange(index, updatedField)}
                     onRemove={() => handleRemoveField(index)}
                     isSaving={isSaving}
-                />
+                  />
                 ))}
                 {fields.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-4">
-                        No fields added yet. Click "Add Field" to begin.
-                    </p>
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No fields added yet. Click "Add Field" to begin.
+                  </p>
                 )}
-            </div>
+              </div>
             </ScrollArea>
             <Button onClick={handleAddField} variant="outline" size="sm" disabled={isSaving} className="mt-2">
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Field
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Field
             </Button>
-        </div>
+          </div>
         </CardContent>
       </Card>
 
+      {/* Bottom Section: Layout Editor & Preview */}
       <div className="flex flex-col md:flex-row gap-8">
         <Card className="md:w-[65%] flex flex-col">
-        <CardHeader>
+          <CardHeader>
             <CardTitle className="text-xl font-bold">Layout Definition (JSON)</CardTitle>
             <CardDescription>
-            Define how card data is visually presented. Use the live preview on the right.
-            Field keys in the JSON must match the keys from your "Data Fields" section.
+              Define how card data is visually presented. Use the live preview on the right.
+              Field keys in the JSON must match the keys from your "Data Fields" section.
             </CardDescription>
-        </CardHeader>
-        <CardContent className="flex-grow space-y-2 flex flex-col">
+          </CardHeader>
+          <CardContent className="flex-grow space-y-2 flex flex-col">
             <Textarea
-            id="layoutDefinition"
-            value={layoutDefinition}
-            onChange={handleLayoutDefinitionChange}
-            onBlur={validateAndFormatLayoutJson} 
-            placeholder='Enter JSON for card layout, e.g., { "width": "280px", "elements": [...] }'
-            rows={15}
-            className="font-mono text-xs flex-grow min-h-[300px] max-h-[350px]" 
-            disabled={isSaving}
+              id="layoutDefinition"
+              value={layoutDefinition}
+              onChange={handleLayoutDefinitionChange}
+              onBlur={validateAndFormatLayoutJson}
+              placeholder='Enter JSON for card layout, e.g., { "width": "280px", "elements": [...] }'
+              rows={15}
+              className="font-mono text-xs flex-grow min-h-[300px] max-h-[350px]"
+              disabled={isSaving}
             />
-            {layoutJsonError && ( 
-            <Alert variant="destructive" className="mt-2">
+            {layoutJsonError && (
+              <Alert variant="destructive" className="mt-2">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>JSON Error</AlertTitle>
                 <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
-            </Alert>
+              </Alert>
             )}
             <Accordion type="single" collapsible className="w-full mt-2">
               <AccordionItem value="layout-guide">
-                  <AccordionTrigger className="text-sm py-2 hover:no-underline">
+                <AccordionTrigger className="text-sm py-2 hover:no-underline">
                   <div className="flex items-center text-muted-foreground">
-                      <HelpCircle className="mr-2 h-4 w-4" />
-                      Show Layout JSON Guide
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    Show Layout JSON Guide
                   </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="text-xs p-3 border rounded-md bg-muted/30">
+                </AccordionTrigger>
+                <AccordionContent className="text-xs p-3 border rounded-md bg-muted/30">
                   <p className="font-semibold mb-1">Top-level properties:</p>
                   <ul className="list-disc list-inside pl-2 mb-2 space-y-0.5">
-                      <li><code>width</code>, <code>height</code>: Card dimensions (e.g., "280px").</li>
-                      <li><code>backgroundColor</code>, <code>borderColor</code>, <code>borderRadius</code>: CSS values.</li>
+                    <li><code>width</code>, <code>height</code>: Card dimensions (e.g., "280px").</li>
+                    <li><code>backgroundColor</code>, <code>borderColor</code>, <code>borderRadius</code>: CSS values.</li>
                   </ul>
                   <p className="font-semibold mb-1 mt-3">Available Field Keys for this Template:</p>
                   {fields.length > 0 ? (
-                      <ScrollArea className="max-h-[100px] bg-background/50 p-2 rounded border text-xs">
+                    <ScrollArea className="max-h-[100px] bg-background/50 p-2 rounded border text-xs">
                       <ul className="list-disc list-inside space-y-0.5">
-                          {fields.map(f => <li key={f.key}><code>{f.key}</code> ({f.label})</li>)}
+                        {fields.map(f => <li key={f.key}><code>{f.key}</code> ({f.label})</li>)}
                       </ul>
-                      </ScrollArea>
+                    </ScrollArea>
                   ) : (
-                      <p className="italic text-muted-foreground">No data fields defined yet for this template.</p>
+                    <p className="italic text-muted-foreground">No data fields defined yet for this template.</p>
                   )}
                   <p className="text-xs mt-1 mb-2">Use these keys in the <code>fieldKey</code> property of elements below.</p>
 
                   <p className="font-semibold mb-1 mt-3"><code>elements</code> array (each object defines one visual piece):</p>
                   <ul className="list-disc list-inside pl-2 space-y-1">
-                      <li>
-                      <strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above.
-                      </li>
-                      <li>
+                    <li>
+                      <strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above (e.g., if you have "Card Title" with key "cardTitle", use "cardTitle").
+                    </li>
+                    <li>
                       <strong><code>type</code></strong>: (String) One of: <code>"text"</code>, <code>"textarea"</code>, <code>"image"</code>, <code>"iconValue"</code>, <code>"iconFromData"</code>.
-                          <ul className="list-['-_'] list-inside pl-4 mt-1 space-y-1 text-muted-foreground/90">
-                          <li><code>text</code>: Single line text.</li>
-                          <li><code>textarea</code>: Multi-line text, often scrollable.</li>
-                          <li><code>image</code>: Displays an image from URL in <code>fieldKey</code>.</li>
-                          <li><code>iconValue</code>: Displays text from <code>fieldKey</code> alongside a fixed <code>icon</code>.</li>
-                          <li><code>iconFromData</code>: Displays an icon whose name is stored in <code>fieldKey</code>.</li>
+                      <ul className="list-['-_'] list-inside pl-4 mt-1 space-y-1 text-muted-foreground/90">
+                        <li><code>text</code>: Single line text.</li>
+                        <li><code>textarea</code>: Multi-line text, often scrollable.</li>
+                        <li><code>image</code>: Displays an image from URL in <code>fieldKey</code>.</li>
+                        <li><code>iconValue</code>: Displays text from <code>fieldKey</code> alongside a fixed <code>icon</code>.</li>
+                        <li><code>iconFromData</code>: Displays an icon whose name is stored in <code>fieldKey</code>.</li>
                       </ul>
-                      </li>
-                      <li>
+                    </li>
+                    <li>
                       <strong><code>style</code></strong>: (Object) CSS-in-JS (e.g., <code>{'{ "position": "absolute", "top": "10px", "fontSize": "1.2em" }'}</code>). Use camelCase for CSS properties.
-                      </li>
-                      <li>
+                    </li>
+                    <li>
                       <strong><code>className</code></strong>: (String, Optional) Tailwind CSS classes.
-                      </li>
-                      <li>
+                    </li>
+                    <li>
                       <strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue". Text added before/after the field's value.
-                      </li>
-                      <li>
+                    </li>
+                    <li>
                       <strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon (e.g., "Coins", "Sword"). **Ensure the icon exists in <code>lucide-react</code>.**
-                      </li>
+                    </li>
                   </ul>
                   <p className="mt-3 italic">The live preview updates as you edit. Ensure your JSON is valid. Customize <code>fieldKey</code> values to match your defined data fields.</p>
-                  
+
                   <p className="font-semibold mb-1 mt-4">Example Element Snippets:</p>
                   <pre className="text-xs bg-background/50 p-2 rounded border whitespace-pre-wrap">
     {`// For a simple text display
@@ -666,80 +671,95 @@ export default function EditTemplatePage() {
     }
 `}
                   </pre>
-                  </AccordionContent>
+                </AccordionContent>
               </AccordionItem>
               <AccordionItem value="lucide-icon-explorer">
                 <AccordionTrigger className="text-sm py-2 hover:no-underline">
-                    <div className="flex items-center text-muted-foreground">
+                  <div className="flex items-center text-muted-foreground">
                     <Copy className="mr-2 h-4 w-4" />
                     Browse Lucide Icons
-                    </div>
+                  </div>
                 </AccordionTrigger>
                 <AccordionContent className="text-xs p-3 border rounded-md bg-muted/30">
                   <p className="font-semibold mb-1 mt-0">Common Lucide Icons (Click to Copy Name):</p>
-                    <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border overflow-y-auto">
-                       <div className={cn(
-                          "grid gap-1",
-                          "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16" 
-                        )}>
-                        {commonLucideIconsForGuide.map(iconName => (
-                          <TooltipProvider key={iconName}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleCopyIconName(iconName)}
-                                  className="h-7 w-7 p-1"
-                                >
-                                  <IconComponent name={iconName} className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{iconName}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ))}
-                      </div>
-                      </ScrollArea>
+                  <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border overflow-y-auto">
+                    <div className={cn(
+                      "grid gap-1",
+                      "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16"
+                    )}>
+                      {commonLucideIconsForGuide.map(iconName => (
+                        <TooltipProvider key={iconName}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleCopyIconName(iconName)}
+                                className="h-7 w-7 p-1"
+                              >
+                                <IconComponent name={iconName} className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{iconName}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ))}
+                    </div>
+                  </ScrollArea>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
-        </CardContent>
-        <CardFooter className="mt-auto">
+          </CardContent>
+          <CardFooter className="mt-auto">
             <Button
-            onClick={handleSaveTemplate}
-            className="w-full md:w-auto"
-            disabled={isSaving || !templateName.trim() || fields.length === 0 || !originalTemplateId}
+              onClick={handleSaveTemplate}
+              className="w-full md:w-auto"
+              disabled={isSaving || !templateName.trim() || fields.length === 0 || !originalTemplateId}
             >
-            {isSaving ? (
+              {isSaving ? (
                 <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving Changes... </>
-            ) : (
+              ) : (
                 <> <Save className="mr-2 h-4 w-4" /> Save Changes </>
-            )}
+              )}
             </Button>
-        </CardFooter>
+          </CardFooter>
         </Card>
 
         <Card className="md:w-[35%] sticky top-20 self-start">
-        <CardHeader>
-            <CardTitle className="text-xl font-bold flex items-center">
-            <Eye className="mr-2 h-5 w-5" />
-            Live Layout Preview
-            </CardTitle>
+          <CardHeader>
+             <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold flex items-center">
+                    <Eye className="mr-2 h-5 w-5" />
+                    Live Layout Preview
+                </CardTitle>
+                <div className="flex items-center space-x-2">
+                    <Switch
+                        id="show-outlines-edit" // Ensure unique ID if this page can be open with new
+                        checked={showElementOutlines}
+                        onCheckedChange={setShowElementOutlines}
+                        aria-label="Show element outlines"
+                    />
+                    <Label htmlFor="show-outlines-edit" className="text-xs text-muted-foreground">Outlines</Label>
+                </div>
+            </div>
             <CardDescription>
-            This preview updates as you modify the Layout Definition JSON or template fields.
-            Uses sample data based on your field definitions.
+              This preview updates as you modify the Layout Definition JSON or template fields.
+              Uses sample data based on your field definitions.
             </CardDescription>
-        </CardHeader>
-        <CardContent className="flex items-center justify-center p-4 min-h-[450px] bg-muted/30 rounded-b-md">
+          </CardHeader>
+          <CardContent className="flex items-center justify-center p-4 min-h-[450px] bg-muted/30 rounded-b-md">
             {sampleCardForPreview && templateForPreview ? (
-            <DynamicCardRenderer card={sampleCardForPreview} template={templateForPreview} />
+              <DynamicCardRenderer 
+                card={sampleCardForPreview} 
+                template={templateForPreview} 
+                showElementOutlines={showElementOutlines}
+              />
             ) : (
-            <p className="text-muted-foreground">Loading preview or define fields...</p>
+              <p className="text-muted-foreground">Loading preview or define fields...</p>
             )}
-        </CardContent>
+          </CardContent>
         </Card>
       </div>
     </div>

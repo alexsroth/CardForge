@@ -6,25 +6,26 @@ import type { CardTemplate, LayoutDefinition, LayoutElement } from '@/lib/card-t
 import Image from 'next/image';
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import * as LucideIcons from 'lucide-react'; 
-import { cn } from '@/lib/utils'; 
+import * as LucideIcons from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface DynamicCardRendererProps {
   card: CardData;
   template: CardTemplate;
+  showElementOutlines?: boolean; // New prop
 }
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
-  if (!Icon || typeof Icon !== 'function') { 
+  if (!Icon || typeof Icon !== 'function') {
     console.warn(`Lucide icon "${name}" not found or is not a component. Fallback HelpCircle will be used.`);
-    return <LucideIcons.HelpCircle {...props} />; 
+    return <LucideIcons.HelpCircle {...props} />;
   }
   return <Icon {...props} />;
 };
 
 
-export default function DynamicCardRenderer({ card, template }: DynamicCardRendererProps) {
+export default function DynamicCardRenderer({ card, template, showElementOutlines = false }: DynamicCardRendererProps) {
   let layout: LayoutDefinition | null = null;
 
   if (template.layoutDefinition) {
@@ -50,7 +51,7 @@ export default function DynamicCardRenderer({ card, template }: DynamicCardRende
       </div>
     );
   }
-  
+
   const cardStyle: React.CSSProperties = {
     width: layout.width || '280px',
     height: layout.height || '400px',
@@ -62,50 +63,47 @@ export default function DynamicCardRenderer({ card, template }: DynamicCardRende
     position: 'relative',
     overflow: 'hidden',
     boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    color: 'hsl(var(--card-foreground))', 
+    color: 'hsl(var(--card-foreground))',
   };
-
-  // Background image logic was removed from default template, but keeping this for potential future use if `backgroundImageField` is added back.
-  // const backgroundImageUrl = layout.backgroundImageField && card[layout.backgroundImageField as keyof CardData]
-  //   ? String(card[layout.backgroundImageField as keyof CardData])
-  //   : null;
 
   return (
     <div style={cardStyle} className="select-none">
-      {/* {backgroundImageUrl && (
-        <Image
-          src={backgroundImageUrl}
-          alt={`${card.name || 'Card'} background`}
-          fill
-          style={{ objectFit: 'cover', zIndex: 0 }}
-          data-ai-hint={card.dataAiHint || "card background art"}
-        />
-      )} */}
       {layout.elements.map((element, index) => {
         const value = card[element.fieldKey as keyof CardData];
-        const elementStyle = { ...(element.style || {}), zIndex: 1 }; 
+        let elementStyle = { ...(element.style || {}), zIndex: 1 };
 
-        // Skip rendering if fieldKey is missing and it's not a decorative element or complex type
-        // This allows prefix/suffix to render even if value is empty for text types
+        if (showElementOutlines) {
+          elementStyle = {
+            ...elementStyle,
+            outline: '1px dashed rgba(255,0,0,0.7)', // Red dashed outline
+            outlineOffset: '-1px',
+          };
+        }
+        
+        const title = `fieldKey: ${element.fieldKey}`;
+
         if (value === undefined && element.type !== 'image' && !(element.prefix || element.suffix) && element.type !== 'iconValue' && element.type !== 'iconFromData') {
            return null;
         }
-        
+
         let content: React.ReactNode = String(value ?? '');
         if (element.prefix) content = element.prefix + content;
-        if (element.suffix) content = content + String(value ?? ''); // Ensure suffix also gets the value if prefix was used
+        // Suffix logic might need adjustment if prefix already prepends value
+        if (element.suffix) content = String(value ?? '') + element.suffix; 
+        // If both prefix and suffix, ensure value is between them
+        if (element.prefix && element.suffix) content = element.prefix + String(value ?? '') + element.suffix;
 
 
         switch (element.type) {
           case 'text':
             return (
-              <div key={index} style={elementStyle} className={element.className}>
+              <div key={index} style={elementStyle} className={element.className} title={title}>
                 {content}
               </div>
             );
-          case 'textarea': 
+          case 'textarea':
             return (
-              <ScrollArea key={index} style={elementStyle} className={element.className}>
+              <ScrollArea key={index} style={elementStyle} className={element.className} title={title}>
                  <div className="whitespace-pre-wrap p-1">{content}</div>
               </ScrollArea>
             );
@@ -113,10 +111,10 @@ export default function DynamicCardRenderer({ card, template }: DynamicCardRende
             const rawImgValue = card[element.fieldKey as keyof CardData];
             let srcForImage: string;
 
-            if (typeof rawImgValue === 'string' && 
-                (rawImgValue.startsWith('http://') || 
-                 rawImgValue.startsWith('https://') || 
-                 rawImgValue.startsWith('/') || 
+            if (typeof rawImgValue === 'string' &&
+                (rawImgValue.startsWith('http://') ||
+                 rawImgValue.startsWith('https://') ||
+                 rawImgValue.startsWith('/') ||
                  rawImgValue.startsWith('data:'))) {
               srcForImage = rawImgValue;
             } else {
@@ -128,35 +126,35 @@ export default function DynamicCardRenderer({ card, template }: DynamicCardRende
               const placeholderWidth = isNaN(widthNum) || widthNum <= 0 ? 100 : widthNum;
               const placeholderHeight = isNaN(heightNum) || heightNum <= 0 ? 100 : heightNum;
               srcForImage = `https://placehold.co/${placeholderWidth}x${placeholderHeight}.png`;
-              
+
               if (typeof rawImgValue === 'string' && rawImgValue.trim() !== '') {
                 console.warn(`DynamicCardRenderer: fieldKey "${element.fieldKey}" (value: "${rawImgValue}") used as image type but is not a valid URL. Using placeholder: ${srcForImage}`);
               }
             }
             const altText = card.name || `Image for ${element.fieldKey}`;
             return (
-              <div key={index} style={elementStyle} className={cn("relative", element.className)}>
-                <Image 
-                    src={srcForImage} 
-                    alt={altText} 
-                    fill 
+              <div key={index} style={elementStyle} className={cn("relative", element.className)} title={title}>
+                <Image
+                    src={srcForImage}
+                    alt={altText}
+                    fill
                     style={{ objectFit: (element.style?.objectFit as any) || 'contain' }}
                     data-ai-hint={card.dataAiHint || `${element.fieldKey} illustration`}
                 />
               </div>
             );
-          case 'iconValue': // Displays a fixed icon (from layout) next to card data
+          case 'iconValue':
             return (
-              <div key={index} style={elementStyle} className={cn("flex items-center gap-1", element.className)}>
-                {element.icon && <IconComponent name={element.icon} className="h-full w-auto" />} {/* Icon size can be controlled by parent style fontSize or explicit className */}
+              <div key={index} style={elementStyle} className={cn("flex items-center gap-1", element.className)} title={title}>
+                {element.icon && <IconComponent name={element.icon} className="h-full w-auto" />}
                 <span>{content}</span>
               </div>
             );
-          case 'iconFromData': // Displays an icon whose name is stored in card data
+          case 'iconFromData':
             const iconNameFromData = String(value || '');
             return (
-              <div key={index} style={elementStyle} className={cn("flex items-center justify-center", element.className)}>
-                 {iconNameFromData && <IconComponent name={iconNameFromData} className="h-full w-auto" />} {/* Icon size controlled by parent style or className */}
+              <div key={index} style={elementStyle} className={cn("flex items-center justify-center", element.className)} title={title}>
+                 {iconNameFromData && <IconComponent name={iconNameFromData} className="h-full w-auto" />}
               </div>
             );
           default:
