@@ -8,7 +8,7 @@ import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIconsAll from 'lucide-react'; // For general lookup
 // Explicitly import commonly used icons and the fallback icon
-import { Coins, Sword, Shield, Moon, HelpCircle as FallbackIcon } from 'lucide-react';
+import { Coins, Sword, Shield, Moon, Pencil, HelpCircle as FallbackIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Create a registry for explicitly imported icons
@@ -17,19 +17,20 @@ const iconRegistry: { [key: string]: React.ElementType<LucideIconsAll.LucideProp
   Sword,
   Shield,
   Moon,
+  Pencil, // Added Pencil to the explicit registry
   HelpCircle: FallbackIcon, // Ensure FallbackIcon is always in the registry by its common name
   // Add other frequently used icons here if you find they are being tree-shaken out
 };
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIconsAll.LucideProps) => {
   // Prioritize the registry, then fall back to dynamic lookup
-  const Icon = iconRegistry[name] || (LucideIconsAll as any)[name];
+  const IconToRender = iconRegistry[name] || (LucideIconsAll as any)[name];
 
-  if (!Icon || typeof Icon !== 'function') {
+  if (!IconToRender || typeof IconToRender !== 'function') {
     console.warn(`Lucide icon "${name}" not found or is not a component. Fallback 'HelpCircle' will be used.`);
     return <FallbackIcon {...props} />; // Use the explicitly imported FallbackIcon
   }
-  return <Icon {...props} />;
+  return <IconToRender {...props} />;
 };
 
 
@@ -97,7 +98,7 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
         let valueForDisplay: any = rawValue;
         if (rawValue === undefined || rawValue === null) {
             if (element.type === 'number') valueForDisplay = '';
-            else if (element.type === 'boolean') valueForDisplay = false; // Though boolean isn't a layout type yet
+            else if (element.type === 'boolean') valueForDisplay = false; 
             else valueForDisplay = '';
         }
 
@@ -137,14 +138,16 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
             }
             const altText = card.name || `Image for ${element.fieldKey}`;
             elementContent = (
-              <Image 
-                  src={imageUrl} 
-                  alt={altText} 
-                  fill 
-                  style={{ objectFit: (element.style?.objectFit as any) || 'contain' }} 
-                  data-ai-hint={card.dataAiHint || `${element.fieldKey} illustration`}
-                  priority={index < 3} // Prioritize loading for first few images
-              />
+              <div style={{position: 'relative', width: '100%', height: '100%'}}>
+                <Image 
+                    src={imageUrl} 
+                    alt={altText} 
+                    fill 
+                    style={{ objectFit: (element.style?.objectFit as any) || 'contain' }} 
+                    data-ai-hint={card.dataAiHint || `${element.fieldKey} illustration`}
+                    priority={index < 3} 
+                />
+              </div>
             );
             break;
           case 'iconValue':
@@ -194,7 +197,7 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
                 padding: '1px 4px',
                 fontSize: '9px',
                 borderRadius: '3px',
-                zIndex: 10000, // Ensure label is on top of other elements
+                zIndex: 10000, 
                 pointerEvents: 'none',
                 lineHeight: '1',
                 whiteSpace: 'nowrap',
