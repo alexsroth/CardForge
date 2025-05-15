@@ -100,13 +100,17 @@ const toCamelCase = (str: string): string => {
 };
 
 function generateSamplePlaceholderUrl(fieldDef: TemplateFieldDefinition): string {
-  const width = fieldDef.placeholderConfigWidth || 100;
-  const height = fieldDef.placeholderConfigHeight || 100;
-  
+  const {
+    placeholderConfigWidth: width = 100,
+    placeholderConfigHeight: height = 100,
+    placeholderConfigBgColor: bgColor,
+    placeholderConfigTextColor: textColor,
+    placeholderConfigText: text,
+  } = fieldDef;
+
   let path = `${width}x${height}`;
-  const cleanBgColor = fieldDef.placeholderConfigBgColor?.replace('#', '').trim();
-  const cleanTextColor = fieldDef.placeholderConfigTextColor?.replace('#', '').trim();
-  const cleanText = fieldDef.placeholderConfigText?.trim();
+  const cleanBgColor = bgColor?.replace('#', '').trim();
+  const cleanTextColor = textColor?.replace('#', '').trim();
 
   if (cleanBgColor) {
     path += `/${cleanBgColor}`;
@@ -114,10 +118,10 @@ function generateSamplePlaceholderUrl(fieldDef: TemplateFieldDefinition): string
       path += `/${cleanTextColor}`;
     }
   }
-  path += '.png'; // Always request PNG for preview
+  path += `.png`;
 
   let fullUrl = `https://placehold.co/${path}`;
-
+  const cleanText = text?.trim();
   if (cleanText) {
     fullUrl += `?text=${encodeURIComponent(cleanText)}`;
   }
@@ -442,7 +446,7 @@ export default function EditTemplatePage() {
                 />
               </div>
               <div>
-                <Label htmlFor="templateId">Template ID (Read-only)</Label>
+                <Label htmlFor="templateId">Template ID (Auto-generated, Read-only)</Label>
                 <Input
                   id="templateId"
                   value={originalTemplateId || ''}
@@ -641,3 +645,5 @@ export default function EditTemplatePage() {
     </div>
   );
 }
+
+    
