@@ -1,16 +1,26 @@
 
-"use client"; 
+"use client";
 
 import Link from 'next/link';
 import ProjectCard from '@/components/project-card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Loader2 } from 'lucide-react';
-import { useProjects } from '@/contexts/ProjectContext'; 
-import type { Project, CardTemplateId } from '@/lib/types'; // Added CardTemplateId
+import { PlusCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { useProjects } from '@/contexts/ProjectContext';
+import type { Project, CardTemplateId } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import CreateProjectDialog from '@/components/project/create-project-dialog';
-import EditProjectDialog from '@/components/project/edit-project-dialog'; 
-import { useState, useEffect } from 'react';
+import EditProjectDialog from '@/components/project/edit-project-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
@@ -40,9 +50,9 @@ function CardSkeleton() {
         <Skeleton className="h-3 w-full mb-1" />
         <Skeleton className="h-3 w-3/4" />
       </div>
-      <div className="p-3 border-t grid grid-cols-2 gap-2">
-        <Skeleton className="h-9 w-full" />
-        <Skeleton className="h-9 w-full" />
+      <div className="p-3 border-t flex items-center justify-between">
+        <Skeleton className="h-9 w-2/3" />
+        <Skeleton className="h-8 w-8 rounded-md" />
       </div>
     </div>
   )
@@ -50,10 +60,12 @@ function CardSkeleton() {
 
 
 export default function DashboardPage() {
-  const { projects, isLoading, addProject, updateProject, getProjectById } = useProjects();
+  const { projects, isLoading, addProject, updateProject, deleteProject, getProjectById } = useProjects();
   const [isCreateProjectDialogOpen, setIsCreateProjectDialogOpen] = useState(false);
   const [isEditProjectDialogOpen, setIsEditProjectDialogOpen] = useState(false);
+  const [isDeleteProjectDialogOpen, setIsDeleteProjectDialogOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
+  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -99,11 +111,10 @@ export default function DashboardPage() {
     }
 
     const projectWithUpdates: Project = {
-      ...fullProjectData, 
+      ...fullProjectData,
       name: updatedData.name || fullProjectData.name,
       thumbnailUrl: updatedData.thumbnailUrl || fullProjectData.thumbnailUrl,
       dataAiHint: updatedData.dataAiHint || fullProjectData.dataAiHint,
-      // associatedTemplateIds are managed separately or are part of fullProjectData
     };
 
     const result = await updateProject(projectWithUpdates);
@@ -121,6 +132,30 @@ export default function DashboardPage() {
         variant: "destructive",
       });
     }
+  };
+
+  const handleOpenDeleteDialog = (project: Project) => {
+    setProjectToDelete(project);
+    setIsDeleteProjectDialogOpen(true);
+  };
+
+  const handleConfirmDeleteProject = async () => {
+    if (!projectToDelete) return;
+    const result = await deleteProject(projectToDelete.id);
+    if (result.success) {
+      toast({
+        title: "Project Deleted",
+        description: result.message,
+      });
+    } else {
+      toast({
+        title: "Deletion Failed",
+        description: result.message,
+        variant: "destructive",
+      });
+    }
+    setIsDeleteProjectDialogOpen(false);
+    setProjectToDelete(null);
   };
 
 
@@ -141,15 +176,17 @@ export default function DashboardPage() {
         {projects.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {projects.map((project) => (
-              <ProjectCard 
-                key={project.id} 
-                project={project} 
+              <ProjectCard
+                key={project.id}
+                project={project}
                 onEditDetailsClick={() => handleOpenEditDialog(project)}
+                onDeleteProjectClick={() => handleOpenDeleteDialog(project)}
               />
             ))}
           </div>
         ) : (
           <div className="text-center py-12">
+            <AlertTriangle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h2 className="text-xl font-medium text-muted-foreground">No projects yet.</h2>
             <p className="text-muted-foreground mt-2">Get started by creating a new project.</p>
             <Button className="mt-4" onClick={() => setIsCreateProjectDialogOpen(true)}>
@@ -174,6 +211,25 @@ export default function DashboardPage() {
           onSubmit={handleEditProject}
           projectToEdit={projectToEdit}
         />
+      )}
+      {projectToDelete && (
+        <AlertDialog open={isDeleteProjectDialogOpen} onOpenChange={setIsDeleteProjectDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the project
+                "{projectToDelete.name}" and all its associated cards.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setProjectToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDeleteProject}>
+                Yes, delete project
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </>
   );

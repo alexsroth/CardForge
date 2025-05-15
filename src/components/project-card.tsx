@@ -1,21 +1,49 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import type { Project } from '@/lib/types';
+import type { Project, CardTemplateId } from '@/lib/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Edit3, ArrowRight, Settings, StickyNote } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from '@/components/ui/badge';
+import { Edit3, ArrowRight, Settings, StickyNote, EllipsisVertical, Trash2, Edit } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useTemplates } from '@/contexts/TemplateContext';
+import { useMemo } from 'react';
 
 interface ProjectCardProps {
   project: Project;
-  onEditDetailsClick: () => void; // Added prop for handling details edit
+  onEditDetailsClick: () => void;
+  onDeleteProjectClick: () => void;
 }
 
-export default function ProjectCard({ project, onEditDetailsClick }: ProjectCardProps) {
+export default function ProjectCard({ project, onEditDetailsClick, onDeleteProjectClick }: ProjectCardProps) {
+  const { getTemplateById, isLoading: templatesLoading } = useTemplates();
   const lastModifiedDate = project.lastModified ? new Date(project.lastModified) : new Date();
   const timeAgo = formatDistanceToNow(lastModifiedDate, { addSuffix: true });
   const cardCount = project.cards?.length || 0;
+
+  const templateCounts = useMemo(() => {
+    if (templatesLoading || !project.cards || project.cards.length === 0) {
+      return [];
+    }
+    const counts: Record<string, { name: string; count: number }> = {};
+    project.cards.forEach(card => {
+      const template = getTemplateById(card.templateId as CardTemplateId);
+      const templateName = template?.name || 'Unknown Template';
+      if (counts[templateName]) {
+        counts[templateName].count++;
+      } else {
+        counts[templateName] = { name: templateName, count: 1 };
+      }
+    });
+    return Object.values(counts).sort((a,b) => b.count - a.count); // Sort by count descending
+  }, [project.cards, getTemplateById, templatesLoading]);
 
   return (
     <Card className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 bg-card">
@@ -31,9 +59,9 @@ export default function ProjectCard({ project, onEditDetailsClick }: ProjectCard
           />
            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent"></div>
            <div className="absolute bottom-2 left-2 right-2 p-2">
-             <CardTitle className="text-xl font-semibold text-white hover:text-primary transition-colors line-clamp-2">
-               {project.name}
-             </CardTitle>
+            <CardTitle className="text-xl font-semibold text-white group-hover:text-primary transition-colors line-clamp-2">
+              {project.name}
+            </CardTitle>
            </div>
         </Link>
       </CardHeader>
@@ -47,24 +75,50 @@ export default function ProjectCard({ project, onEditDetailsClick }: ProjectCard
             <span>{cardCount} card{cardCount !== 1 ? 's' : ''}</span>
           </div>
         </div>
-        {/* Removed descriptive paragraph:
-        <p className="text-sm text-muted-foreground line-clamp-2">
-          {project.description || `Manage and edit the cards for the "${project.name}" project.`}
-        </p>
-        */}
+        {cardCount > 0 && templateCounts.length > 0 && (
+          <div className="mb-2">
+            <p className="text-xs font-medium text-muted-foreground mb-1">Card Types:</p>
+            <div className="flex flex-wrap gap-1">
+              {templateCounts.slice(0, 3).map(tc => ( // Show top 3 for brevity
+                <Badge key={tc.name} variant="secondary" className="text-xs">
+                  {tc.name}: {tc.count}
+                </Badge>
+              ))}
+              {templateCounts.length > 3 && (
+                <Badge variant="secondary" className="text-xs">
+                  + {templateCounts.length - 3} more
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
       </CardContent>
-      <CardFooter className="p-3 border-t grid grid-cols-2 gap-2">
-        <Button onClick={onEditDetailsClick} variant="outline" size="sm" className="w-full">
-          <Settings className="mr-2 h-4 w-4" />
-          Details
-        </Button>
-        <Link href={`/project/${project.id}/editor`} className="w-full">
+      <CardFooter className="p-3 border-t flex items-center justify-between">
+        <Link href={`/project/${project.id}/editor`} className="flex-grow mr-2">
           <Button variant="default" size="sm" className="w-full">
             <Edit3 className="mr-2 h-4 w-4" />
             Editor
             <ArrowRight className="ml-auto h-4 w-4" />
           </Button>
         </Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-9 w-9">
+              <EllipsisVertical className="h-4 w-4" />
+              <span className="sr-only">More actions</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onEditDetailsClick}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit Details
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onDeleteProjectClick} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Project
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </CardFooter>
     </Card>
   );

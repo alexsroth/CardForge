@@ -13,6 +13,7 @@ export interface ProjectContextType {
   getProjectById: (id: string | undefined) => Project | undefined;
   addProject: (projectData: { name: string; associatedTemplateIds?: CardTemplateId[] }) => Promise<{ success: boolean; message: string; newProject?: Project }>;
   updateProject: (updatedProject: Project) => Promise<{ success: boolean; message: string }>;
+  deleteProject: (projectId: string) => Promise<{ success: boolean; message: string }>;
   updateProjectAssociatedTemplates: (projectId: string, associatedTemplateIds: CardTemplateId[]) => Promise<{ success: boolean; message: string }>;
   updateProjectCards: (projectId: string, cards: CardData[]) => Promise<{ success: boolean; message: string }>;
   isLoading: boolean;
@@ -54,19 +55,19 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
             dataAiHint: c.dataAiHint || 'card art',
           })) : [],
           associatedTemplateIds: Array.isArray(p.associatedTemplateIds) ? p.associatedTemplateIds : [],
-          lastModified: p.lastModified || new Date().toISOString(), 
-          thumbnailUrl: p.thumbnailUrl || 'https://placehold.co/300x200.png', 
-          dataAiHint: p.dataAiHint || 'abstract game concept', 
+          lastModified: p.lastModified || new Date().toISOString(),
+          thumbnailUrl: p.thumbnailUrl || 'https://placehold.co/300x200.png',
+          dataAiHint: p.dataAiHint || 'abstract game concept',
         }));
       } else {
-        initialData = seedProjectsData; 
+        initialData = seedProjectsData;
         if (initialData.length > 0) { // Only persist if seed data actually exists
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialData));
+            persistProjects(initialData);
         }
       }
     } catch (error) {
       console.error("Failed to load projects from localStorage, using empty seed:", error);
-      initialData = seedProjectsData; 
+      initialData = seedProjectsData;
     }
 
     setProjects(initialData);
@@ -84,11 +85,10 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     projectData: { name: string; associatedTemplateIds?: CardTemplateId[] }
   ): Promise<{ success: boolean; message: string; newProject?: Project }> => {
 
-    const starterCardTemplateId = 
+    const starterCardTemplateId =
       (projectData.associatedTemplateIds && projectData.associatedTemplateIds.length > 0)
-      ? projectData.associatedTemplateIds[0] 
-      : NEW_CARD_TEMPLATE_ID_PLACEHOLDER; // Use placeholder if no templates selected
-      // If a real template is selected as first, use it, otherwise starter card will require template selection.
+      ? projectData.associatedTemplateIds[0]
+      : NEW_CARD_TEMPLATE_ID_PLACEHOLDER;
 
     const newProject: Project = {
       id: `project-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -105,16 +105,13 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
           description: 'This is a new card in your project. Edit its properties and template!',
           imageUrl: 'https://placehold.co/280x400.png',
           dataAiHint: 'card game concept',
-          // Add other default fields for the starter card as needed,
-          // or rely on CardDataForm to populate them based on the template.
-          // For example, if starterCardTemplateId is 'generic', these could be:
-          ...(starterCardTemplateId === 'generic' || starterCardTemplateId === NEW_CARD_TEMPLATE_ID_PLACEHOLDER ? {
+          ...(starterCardTemplateId !== NEW_CARD_TEMPLATE_ID_PLACEHOLDER ? {} : { // Add defaults only if template not pre-selected
             cost: 0,
             attack: 0,
             defense: 0,
             cardType: 'Unit',
             effectText: 'This is a sample effect.'
-          } : {})
+          })
         }
       ],
     };
@@ -140,12 +137,10 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       if (existingIndex > -1) {
         projectWasFoundAndUpdated = true;
         const updatedProjectsList = [...prevProjects];
-        // Ensure all fields are preserved, and cards are correctly updated
         updatedProjectsList[existingIndex] = {
-          ...prevProjects[existingIndex], // Preserve any fields not in updatedProjectData
-          ...updatedProjectData,          // Apply updates
-          lastModified: new Date().toISOString(), // Always update lastModified timestamp
-          // Ensure cards are properly mapped, especially if templateId might be placeholder
+          ...prevProjects[existingIndex],
+          ...updatedProjectData,
+          lastModified: new Date().toISOString(),
           cards: updatedProjectData.cards.map(c => ({
             ...c,
             templateId: c.templateId || NEW_CARD_TEMPLATE_ID_PLACEHOLDER,
@@ -156,7 +151,6 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
         persistProjects(updatedProjectsList);
         return updatedProjectsList;
       }
-      console.warn(`Project with ID ${updatedProjectData.id} not found for update during setProjects. No update performed.`);
       return prevProjects;
     });
 
@@ -167,29 +161,52 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [persistProjects]);
 
+  const deleteProject = useCallback(async (projectId: string): Promise<{ success: boolean; message: string }> => {
+    let projectFoundAndDeleted = false;
+    let projectName = '';
+
+    setProjects(prevProjects => {
+      const projectToDelete = prevProjects.find(p => p.id === projectId);
+      if (projectToDelete) {
+        projectName = projectToDelete.name;
+        projectFoundAndDeleted = true;
+        const updatedProjects = prevProjects.filter(p => p.id !== projectId);
+        persistProjects(updatedProjects);
+        return updatedProjects;
+      }
+      return prevProjects;
+    });
+
+    if (projectFoundAndDeleted) {
+      return { success: true, message: `Project "${projectName}" deleted successfully.` };
+    } else {
+      return { success: false, message: `Project with ID "${projectId}" not found.` };
+    }
+  }, [persistProjects]);
+
 
   const updateProjectAssociatedTemplates = useCallback(async (projectId: string, associatedTemplateIds: CardTemplateId[]): Promise<{ success: boolean; message: string }> => {
-    const projectToUpdate = getProjectById(projectId); 
+    const projectToUpdate = getProjectById(projectId);
     if (!projectToUpdate) {
       return { success: false, message: `Project with ID '${projectId}' not found.` };
     }
-    const updatedProject = { ...projectToUpdate, associatedTemplateIds };
+    const updatedProject = { ...projectToUpdate, associatedTemplateIds, lastModified: new Date().toISOString() };
     return updateProject(updatedProject);
   }, [getProjectById, updateProject]);
 
 
   const updateProjectCards = useCallback(async (projectId: string, cards: CardData[]): Promise<{ success: boolean; message: string }> => {
-    const projectToUpdate = getProjectById(projectId); 
+    const projectToUpdate = getProjectById(projectId);
     if (!projectToUpdate) {
       return { success: false, message: `Project with ID '${projectId}' not found.` };
     }
-    const updatedProject = { ...projectToUpdate, cards };
+    const updatedProject = { ...projectToUpdate, cards, lastModified: new Date().toISOString() };
     return updateProject(updatedProject);
   }, [getProjectById, updateProject]);
 
 
   return (
-    <ProjectContext.Provider value={{ projects, getProjectById, addProject, updateProject, updateProjectAssociatedTemplates, updateProjectCards, isLoading }}>
+    <ProjectContext.Provider value={{ projects, getProjectById, addProject, updateProject, deleteProject, updateProjectAssociatedTemplates, updateProjectCards, isLoading }}>
       {children}
     </ProjectContext.Provider>
   );
