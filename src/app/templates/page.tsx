@@ -2,7 +2,7 @@
 // src/app/templates/page.tsx
 "use client"; 
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { CardTemplate, TemplateField } from '@/lib/card-templates';
 import { useTemplates, type CardTemplateId } from '@/contexts/TemplateContext'; 
 import { useProjects } from '@/contexts/ProjectContext'; 
@@ -114,6 +114,10 @@ export default function TemplateLibraryPage() {
     setIsTogglingAssociation(prev => ({ ...prev, [toggleKey]: false }));
   };
 
+  // Filter out any potential seed templates if they were ever loaded into local storage
+  const displayTemplates = useMemo(() => {
+    return templates;
+  }, [templates]);
 
   if (templatesLoading || projectsLoading) {
     return (
@@ -155,12 +159,12 @@ export default function TemplateLibraryPage() {
 
       {templates.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {templates.map((template: CardTemplate) => {
+          {displayTemplates.map((template: CardTemplate) => {
             const projectsUsingThisTemplate = projects.filter(p => p.associatedTemplateIds?.includes(template.id as CardTemplateId));
             const isTemplateInUse = projectsUsingThisTemplate.length > 0;
             
             return (
-              <Card key={template.id} className="flex flex-col shadow-md">
+              <Card key={template.id} className="flex flex-col shadow-md w-[320px]">
                 <CardHeader>
                   <CardTitle>{template.name}</CardTitle>
                   <CardDescription>ID: <code>{template.id}</code></CardDescription>

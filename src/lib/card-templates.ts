@@ -46,11 +46,7 @@ export interface CardTemplate {
   layoutDefinition?: string; // JSON string for LayoutDefinition
 }
 
-// Define available template IDs - this now serves as the "seed" data.
-export const CARD_TEMPLATE_IDS_SEED = ['generic', 'creature', 'spell', 'item'] as const;
-export type CardTemplateIdSeed = typeof CARD_TEMPLATE_IDS_SEED[number];
-
-// This CardTemplateId is a more generic representation, used by CardData
+// This CardTemplateId is a generic representation, used by CardData
 export type CardTemplateId = string;
 
 

@@ -9,18 +9,24 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIconsAll from 'lucide-react'; // For general lookup
 // Explicitly import commonly used icons and the fallback icon
 import { 
-  Coins, Sword, Shield, Moon, Pencil, HelpCircle as FallbackIcon,
+  Sword, Shield, Moon, Pencil, Coins,
   Zap, Brain, Heart, Skull, Star, Gem, Settings, PlusCircle, MinusCircle, XCircle, CheckCircle2,
   AlertTriangle, Info, Wand2, Sparkles, Sun, Cloud, Flame, Leaf, Droplets, Feather, Eye, Swords, ShieldCheck,
-  ShieldAlert, Aperture, Book, Camera, Castle, Crown, Diamond, Dice5, Flag, /* Flash removed */ Flower, Gift, Globe, KeyRound, Lightbulb, Lock,
+  ShieldAlert, Aperture, Book, Camera, Castle, Crown, Diamond, Dice5, Flag, Flower, Gift, Globe, KeyRound, Lightbulb, Lock,
   MapPin, Medal, Mountain, Music, Package, Palette, PawPrint, Phone, Puzzle, Rocket, Save, Search, Ship, Sprout, Ticket, Trash2,
-  TreePine, Trophy, Umbrella, User, Video, Wallet, Watch, Wifi, Wrench
+  TreePine, Trophy, Umbrella, User, Video, Wallet, Watch, Wifi, Wrench, HelpCircle as FallbackIcon
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Create a registry for explicitly imported icons
 const iconRegistry: { [key: string]: React.ElementType<LucideIconsAll.LucideProps> } = {
-  Coins, Sword, Shield, Moon, Pencil, HelpCircle: FallbackIcon, Zap, Brain, Heart, Skull, Star, Gem, Settings, PlusCircle, MinusCircle, XCircle, CheckCircle2, AlertTriangle, Info, Wand2, Sparkles, Sun, Cloud, Flame, Leaf, Droplets, Feather, Eye, Swords, ShieldCheck, ShieldAlert, Aperture, Book, Camera, Castle, Crown, Diamond, Dice5, Flag, /* Flash removed */ Flower, Gift, Globe, KeyRound, Lightbulb, Lock, MapPin, Medal, Mountain, Music, Package, Palette, PawPrint, Phone, Puzzle, Rocket, Save, Search, Ship, Sprout, Ticket, Trash2, TreePine, Trophy, Umbrella, User, Video, Wallet, Watch, Wifi, Wrench
+  Sword, Shield, Moon, Pencil, Coins,
+  Zap, Brain, Heart, Skull, Star, Gem, Settings, PlusCircle, MinusCircle, XCircle, CheckCircle2, 
+  AlertTriangle, Info, Wand2, Sparkles, Sun, Cloud, Flame, Leaf, Droplets, Feather, Eye, Swords, 
+  ShieldCheck, ShieldAlert, Aperture, Book, Camera, Castle, Crown, Diamond, Dice5, Flag, 
+  Flower, Gift, Globe, KeyRound, Lightbulb, Lock, MapPin, Medal, Mountain, Music, Package, 
+  Palette, PawPrint, Phone, Puzzle, Rocket, Save, Search, Ship, Sprout, Ticket, Trash2, TreePine, 
+  Trophy, Umbrella, User, Video, Wallet, Watch, Wifi, Wrench, HelpCircle: FallbackIcon
 };
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIconsAll.LucideProps) => {
