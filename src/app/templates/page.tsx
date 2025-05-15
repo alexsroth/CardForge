@@ -160,7 +160,7 @@ export default function TemplateLibraryPage() {
             const isTemplateInUse = projectsUsingThisTemplate.length > 0;
             
             return (
-              <Card key={template.id} className="flex flex-col">
+              <Card key={template.id} className="flex flex-col shadow-md">
                 <CardHeader>
                   <CardTitle>{template.name}</CardTitle>
                   <CardDescription>ID: <code>{template.id}</code></CardDescription>

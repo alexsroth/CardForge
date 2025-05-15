@@ -1,3 +1,4 @@
+
 // src/app/templates/edit/[templateId]/page.tsx
 "use client";
 
@@ -22,7 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Switch } from '@/components/ui/switch'; // Import Switch
+import { Switch } from '@/components/ui/switch';
 import {
   Tooltip,
   TooltipContent,
@@ -134,6 +135,7 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
+  // Append .png after color codes, before text query
   path += `.png`;
 
   let fullUrl = `https://placehold.co/${path}`;
@@ -182,7 +184,7 @@ export default function EditTemplatePage() {
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [errorLoading, setErrorLoading] = useState<string | null>(null);
   const [sampleCardForPreview, setSampleCardForPreview] = useState<CardData | null>(null);
-  const [showElementOutlines, setShowElementOutlines] = useState(false); // New state for outlines
+  const [showElementOutlines, setShowElementOutlines] = useState(false);
 
 
   useEffect(() => {
@@ -488,8 +490,7 @@ export default function EditTemplatePage() {
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
-      {/* Top Section: Template Info & Data Fields */}
-      <Card>
+      <Card className="shadow-md">
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className="text-2xl font-bold">Edit Template</CardTitle>
@@ -551,9 +552,8 @@ export default function EditTemplatePage() {
         </CardContent>
       </Card>
 
-      {/* Bottom Section: Layout Editor & Preview */}
       <div className="flex flex-col md:flex-row gap-8">
-        <Card className="md:w-[65%] flex flex-col">
+        <Card className="md:w-[65%] flex flex-col shadow-md">
           <CardHeader>
             <CardTitle className="text-xl font-bold">Layout Definition (JSON)</CardTitle>
             <CardDescription>
@@ -579,7 +579,7 @@ export default function EditTemplatePage() {
                 <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
               </Alert>
             )}
-            <Accordion type="single" collapsible className="w-full mt-2">
+            <Accordion type="single" collapsible className="w-full mt-2" defaultValue='layout-guide'>
               <AccordionItem value="layout-guide">
                 <AccordionTrigger className="text-sm py-2 hover:no-underline">
                   <div className="flex items-center text-muted-foreground">
@@ -685,7 +685,7 @@ export default function EditTemplatePage() {
                   <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border overflow-y-auto">
                     <div className={cn(
                       "grid gap-1",
-                      "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16"
+                      "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16" 
                     )}>
                       {commonLucideIconsForGuide.map(iconName => (
                         <TooltipProvider key={iconName}>
@@ -695,7 +695,7 @@ export default function EditTemplatePage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleCopyIconName(iconName)}
-                                className="h-7 w-7 p-1"
+                                className="h-7 w-7 p-1" 
                               >
                                 <IconComponent name={iconName} className="h-4 w-4" />
                               </Button>
@@ -727,7 +727,7 @@ export default function EditTemplatePage() {
           </CardFooter>
         </Card>
 
-        <Card className="md:w-[35%] sticky top-20 self-start">
+        <Card className="md:w-[35%] sticky top-20 self-start shadow-md">
           <CardHeader>
              <div className="flex items-center justify-between">
                 <CardTitle className="text-xl font-bold flex items-center">
@@ -736,7 +736,7 @@ export default function EditTemplatePage() {
                 </CardTitle>
                 <div className="flex items-center space-x-2">
                     <Switch
-                        id="show-outlines-edit" // Ensure unique ID if this page can be open with new
+                        id="show-outlines-edit" 
                         checked={showElementOutlines}
                         onCheckedChange={setShowElementOutlines}
                         aria-label="Show element outlines"

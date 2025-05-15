@@ -1,3 +1,4 @@
+
 // src/app/templates/new/page.tsx
 "use client";
 
@@ -22,7 +23,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Switch } from '@/components/ui/switch'; // Import Switch
+import { Switch } from '@/components/ui/switch';
 import {
   Tooltip,
   TooltipContent,
@@ -115,6 +116,7 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
+  // Append .png after color codes, before text query
   path += `.png`;
 
   let fullUrl = `https://placehold.co/${path}`;
@@ -155,7 +157,7 @@ export default function TemplateDesignerPage() {
   const [layoutJsonError, setLayoutJsonError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [sampleCardForPreview, setSampleCardForPreview] = useState<CardData | null>(null);
-  const [showElementOutlines, setShowElementOutlines] = useState(false); // New state for outlines
+  const [showElementOutlines, setShowElementOutlines] = useState(false);
 
   const { toast } = useToast();
   const { addTemplate: saveTemplateToContext, templates: existingTemplates, isLoading: templatesLoading } = useTemplates();
@@ -239,7 +241,7 @@ export default function TemplateDesignerPage() {
     if (generatedSampleCard.effectText === undefined && !fields.some(f => f.key === 'effectText')) generatedSampleCard.effectText = 'Sample effect: Draw a card. This unit gets +1/+1 until end of turn. This text might be long to test scrolling in a textarea layout element.';
     if (generatedSampleCard.attack === undefined && !fields.some(f => f.key === 'attack')) generatedSampleCard.attack = 2;
     if (generatedSampleCard.defense === undefined && !fields.some(f => f.key === 'defense')) generatedSampleCard.defense = 2;
-    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) { // artworkUrl might be used by some layouts
+    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) {
       generatedSampleCard.artworkUrl = generateSamplePlaceholderUrl({width: 280, height: 400, text: 'Background Art'});
     }
     if (generatedSampleCard.statusIcon === undefined && !fields.some(f => f.key === 'statusIcon')) generatedSampleCard.statusIcon = 'ShieldCheck';
@@ -353,24 +355,20 @@ export default function TemplateDesignerPage() {
 
 
   const handleSaveTemplate = async () => {
-    if (!templateId.trim() || !templateName.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide a Template Name (Template ID is auto-generated).",
-        variant: "destructive",
-      });
+    if (!templateName.trim()) {
+      toast({ title: "Missing Name", description: "Template Name cannot be empty.", variant: "destructive" });
       return;
     }
+    const finalTemplateId = toCamelCase(templateName.trim());
+     if (!finalTemplateId) {
+        toast({ title: "Invalid Name", description: "Template Name generates an empty ID. Please provide a valid name.", variant: "destructive" });
+        return;
+    }
     if (fields.length === 0) {
-      toast({
-        title: "No Fields",
-        description: "Please add at least one field to the template.",
-        variant: "destructive",
-      });
+      toast({ title: "No Fields", description: "Please add at least one field to the template.", variant: "destructive" });
       return;
     }
 
-    const finalTemplateId = toCamelCase(templateName);
      if (existingTemplates.some(t => t.id === finalTemplateId)) {
         toast({
             title: "Duplicate ID",
@@ -459,8 +457,7 @@ export default function TemplateDesignerPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
-      {/* Top Section: Template Info & Data Fields */}
-      <Card>
+      <Card className="shadow-md">
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className="text-2xl font-bold">Template Designer</CardTitle>
@@ -503,7 +500,7 @@ export default function TemplateDesignerPage() {
               <div className="p-2 space-y-3">
                 {fields.map((field, index) => (
                   <FieldRow
-                    key={index}
+                    key={index} // Consider using a more stable key if fields can be reordered
                     field={field}
                     onChange={(updatedField) => handleFieldChange(index, updatedField)}
                     onRemove={() => handleRemoveField(index)}
@@ -524,9 +521,8 @@ export default function TemplateDesignerPage() {
         </CardContent>
       </Card>
 
-      {/* Bottom Section: Layout Editor & Preview */}
       <div className="flex flex-col md:flex-row gap-8">
-        <Card className="md:w-[65%] flex flex-col">
+        <Card className="md:w-[65%] flex flex-col shadow-md">
           <CardHeader>
             <CardTitle className="text-xl font-bold">Layout Definition (JSON)</CardTitle>
             <CardDescription>
@@ -552,7 +548,7 @@ export default function TemplateDesignerPage() {
                 <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
               </Alert>
             )}
-            <Accordion type="single" collapsible className="w-full mt-2">
+             <Accordion type="single" collapsible className="w-full mt-2" defaultValue='layout-guide'>
               <AccordionItem value="layout-guide">
                 <AccordionTrigger className="text-sm py-2 hover:no-underline">
                   <div className="flex items-center text-muted-foreground">
@@ -659,7 +655,7 @@ export default function TemplateDesignerPage() {
                   <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border overflow-y-auto">
                     <div className={cn(
                       "grid gap-1",
-                      "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16" // Denser grid
+                      "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16"
                     )}>
                       {commonLucideIconsForGuide.map(iconName => (
                         <TooltipProvider key={iconName}>
@@ -669,7 +665,7 @@ export default function TemplateDesignerPage() {
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => handleCopyIconName(iconName)}
-                                className="h-7 w-7 p-1" // Compact button
+                                className="h-7 w-7 p-1"
                               >
                                 <IconComponent name={iconName} className="h-4 w-4" />
                               </Button>
@@ -701,7 +697,7 @@ export default function TemplateDesignerPage() {
           </CardFooter>
         </Card>
 
-        <Card className="md:w-[35%] sticky top-20 self-start">
+        <Card className="md:w-[35%] sticky top-20 self-start shadow-md">
           <CardHeader>
             <div className="flex items-center justify-between">
                 <CardTitle className="text-xl font-bold flex items-center">
