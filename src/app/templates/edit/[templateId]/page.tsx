@@ -22,6 +22,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // Helper to convert TemplateField (from storage) to TemplateFieldDefinition (for UI)
 function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldDefinition {
@@ -255,13 +256,17 @@ export default function EditTemplatePage() {
     
     if (generatedSampleCard.name === undefined && !fields.some(f => f.key === 'name')) generatedSampleCard.name = 'Awesome Card Name';
     if (generatedSampleCard.cost === undefined && !fields.some(f => f.key === 'cost')) generatedSampleCard.cost = 3;
-    if (generatedSampleCard.imageUrl === undefined && !fields.some(f => f.key === 'imageUrl')) generatedSampleCard.imageUrl = 'https://placehold.co/250x140.png';
+    if (generatedSampleCard.imageUrl === undefined && !fields.some(f => f.key === 'imageUrl')) {
+      generatedSampleCard.imageUrl = generateSamplePlaceholderUrl({width: 250, height: 140, text: 'Card Image'});
+    }
     if (generatedSampleCard.dataAiHint === undefined && !fields.some(f => f.key === 'dataAiHint')) generatedSampleCard.dataAiHint = 'card art sample';
     if (generatedSampleCard.cardType === undefined && !fields.some(f => f.key === 'cardType')) generatedSampleCard.cardType = 'Creature - Goblin';
     if (generatedSampleCard.effectText === undefined && !fields.some(f => f.key === 'effectText')) generatedSampleCard.effectText = 'Sample effect text for preview.';
     if (generatedSampleCard.attack === undefined && !fields.some(f => f.key === 'attack')) generatedSampleCard.attack = 2;
     if (generatedSampleCard.defense === undefined && !fields.some(f => f.key === 'defense')) generatedSampleCard.defense = 2;
-    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) generatedSampleCard.artworkUrl = 'https://placehold.co/280x400.png';
+    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) {
+      generatedSampleCard.artworkUrl = generateSamplePlaceholderUrl({width: 280, height: 400, text: 'Artwork'});
+    }
     if (generatedSampleCard.statusIcon === undefined && !fields.some(f => f.key === 'statusIcon')) generatedSampleCard.statusIcon = 'ShieldCheck';
 
 
@@ -303,6 +308,7 @@ export default function EditTemplatePage() {
         type: 'text',
         placeholder: '',
         defaultValue: '',
+        previewValue: '',
         optionsString: '',
         placeholderConfigWidth: 250, 
         placeholderConfigHeight: 140, 
@@ -667,18 +673,20 @@ export default function EditTemplatePage() {
                 <AccordionContent className="text-xs p-3 border rounded-md bg-muted/30">
                   <p className="font-semibold mb-1 mt-0">Common Lucide Icons (Click to Copy Name):</p>
                     <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1">
+                       <div className={cn(
+                          "grid gap-1",
+                          "grid-cols-6 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12" // Denser grid
+                        )}>
                         {commonLucideIconsForGuide.map(iconName => (
                           <Button
                             key={iconName}
                             variant="ghost"
-                            size="sm"
+                            size="icon" // Make button square
                             onClick={() => handleCopyIconName(iconName)}
-                            className="justify-start text-xs h-auto py-1 px-1.5"
+                            className="h-7 w-7 p-1" // Custom small size
                             title={`Copy "${iconName}"`}
                           >
-                            <IconComponent name={iconName} className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
-                            <span className="truncate">{iconName}</span>
+                            <IconComponent name={iconName} className="h-4 w-4" /> {/* Slightly smaller icon */}
                           </Button>
                         ))}
                       </div>
