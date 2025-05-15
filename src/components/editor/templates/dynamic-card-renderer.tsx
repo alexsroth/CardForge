@@ -12,7 +12,7 @@ import {
   Coins, Sword, Shield, Moon, Pencil, HelpCircle as FallbackIcon,
   Zap, Brain, Heart, Skull, Star, Gem, Settings, PlusCircle, MinusCircle, XCircle, CheckCircle2,
   AlertTriangle, Info, Wand2, Sparkles, Sun, Cloud, Flame, Leaf, Droplets, Feather, Eye, Swords, ShieldCheck,
-  ShieldAlert, Aperture, Book, Camera, Castle, Crown, Diamond, Dice5, Flag, Flash, Flower, Gift, Globe, KeyRound, Lightbulb, Lock,
+  ShieldAlert, Aperture, Book, Camera, Castle, Crown, Diamond, Dice5, Flag, /* Flash removed */ Flower, Gift, Globe, KeyRound, Lightbulb, Lock,
   MapPin, Medal, Mountain, Music, Package, Palette, PawPrint, Phone, Puzzle, Rocket, Save, Search, Ship, Sprout, Ticket, Trash2,
   TreePine, Trophy, Umbrella, User, Video, Wallet, Watch, Wifi, Wrench
 } from 'lucide-react';
@@ -20,12 +20,7 @@ import { cn } from '@/lib/utils';
 
 // Create a registry for explicitly imported icons
 const iconRegistry: { [key: string]: React.ElementType<LucideIconsAll.LucideProps> } = {
-  Coins, Sword, Shield, Moon, Pencil, HelpCircle: FallbackIcon,
-  Zap, Brain, Heart, Skull, Star, Gem, Settings, PlusCircle, MinusCircle, XCircle, CheckCircle2,
-  AlertTriangle, Info, Wand2, Sparkles, Sun, Cloud, Flame, Leaf, Droplets, Feather, Eye, Swords, ShieldCheck,
-  ShieldAlert, Aperture, Book, Camera, Castle, Crown, Diamond, Dice5, Flag, Flash, Flower, Gift, Globe, KeyRound, Lightbulb, Lock,
-  MapPin, Medal, Mountain, Music, Package, Palette, PawPrint, Phone, Puzzle, Rocket, Save, Search, Ship, Sprout, Ticket, Trash2,
-  TreePine, Trophy, Umbrella, User, Video, Wallet, Watch, Wifi, Wrench
+  Coins, Sword, Shield, Moon, Pencil, HelpCircle: FallbackIcon, Zap, Brain, Heart, Skull, Star, Gem, Settings, PlusCircle, MinusCircle, XCircle, CheckCircle2, AlertTriangle, Info, Wand2, Sparkles, Sun, Cloud, Flame, Leaf, Droplets, Feather, Eye, Swords, ShieldCheck, ShieldAlert, Aperture, Book, Camera, Castle, Crown, Diamond, Dice5, Flag, /* Flash removed */ Flower, Gift, Globe, KeyRound, Lightbulb, Lock, MapPin, Medal, Mountain, Music, Package, Palette, PawPrint, Phone, Puzzle, Rocket, Save, Search, Ship, Sprout, Ticket, Trash2, TreePine, Trophy, Umbrella, User, Video, Wallet, Watch, Wifi, Wrench
 };
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIconsAll.LucideProps) => {
@@ -89,7 +84,7 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
     <div style={cardStyle} className="select-none">
       {layout.elements.map((element, index) => {
         const rawValue = card[element.fieldKey as keyof CardData];
-        let elementStyle = { ...(element.style || {}), zIndex: index + 1 }; // Assign zIndex based on order
+        let elementStyle = { ...(element.style || {}), zIndex: index + 1 }; 
 
         if (showElementOutlines) {
           elementStyle = {
@@ -108,12 +103,10 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
             else valueForDisplay = '';
         }
 
-
         let content: React.ReactNode = String(valueForDisplay ?? '');
         if (element.prefix) content = element.prefix + String(valueForDisplay ?? '');
         if (element.suffix) content = String(valueForDisplay ?? '') + element.suffix;
         if (element.prefix && element.suffix) content = element.prefix + String(valueForDisplay ?? '') + element.suffix;
-
 
         let elementContent: React.ReactNode;
 
@@ -217,4 +210,3 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
     </div>
   );
 }
-

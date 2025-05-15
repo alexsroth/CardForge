@@ -116,8 +116,8 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  // Append .png after color codes, before text query
-  path += `.png`;
+  
+  path += `.png`; 
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
@@ -133,7 +133,7 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
   "AlertTriangle", "Info", "HelpCircle", "Wand2", "Sparkles", "Sun", "Moon",
   "Cloud", "Flame", "Leaf", "Droplets", "Feather", "Eye", "Swords", "ShieldCheck",
   "ShieldAlert", "Aperture", "Book", "Camera", "Castle", "Crown", "Diamond", "Dice5",
-  "Flag", "Flash", "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock",
+  "Flag", "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock", 
   "MapPin", "Medal", "Mountain", "Music", "Package", "Palette", "PawPrint", "Pencil",
   "Phone", "Puzzle", "Rocket", "Save", "Search", "Ship", "Sprout", "Ticket", "Trash2",
   "TreePine", "Trophy", "Umbrella", "User", "Video", "Wallet", "Watch", "Wifi", "Wrench"
@@ -141,11 +141,11 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
-  if (!Icon) {
+  if (!Icon) { 
     console.warn(`Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
-    return <LucideIcons.HelpCircle {...props} />;
+    return <LucideIcons.HelpCircle {...props} />; 
   }
-  return <Icon {...props} />;
+  return <Icon {...props} />; 
 };
 
 
@@ -500,7 +500,7 @@ export default function TemplateDesignerPage() {
               <div className="p-2 space-y-3">
                 {fields.map((field, index) => (
                   <FieldRow
-                    key={index} // Consider using a more stable key if fields can be reordered
+                    key={index} 
                     field={field}
                     onChange={(updatedField) => handleFieldChange(index, updatedField)}
                     onRemove={() => handleRemoveField(index)}
@@ -548,7 +548,7 @@ export default function TemplateDesignerPage() {
                 <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
               </Alert>
             )}
-             <Accordion type="single" collapsible className="w-full mt-2" defaultValue='layout-guide'>
+            <Accordion type="single" collapsible className="w-full mt-2" defaultValue='layout-guide'>
               <AccordionItem value="layout-guide">
                 <AccordionTrigger className="text-sm py-2 hover:no-underline">
                   <div className="flex items-center text-muted-foreground">
@@ -735,4 +735,3 @@ export default function TemplateDesignerPage() {
     </div>
   );
 }
-

@@ -135,8 +135,7 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  // Append .png after color codes, before text query
-  path += `.png`;
+  path += `.png`; 
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
@@ -152,7 +151,7 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
   "AlertTriangle", "Info", "HelpCircle", "Wand2", "Sparkles", "Sun", "Moon",
   "Cloud", "Flame", "Leaf", "Droplets", "Feather", "Eye", "Swords", "ShieldCheck",
   "ShieldAlert", "Aperture", "Book", "Camera", "Castle", "Crown", "Diamond", "Dice5",
-  "Flag", "Flash", "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock",
+  "Flag", "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock", 
   "MapPin", "Medal", "Mountain", "Music", "Package", "Palette", "PawPrint", "Pencil",
   "Phone", "Puzzle", "Rocket", "Save", "Search", "Ship", "Sprout", "Ticket", "Trash2",
   "TreePine", "Trophy", "Umbrella", "User", "Video", "Wallet", "Watch", "Wifi", "Wrench"
@@ -160,11 +159,11 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
-  if (!Icon) {
+  if (!Icon) { 
     console.warn(`Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
-    return <LucideIcons.HelpCircle {...props} />;
+    return <LucideIcons.HelpCircle {...props} />; 
   }
-  return <Icon {...props} />;
+  return <Icon {...props} />; 
 };
 
 export default function EditTemplatePage() {
@@ -765,4 +764,3 @@ export default function EditTemplatePage() {
     </div>
   );
 }
-
