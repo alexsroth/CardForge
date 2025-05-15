@@ -31,7 +31,6 @@ export default function ProjectCard({ project, onEditDetailsClick }: ProjectCard
           />
            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent"></div>
            <div className="absolute bottom-2 left-2 right-2 p-2">
-             {/* Removed the inner Link component here */}
              <CardTitle className="text-xl font-semibold text-white hover:text-primary transition-colors line-clamp-2">
                {project.name}
              </CardTitle>
@@ -48,11 +47,11 @@ export default function ProjectCard({ project, onEditDetailsClick }: ProjectCard
             <span>{cardCount} card{cardCount !== 1 ? 's' : ''}</span>
           </div>
         </div>
-        {/* Description or other brief content can go here if needed */}
+        {/* Removed descriptive paragraph:
         <p className="text-sm text-muted-foreground line-clamp-2">
-          {/* Placeholder for a short project description if you add one later */}
           {project.description || `Manage and edit the cards for the "${project.name}" project.`}
         </p>
+        */}
       </CardContent>
       <CardFooter className="p-3 border-t grid grid-cols-2 gap-2">
         <Button onClick={onEditDetailsClick} variant="outline" size="sm" className="w-full">
