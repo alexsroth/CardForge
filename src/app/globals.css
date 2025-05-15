@@ -20,7 +20,7 @@
     --popover-foreground: 300 13% 21%; /* Charcoal Plum #3E2F3F */
 
     --primary: 46 100% 72%; /* Citrus Zing #FFD972 */
-    --primary-foreground: 300 13% 21%; /* Charcoal Plum #3E2F3F (for text on primary) */
+    --primary-foreground: 0 0% 13%; /* Dark Neutral Gray #212121 (for text on primary) - Updated for better contrast */
 
     --secondary: 81 17% 61%; /* Olive #A3B18A */
     --secondary-foreground: 40 33% 96%; /* Bone White #F9F7F3 (for text on secondary) */
@@ -49,7 +49,7 @@
     --sidebar-background: 321 37% 35%; /* Plum #7C3A5C */
     --sidebar-foreground: 40 33% 96%; /* Bone White #F9F7F3 */
     --sidebar-primary: 46 100% 72%; /* Citrus Zing #FFD972 */
-    --sidebar-primary-foreground: 300 13% 21%; /* Charcoal Plum #3E2F3F */
+    --sidebar-primary-foreground: 0 0% 13%; /* Dark Neutral Gray #212121 */
     --sidebar-accent: 321 37% 45%; /* Lighter Plum for hover */
     --sidebar-accent-foreground: 40 33% 96%; /* Bone White */
     --sidebar-border: 321 37% 25%; /* Darker Plum */
@@ -67,7 +67,7 @@
     --popover-foreground: 40 33% 96%; /* Bone White */
 
     --primary: 46 100% 72%; /* Citrus Zing #FFD972 */
-    --primary-foreground: 300 13% 21%; /* Charcoal Plum */
+    --primary-foreground: 300 13% 21%; /* Charcoal Plum (original dark text for primary on dark theme) */
 
     --secondary: 81 17% 35%; /* Darker Olive */
     --secondary-foreground: 40 33% 96%; /* Bone White */
