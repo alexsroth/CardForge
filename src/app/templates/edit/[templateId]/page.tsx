@@ -21,7 +21,6 @@ import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import * as LucideIcons from 'lucide-react';
 
 // Helper to convert TemplateField (from storage) to TemplateFieldDefinition (for UI)
@@ -150,11 +149,11 @@ const commonLucideIconsForGuide = [
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
-  if (!Icon || typeof Icon !== 'function') {
-    console.warn(`Lucide icon "${name}" not found or is not a component.`);
-    return <LucideIcons.HelpCircle {...props} className={props.className || "h-4 w-4"} />;
+  if (!Icon) {
+    console.warn(`Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
+    return <LucideIcons.HelpCircle {...props} />;
   }
-  return <Icon {...props} className={props.className || "h-4 w-4"} />;
+  return <Icon {...props} />;
 };
 
 export default function EditTemplatePage() {
@@ -197,7 +196,7 @@ export default function EditTemplatePage() {
 
   useEffect(() => {
     const currentTemplateIdForPreview = originalTemplateId || 'previewTemplateId';
-    const generatedSampleCard: Partial<CardData> = { // Use Partial<CardData>
+    const generatedSampleCard: Partial<CardData> = { 
       id: 'preview-card',
       templateId: currentTemplateIdForPreview as CardTemplateId,
     };
@@ -653,7 +652,8 @@ export default function EditTemplatePage() {
       "fieldKey": "yourIconDataFieldKey", // Replace
       "type": "iconFromData",
       "style": { "position": "absolute", "bottom": "20px", "left": "20px" }
-    }`}
+    }
+`}
                   </pre>
                   </AccordionContent>
               </AccordionItem>

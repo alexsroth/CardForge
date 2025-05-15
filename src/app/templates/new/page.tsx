@@ -21,7 +21,6 @@ import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import * as LucideIcons from 'lucide-react';
 
 // Helper to convert TemplateFieldDefinition (from UI) to TemplateField (for storage)
@@ -109,7 +108,6 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${cleanTextColor}`;
     }
   }
-  // Append format specifier correctly after colors, if any
   path += `.png`;
 
   let fullUrl = `https://placehold.co/${path}`;
@@ -134,11 +132,11 @@ const commonLucideIconsForGuide = [
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
-  if (!Icon || typeof Icon !== 'function') {
-    console.warn(`Lucide icon "${name}" not found or is not a component.`);
-    return <LucideIcons.HelpCircle {...props} className={props.className || "h-4 w-4"} />;
+  if (!Icon) {
+    console.warn(`Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
+    return <LucideIcons.HelpCircle {...props} />; 
   }
-  return <Icon {...props} className={props.className || "h-4 w-4"} />;
+  return <Icon {...props} />;
 };
 
 
@@ -222,6 +220,7 @@ export default function TemplateDesignerPage() {
       (generatedSampleCard as any)[key] = valueForPreview;
     });
     
+    // Ensure some base fields always have sample data for the default layout if not already defined by user fields
     if (generatedSampleCard.name === undefined && !fields.some(f => f.key === 'name')) generatedSampleCard.name = 'Awesome Card Name';
     if (generatedSampleCard.cost === undefined && !fields.some(f => f.key === 'cost')) generatedSampleCard.cost = 3;
     if (generatedSampleCard.imageUrl === undefined && !fields.some(f => f.key === 'imageUrl')) generatedSampleCard.imageUrl = 'https://placehold.co/250x140.png';
@@ -230,8 +229,9 @@ export default function TemplateDesignerPage() {
     if (generatedSampleCard.effectText === undefined && !fields.some(f => f.key === 'effectText')) generatedSampleCard.effectText = 'Sample effect: Draw a card. This unit gets +1/+1 until end of turn. This text might be long to test scrolling in a textarea layout element.';
     if (generatedSampleCard.attack === undefined && !fields.some(f => f.key === 'attack')) generatedSampleCard.attack = 2;
     if (generatedSampleCard.defense === undefined && !fields.some(f => f.key === 'defense')) generatedSampleCard.defense = 2;
-    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) generatedSampleCard.artworkUrl = 'https://placehold.co/280x400.png';
+    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) generatedSampleCard.artworkUrl = 'https://placehold.co/280x400.png'; // For background image
     if (generatedSampleCard.statusIcon === undefined && !fields.some(f => f.key === 'statusIcon')) generatedSampleCard.statusIcon = 'ShieldCheck';
+
 
     setSampleCardForPreview(generatedSampleCard as CardData);
   }, [fields, templateId, templateName]);
@@ -630,7 +630,8 @@ export default function TemplateDesignerPage() {
       "fieldKey": "yourIconDataFieldKey", // Replace
       "type": "iconFromData",
       "style": { "position": "absolute", "bottom": "20px", "left": "20px" }
-    }`}
+    }
+`}
                         </pre>
                     </AccordionContent>
                 </AccordionItem>
