@@ -3,8 +3,8 @@
 "use client"; 
 
 import { useState } from 'react';
-import type { CardTemplate, TemplateField, CardTemplateId as ImportedCardTemplateId } from '@/lib/card-templates';
-import { useTemplates } from '@/contexts/TemplateContext'; 
+import type { CardTemplate, TemplateField } from '@/lib/card-templates';
+import { useTemplates, type CardTemplateId } from '@/contexts/TemplateContext'; 
 import { useProjects } from '@/contexts/ProjectContext'; 
 import type { Project } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -22,12 +22,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, AlertTriangle, Info, Settings2, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { PlusCircle, AlertTriangle, Info, Settings2, Loader2, Pencil, Trash2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-
-type CardTemplateId = ImportedCardTemplateId; 
+import { cn } from '@/lib/utils';
 
 function TemplateFieldDetail({ field }: { field: TemplateField }) {
   return (
@@ -60,21 +59,18 @@ function TemplateFieldDetail({ field }: { field: TemplateField }) {
   );
 }
 
-function getProjectsForTemplate(templateId: CardTemplateId, allProjects: Project[]): Project[] {
-  return allProjects.filter(project => project.associatedTemplateIds?.includes(templateId));
-}
-
 
 export default function TemplateLibraryPage() {
   const { templates, deleteTemplate, isLoading: templatesLoading } = useTemplates();
-  const { projects, isLoading: projectsLoading } = useProjects();
+  const { projects, isLoading: projectsLoading, updateProjectAssociatedTemplates } = useProjects();
   const { toast } = useToast();
-  const [isDeleting, setIsDeleting] = useState<string | null>(null); // Store ID of template being deleted
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isTogglingAssociation, setIsTogglingAssociation] = useState<Record<string, boolean>>({});
 
 
-  const handleDeleteTemplate = async (templateId: CardTemplateId) => {
-    setIsDeleting(templateId);
-    const result = await deleteTemplate(templateId);
+  const handleDeleteTemplate = async (templateIdToDelete: CardTemplateId) => {
+    setIsDeleting(templateIdToDelete);
+    const result = await deleteTemplate(templateIdToDelete);
     if (result.success) {
       toast({
         title: "Template Deleted",
@@ -88,6 +84,34 @@ export default function TemplateLibraryPage() {
       });
     }
     setIsDeleting(null);
+  };
+
+  const handleToggleAssociation = async (project: Project, templateIdToToggle: CardTemplateId, currentlyAssociated: boolean) => {
+    const toggleKey = `${project.id}-${templateIdToToggle}`;
+    setIsTogglingAssociation(prev => ({ ...prev, [toggleKey]: true }));
+
+    let newAssociatedIds: CardTemplateId[];
+    if (currentlyAssociated) {
+      newAssociatedIds = project.associatedTemplateIds.filter(id => id !== templateIdToToggle);
+    } else {
+      newAssociatedIds = [...project.associatedTemplateIds, templateIdToToggle];
+    }
+
+    const result = await updateProjectAssociatedTemplates(project.id, newAssociatedIds);
+
+    if (result.success) {
+      toast({
+        title: "Association Updated",
+        description: `Template ${currentlyAssociated ? 'disassociated from' : 'associated with'} project "${project.name}".`,
+      });
+    } else {
+      toast({
+        title: "Update Failed",
+        description: result.message || "Could not update template association.",
+        variant: "destructive",
+      });
+    }
+    setIsTogglingAssociation(prev => ({ ...prev, [toggleKey]: false }));
   };
 
 
@@ -125,23 +149,23 @@ export default function TemplateLibraryPage() {
         <AlertTitle className="text-primary">Template Management Note</AlertTitle>
         <AlertDescription className="text-primary/80 dark:text-primary/90">
           This library displays templates currently stored in your browser's local storage.
-          When you create or edit templates, they are saved here.
-          Project associations are managed on the "Manage Assignments" page and are also stored locally.
+          You can directly manage which projects use a template from here.
         </AlertDescription>
       </Alert>
 
       {templates.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {templates.map((template: CardTemplate) => {
-            const associatedProjects = getProjectsForTemplate(template.id as CardTemplateId, projects);
-            const isTemplateInUse = associatedProjects.length > 0;
+            const projectsUsingThisTemplate = projects.filter(p => p.associatedTemplateIds?.includes(template.id as CardTemplateId));
+            const isTemplateInUse = projectsUsingThisTemplate.length > 0;
+            
             return (
               <Card key={template.id} className="flex flex-col">
                 <CardHeader>
                   <CardTitle>{template.name}</CardTitle>
                   <CardDescription>ID: <code>{template.id}</code></CardDescription>
                 </CardHeader>
-                <CardContent className="flex-grow space-y-3">
+                <CardContent className="flex-grow space-y-4">
                   <div>
                     <h4 className="text-sm font-semibold mb-1 text-muted-foreground">Fields:</h4>
                     {template.fields.length > 0 ? (
@@ -157,17 +181,44 @@ export default function TemplateLibraryPage() {
                     )}
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold mb-1 text-muted-foreground">Used by Projects:</h4>
-                    {associatedProjects.length > 0 ? (
-                       <ScrollArea className="h-[60px] pr-3">
-                        <div className="flex flex-wrap gap-1">
-                          {associatedProjects.map(project => (
-                            <Badge key={project.id} variant="secondary">{project.name}</Badge>
-                          ))}
+                    <h4 className="text-sm font-semibold mb-1 text-muted-foreground">Project Associations:</h4>
+                    {projects.length > 0 ? (
+                      <ScrollArea className="h-[100px] pr-2 border rounded-md bg-muted/20 dark:bg-muted/10">
+                        <div className="p-2 space-y-1.5">
+                          {projects.map(project => {
+                            const isAssociated = project.associatedTemplateIds?.includes(template.id as CardTemplateId);
+                            const toggleKey = `${project.id}-${template.id}`;
+                            return (
+                              <div key={project.id} className="flex items-center justify-between py-1 px-1.5 rounded hover:bg-muted/50 transition-colors">
+                                <span className="text-sm text-foreground truncate mr-2">{project.name}</span>
+                                <Button
+                                  size="sm"
+                                  variant={isAssociated ? "default" : "outline"}
+                                  className={cn(
+                                    "px-2 py-0.5 h-auto text-xs min-w-[100px]", // Compact button with min-width
+                                    isAssociated 
+                                      ? "bg-green-500 hover:bg-green-600 text-white border-green-500" 
+                                      : "border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                  )}
+                                  onClick={() => handleToggleAssociation(project, template.id as CardTemplateId, isAssociated)}
+                                  disabled={isTogglingAssociation[toggleKey]}
+                                >
+                                  {isTogglingAssociation[toggleKey] ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : isAssociated ? (
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  ) : (
+                                    <PlusCircle className="h-3 w-3 mr-1" />
+                                  )}
+                                  <span className="ml-1">{isAssociated ? "Associated" : "Associate"}</span>
+                                </Button>
+                              </div>
+                            );
+                          })}
                         </div>
                       </ScrollArea>
                     ) : (
-                      <p className="text-sm text-muted-foreground italic">Not currently associated with any projects.</p>
+                      <p className="text-sm text-muted-foreground italic p-2 border rounded-md">No projects available to associate.</p>
                     )}
                   </div>
                 </CardContent>
@@ -206,6 +257,12 @@ export default function TemplateLibraryPage() {
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
+                   {isTemplateInUse && (
+                     <Button variant="outline" size="sm" className="w-full" disabled={true} title="Cannot delete: template is associated with one or more projects.">
+                        <Trash2 className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">Delete Template</span>
+                     </Button>
+                   )}
                 </CardFooter>
               </Card>
             );
@@ -216,7 +273,7 @@ export default function TemplateLibraryPage() {
           <AlertTriangle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
           <h2 className="text-xl font-medium text-muted-foreground">No Templates Found</h2>
           <p className="text-muted-foreground mt-2">
-            It looks like there are no card templates currently stored or seeded.
+            It looks like there are no card templates currently stored.
           </p>
           <Button asChild className="mt-4">
             <Link href="/templates/new">
