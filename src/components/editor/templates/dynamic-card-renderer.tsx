@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 interface DynamicCardRendererProps {
   card: CardData;
   template: CardTemplate;
-  showElementOutlines?: boolean; // New prop
+  showElementOutlines?: boolean; 
 }
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
@@ -75,7 +75,7 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
         if (showElementOutlines) {
           elementStyle = {
             ...elementStyle,
-            outline: '1px dashed rgba(255,0,0,0.7)', // Red dashed outline
+            outline: '1px dashed rgba(255,0,0,0.7)', 
             outlineOffset: '-1px',
           };
         }
@@ -88,25 +88,19 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
 
         let content: React.ReactNode = String(value ?? '');
         if (element.prefix) content = element.prefix + content;
-        // Suffix logic might need adjustment if prefix already prepends value
         if (element.suffix) content = String(value ?? '') + element.suffix; 
-        // If both prefix and suffix, ensure value is between them
         if (element.prefix && element.suffix) content = element.prefix + String(value ?? '') + element.suffix;
 
 
+        let elementContent: React.ReactNode;
+
         switch (element.type) {
           case 'text':
-            return (
-              <div key={index} style={elementStyle} className={element.className} title={title}>
-                {content}
-              </div>
-            );
+            elementContent = <>{content}</>;
+            break;
           case 'textarea':
-            return (
-              <ScrollArea key={index} style={elementStyle} className={element.className} title={title}>
-                 <div className="whitespace-pre-wrap p-1">{content}</div>
-              </ScrollArea>
-            );
+            elementContent = <div className="whitespace-pre-wrap p-1">{content}</div>;
+            break;
           case 'image':
             const rawImgValue = card[element.fieldKey as keyof CardData];
             let srcForImage: string;
@@ -125,43 +119,88 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
               const heightNum = parseInt(heightStr, 10);
               const placeholderWidth = isNaN(widthNum) || widthNum <= 0 ? 100 : widthNum;
               const placeholderHeight = isNaN(heightNum) || heightNum <= 0 ? 100 : heightNum;
-              srcForImage = `https://placehold.co/${placeholderWidth}x${placeholderHeight}.png`;
-
-              if (typeof rawImgValue === 'string' && rawImgValue.trim() !== '') {
-                console.warn(`DynamicCardRenderer: fieldKey "${element.fieldKey}" (value: "${rawImgValue}") used as image type but is not a valid URL. Using placeholder: ${srcForImage}`);
+              
+              if (typeof rawImgValue === 'string' && rawImgValue.trim() !== '' && !(rawImgValue.startsWith('http://') || rawImgValue.startsWith('https://') || rawImgValue.startsWith('/') || rawImgValue.startsWith('data:'))) {
+                console.warn(`DynamicCardRenderer: fieldKey "${element.fieldKey}" (value: "${rawImgValue}") used as image type but is not a valid URL. Using placeholder.`);
               }
+              srcForImage = `https://placehold.co/${placeholderWidth}x${placeholderHeight}.png/E8E8E8/AAAAAA?text=Invalid+Src`;
             }
             const altText = card.name || `Image for ${element.fieldKey}`;
-            return (
-              <div key={index} style={elementStyle} className={cn("relative", element.className)} title={title}>
-                <Image
-                    src={srcForImage}
-                    alt={altText}
-                    fill
-                    style={{ objectFit: (element.style?.objectFit as any) || 'contain' }}
-                    data-ai-hint={card.dataAiHint || `${element.fieldKey} illustration`}
-                />
-              </div>
+            elementContent = (
+              <Image
+                  src={srcForImage}
+                  alt={altText}
+                  fill
+                  style={{ objectFit: (element.style?.objectFit as any) || 'contain' }}
+                  data-ai-hint={card.dataAiHint || `${element.fieldKey} illustration`}
+              />
             );
+            break;
           case 'iconValue':
-            return (
-              <div key={index} style={elementStyle} className={cn("flex items-center gap-1", element.className)} title={title}>
+            elementContent = (
+              <>
                 {element.icon && <IconComponent name={element.icon} className="h-full w-auto" />}
                 <span>{content}</span>
-              </div>
+              </>
             );
+            break;
           case 'iconFromData':
             const iconNameFromData = String(value || '');
-            return (
-              <div key={index} style={elementStyle} className={cn("flex items-center justify-center", element.className)} title={title}>
-                 {iconNameFromData && <IconComponent name={iconNameFromData} className="h-full w-auto" />}
-              </div>
-            );
+            elementContent = <>{iconNameFromData && <IconComponent name={iconNameFromData} className="h-full w-auto" />}</>;
+            break;
           default:
             console.warn(`DynamicCardRenderer: Unknown element type "${(element as any).type}" for fieldKey "${element.fieldKey}"`);
             return null;
         }
+
+        const wrapperClasses = cn(
+          element.className,
+          // Apply type-specific classes for iconValue and iconFromData to ensure flex behavior if needed
+          (element.type === 'iconValue' || element.type === 'iconFromData') && 'flex items-center',
+          element.type === 'iconValue' && 'gap-1', // Default gap for iconValue
+          element.type === 'iconFromData' && 'justify-center' // Default centering for iconFromData
+        );
+
+        // Use ScrollArea for 'textarea' type elements
+        const finalElement = element.type === 'textarea' ? (
+          <ScrollArea key={index} style={elementStyle} className={wrapperClasses} title={title}>
+            {elementContent}
+          </ScrollArea>
+        ) : (
+          <div key={index} style={elementStyle} className={wrapperClasses} title={title}>
+            {elementContent}
+          </div>
+        );
+        
+        return (
+          <React.Fragment key={`frag-${index}`}>
+            {finalElement}
+            {showElementOutlines && (
+              <div style={{
+                position: 'absolute',
+                top: typeof elementStyle.top === 'string' ? `calc(${elementStyle.top} + 0px)` : '0px', // Adjust based on element's top
+                left: typeof elementStyle.left === 'string' ? `calc(${elementStyle.left} + 0px)` : '0px', // Adjust based on element's left
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                color: 'white',
+                padding: '1px 4px',
+                fontSize: '9px',
+                borderRadius: '3px',
+                zIndex: 1000, 
+                pointerEvents: 'none',
+                lineHeight: '1',
+                whiteSpace: 'nowrap',
+                // Ensure this label is positioned relative to its 'element's wrapper
+                // If the element itself has position: absolute, this should work.
+                // If the element is static, this needs to be adjusted relative to the card.
+              }}>
+                {element.fieldKey}
+              </div>
+            )}
+          </React.Fragment>
+        );
+
       })}
     </div>
   );
 }
+
