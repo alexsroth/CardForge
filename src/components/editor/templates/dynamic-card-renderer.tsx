@@ -103,14 +103,14 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
             break;
           case 'image':
             const rawImgValue = card[element.fieldKey as keyof CardData];
-            let srcForImage: string;
+            let imageUrl: string;
 
             if (typeof rawImgValue === 'string' &&
                 (rawImgValue.startsWith('http://') ||
                  rawImgValue.startsWith('https://') ||
                  rawImgValue.startsWith('/') ||
                  rawImgValue.startsWith('data:'))) {
-              srcForImage = rawImgValue;
+              imageUrl = rawImgValue;
             } else {
               const imgStyle = element.style || {};
               const widthStr = String(imgStyle.width || '100').replace(/px|%|em|rem|vw|vh/gi, '');
@@ -123,15 +123,15 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
               if (typeof rawImgValue === 'string' && rawImgValue.trim() !== '' && !(rawImgValue.startsWith('http://') || rawImgValue.startsWith('https://') || rawImgValue.startsWith('/') || rawImgValue.startsWith('data:'))) {
                 console.warn(`DynamicCardRenderer: fieldKey "${element.fieldKey}" (value: "${rawImgValue}") used as image type but is not a valid URL. Using placeholder.`);
               }
-              srcForImage = `https://placehold.co/${placeholderWidth}x${placeholderHeight}.png/E8E8E8/AAAAAA?text=Invalid+Src`;
+              imageUrl = `https://placehold.co/${placeholderWidth}x${placeholderHeight}.png/E8E8E8/AAAAAA?text=Invalid+Src`;
             }
             const altText = card.name || `Image for ${element.fieldKey}`;
             elementContent = (
-              <Image
-                  src={srcForImage}
-                  alt={altText}
-                  fill
-                  style={{ objectFit: (element.style?.objectFit as any) || 'contain' }}
+              <Image 
+                  src={imageUrl} 
+                  alt={altText} 
+                  fill 
+                  style={{ objectFit: (element.style?.objectFit as any) || 'contain' }} 
                   data-ai-hint={card.dataAiHint || `${element.fieldKey} illustration`}
               />
             );
@@ -139,14 +139,14 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
           case 'iconValue':
             elementContent = (
               <>
-                {element.icon && <IconComponent name={element.icon} className="h-full w-auto" />}
+                {element.icon && <IconComponent name={element.icon} className="h-[1em] w-[1em] shrink-0" />}
                 <span>{content}</span>
               </>
             );
             break;
           case 'iconFromData':
             const iconNameFromData = String(value || '');
-            elementContent = <>{iconNameFromData && <IconComponent name={iconNameFromData} className="h-full w-auto" />}</>;
+            elementContent = <>{iconNameFromData.trim() && <IconComponent name={iconNameFromData.trim()} className="h-[1em] w-[1em] shrink-0" />}</>;
             break;
           default:
             console.warn(`DynamicCardRenderer: Unknown element type "${(element as any).type}" for fieldKey "${element.fieldKey}"`);
@@ -155,13 +155,11 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
 
         const wrapperClasses = cn(
           element.className,
-          // Apply type-specific classes for iconValue and iconFromData to ensure flex behavior if needed
           (element.type === 'iconValue' || element.type === 'iconFromData') && 'flex items-center',
-          element.type === 'iconValue' && 'gap-1', // Default gap for iconValue
-          element.type === 'iconFromData' && 'justify-center' // Default centering for iconFromData
+          element.type === 'iconValue' && 'gap-1', 
+          element.type === 'iconFromData' && 'justify-center' 
         );
-
-        // Use ScrollArea for 'textarea' type elements
+        
         const finalElement = element.type === 'textarea' ? (
           <ScrollArea key={index} style={elementStyle} className={wrapperClasses} title={title}>
             {elementContent}
@@ -178,8 +176,8 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
             {showElementOutlines && (
               <div style={{
                 position: 'absolute',
-                top: typeof elementStyle.top === 'string' ? `calc(${elementStyle.top} + 0px)` : '0px', // Adjust based on element's top
-                left: typeof elementStyle.left === 'string' ? `calc(${elementStyle.left} + 0px)` : '0px', // Adjust based on element's left
+                top: typeof elementStyle.top === 'string' ? `calc(${elementStyle.top} + 0px)` : '0px',
+                left: typeof elementStyle.left === 'string' ? `calc(${elementStyle.left} + 0px)` : '0px',
                 backgroundColor: 'rgba(0, 0, 0, 0.7)',
                 color: 'white',
                 padding: '1px 4px',
@@ -189,9 +187,6 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
                 pointerEvents: 'none',
                 lineHeight: '1',
                 whiteSpace: 'nowrap',
-                // Ensure this label is positioned relative to its 'element's wrapper
-                // If the element itself has position: absolute, this should work.
-                // If the element is static, this needs to be adjusted relative to the card.
               }}>
                 {element.fieldKey}
               </div>
