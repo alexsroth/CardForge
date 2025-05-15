@@ -10,53 +10,6 @@
 
 @layer base {
   :root {
-    --background: 40 33% 96%; /* Bone White #F9F7F3 */
-    --foreground: 300 13% 21%; /* Charcoal Plum #3E2F3F */
-
-    --card: 40 33% 96%; /* Bone White #F9F7F3 */
-    --card-foreground: 300 13% 21%; /* Charcoal Plum #3E2F3F */
-
-    --popover: 40 33% 96%; /* Bone White #F9F7F3 */
-    --popover-foreground: 300 13% 21%; /* Charcoal Plum #3E2F3F */
-
-    --primary: 46 100% 72%; /* Citrus Zing #FFD972 */
-    --primary-foreground: 0 0% 13%; /* Dark Neutral Gray #212121 (for text on primary) - Updated for better contrast */
-
-    --secondary: 81 17% 61%; /* Olive #A3B18A */
-    --secondary-foreground: 40 33% 96%; /* Bone White #F9F7F3 (for text on secondary) */
-
-    --muted: 40 33% 90%; /* Slightly darker Bone White for muted backgrounds */
-    --muted-foreground: 71 8% 42%; /* Dusty Sage #657158 */
-
-    --accent: 321 37% 35%; /* Plum #7C3A5C */
-    --accent-foreground: 40 33% 96%; /* Bone White #F9F7F3 (for text on accent) */
-
-    --destructive: 0 84.2% 60.2%; /* Default ShadCN Red */
-    --destructive-foreground: 0 0% 98%; /* Default ShadCN Light Text for Destructive */
-
-    --border: 141 40% 80%; /* Desaturated Electric Mint #8FFFB1 (HSL 141, 99%, 78%) */
-    --input: 40 33% 88%; /* Slightly darker Bone White for input backgrounds */
-    --ring: 141 99% 78%; /* Electric Mint #8FFFB1 (for focus rings) */
-
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-
-    /* Sidebar Light Theme */
-    --sidebar-background: 321 37% 35%; /* Plum #7C3A5C */
-    --sidebar-foreground: 40 33% 96%; /* Bone White #F9F7F3 */
-    --sidebar-primary: 46 100% 72%; /* Citrus Zing #FFD972 */
-    --sidebar-primary-foreground: 0 0% 13%; /* Dark Neutral Gray #212121 */
-    --sidebar-accent: 321 37% 45%; /* Lighter Plum for hover */
-    --sidebar-accent-foreground: 40 33% 96%; /* Bone White */
-    --sidebar-border: 321 37% 25%; /* Darker Plum */
-    --sidebar-ring: 141 99% 78%; /* Electric Mint #8FFFB1 */
-  }
-
-  .dark {
     --background: 300 13% 21%; /* Charcoal Plum #3E2F3F */
     --foreground: 40 33% 96%; /* Bone White #F9F7F3 */
 
@@ -67,31 +20,32 @@
     --popover-foreground: 40 33% 96%; /* Bone White */
 
     --primary: 46 100% 72%; /* Citrus Zing #FFD972 */
-    --primary-foreground: 300 13% 21%; /* Charcoal Plum (original dark text for primary on dark theme) */
+    --primary-foreground: 0 0% 13%; /* Dark Neutral Gray #212121 (for text on primary) */
 
     --secondary: 81 17% 35%; /* Darker Olive */
-    --secondary-foreground: 40 33% 96%; /* Bone White */
+    --secondary-foreground: 40 33% 96%; /* Bone White (for text on secondary) */
 
     --muted: 300 13% 15%; /* Darker Charcoal Plum for muted backgrounds */
     --muted-foreground: 71 8% 65%; /* Lighter Dusty Sage */
 
     --accent: 321 37% 60%; /* Lighter Plum */
-    --accent-foreground: 40 33% 96%; /* Bone White */
+    --accent-foreground: 40 33% 96%; /* Bone White (for text on accent) */
 
-    --destructive: 0 62.8% 30.6%; /* Default ShadCN Dark Destructive */
+    --destructive: 0 84.2% 60.2%; /* Default ShadCN Red (remains light theme red for now) */
     --destructive-foreground: 0 0% 98%; /* Default ShadCN Light Text for Destructive */
 
     --border: 141 60% 40%; /* Darker Electric Mint */
     --input: 300 13% 25%; /* Slightly Lighter Charcoal Plum for input backgrounds */
-    --ring: 141 99% 78%; /* Electric Mint */
-    
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+    --ring: 141 99% 78%; /* Electric Mint #8FFFB1 (for focus rings) */
 
-    /* Sidebar Dark Theme */
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+
+    /* Sidebar Light Theme (now effectively a dark sidebar) */
     --sidebar-background: 300 13% 15%; /* Darker Charcoal Plum */
     --sidebar-foreground: 40 33% 90%; /* Off-White/Bone White */
     --sidebar-primary: 46 100% 72%; /* Citrus Zing */
@@ -99,7 +53,54 @@
     --sidebar-accent: 300 13% 25%; /* Lighter Charcoal Plum for hover */
     --sidebar-accent-foreground: 40 33% 96%; /* Bone White */
     --sidebar-border: 300 13% 10%; /* Very Dark Charcoal Plum */
-    --sidebar-ring: 141 99% 78%; /* Electric Mint */
+    --sidebar-ring: 141 99% 78%; /* Electric Mint #8FFFB1 */
+  }
+
+  .dark {
+    /* This dark theme can be an alternative or further tweaked if needed */
+    --background: 300 13% 18%; /* Even darker Charcoal Plum */
+    --foreground: 40 33% 98%; /* Brighter Bone White */
+
+    --card: 300 13% 22%; 
+    --card-foreground: 40 33% 98%;
+
+    --popover: 300 13% 18%; 
+    --popover-foreground: 40 33% 98%;
+
+    --primary: 46 100% 72%; /* Citrus Zing */
+    --primary-foreground: 300 13% 18%; /* Dark background for primary text */
+
+    --secondary: 81 17% 30%; 
+    --secondary-foreground: 40 33% 98%;
+
+    --muted: 300 13% 12%; 
+    --muted-foreground: 71 8% 70%; 
+
+    --accent: 321 37% 65%; 
+    --accent-foreground: 40 33% 98%;
+
+    --destructive: 0 62.8% 30.6%; 
+    --destructive-foreground: 0 0% 98%; 
+
+    --border: 141 60% 35%; 
+    --input: 300 13% 22%; 
+    --ring: 141 99% 78%; 
+    
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+
+    /* Sidebar Dark Theme (remains for the explicit .dark class) */
+    --sidebar-background: 300 13% 12%; 
+    --sidebar-foreground: 40 33% 92%; 
+    --sidebar-primary: 46 100% 72%; 
+    --sidebar-primary-foreground: 300 13% 18%;
+    --sidebar-accent: 300 13% 22%; 
+    --sidebar-accent-foreground: 40 33% 98%;
+    --sidebar-border: 300 13% 8%; 
+    --sidebar-ring: 141 99% 78%; 
   }
 }
 
