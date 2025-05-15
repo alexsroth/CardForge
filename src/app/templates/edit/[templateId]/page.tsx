@@ -22,6 +22,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import * as LucideIcons from 'lucide-react';
 
 // Helper to convert TemplateField (from storage) to TemplateFieldDefinition (for UI)
 function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldDefinition {
@@ -146,6 +147,15 @@ const commonLucideIconsForGuide = [
   "Phone", "Puzzle", "Rocket", "Save", "Search", "Ship", "Sprout", "Ticket", "Trash2",
   "TreePine", "Trophy", "Umbrella", "User", "Video", "Wallet", "Watch", "Wifi", "Wrench"
 ];
+
+const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
+  const Icon = (LucideIcons as any)[name];
+  if (!Icon || typeof Icon !== 'function') {
+    console.warn(`Lucide icon "${name}" not found or is not a component.`);
+    return <LucideIcons.HelpCircle {...props} className={props.className || "h-4 w-4"} />;
+  }
+  return <Icon {...props} className={props.className || "h-4 w-4"} />;
+};
 
 export default function EditTemplatePage() {
   const router = useRouter();
@@ -501,7 +511,7 @@ export default function EditTemplatePage() {
         </div>
         <div className="space-y-2">
             <h3 className="text-lg font-semibold">Data Fields</h3>
-            <ScrollArea className="h-auto pr-3"> 
+            <ScrollArea className="h-auto pr-3 border rounded-md"> 
             <div className="p-2 space-y-3">
                 {fields.map((field, index) => (
                 <FieldRow
@@ -610,17 +620,19 @@ export default function EditTemplatePage() {
                 </ul>
                  <p className="font-semibold mb-1 mt-4">Common Lucide Icons (Click to Copy Name):</p>
                   <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border">
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1">
                       {commonLucideIconsForGuide.map(iconName => (
-                        <Badge
+                        <Button
                           key={iconName}
-                          variant="outline"
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleCopyIconName(iconName)}
-                          className="cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors text-xs justify-center py-1"
+                          className="justify-start text-xs h-auto py-1 px-1.5"
                           title={`Copy "${iconName}"`}
                         >
-                          {iconName}
-                        </Badge>
+                          <IconComponent name={iconName} className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
+                          <span className="truncate">{iconName}</span>
+                        </Button>
                       ))}
                     </div>
                   </ScrollArea>
