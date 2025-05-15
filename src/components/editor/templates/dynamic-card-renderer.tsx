@@ -6,8 +6,8 @@ import type { CardTemplate, LayoutDefinition, LayoutElement } from '@/lib/card-t
 import Image from 'next/image';
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import * as LucideIcons from 'lucide-react'; // Import all icons
-import { cn } from '@/lib/utils'; // Import the cn utility
+import * as LucideIcons from 'lucide-react'; 
+import { cn } from '@/lib/utils'; 
 
 interface DynamicCardRendererProps {
   card: CardData;
@@ -16,10 +16,9 @@ interface DynamicCardRendererProps {
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
-  if (!Icon) {
-    // Fallback or error handling if icon name is invalid
-    console.warn(`Lucide icon "${name}" not found.`);
-    return <LucideIcons.HelpCircle {...props} />; // Default fallback icon
+  if (!Icon || typeof Icon !== 'function') { 
+    console.warn(`Lucide icon "${name}" not found or is not a component. Fallback HelpCircle will be used.`);
+    return <LucideIcons.HelpCircle {...props} />; 
   }
   return <Icon {...props} />;
 };
@@ -32,17 +31,18 @@ export default function DynamicCardRenderer({ card, template }: DynamicCardRende
     try {
       layout = JSON.parse(template.layoutDefinition) as LayoutDefinition;
     } catch (error) {
-      console.error("Failed to parse layoutDefinition JSON:", error);
+      console.error(`Error parsing layoutDefinition for template "${template.id}":`, error, "\nLayout Definition:", template.layoutDefinition);
       return (
-        <div className="w-[280px] h-[400px] border border-destructive bg-destructive/10 flex items-center justify-center p-4 text-center">
-          Error parsing layout definition for template "{template.name}". Check console.
+        <div className="w-[280px] h-[400px] border border-destructive bg-destructive/10 flex flex-col items-center justify-center p-4 text-center text-xs">
+          <p className="font-semibold mb-1">Layout Error!</p>
+          <p>Template: "{template.name}" (ID: {template.id})</p>
+          <p>Failed to parse layout JSON. Check console for details.</p>
         </div>
       );
     }
   }
 
   if (!layout) {
-    // Fallback to a very basic rendering if no layout is defined or parsing failed
     return (
       <div className="w-[280px] h-[400px] border border-muted-foreground bg-muted flex flex-col items-center justify-center p-4 text-center">
         <p className="font-semibold">{card.name || "Untitled Card"}</p>
@@ -62,16 +62,17 @@ export default function DynamicCardRenderer({ card, template }: DynamicCardRende
     position: 'relative',
     overflow: 'hidden',
     boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
-    color: 'hsl(var(--card-foreground))', // Default text color
+    color: 'hsl(var(--card-foreground))', 
   };
 
-  const backgroundImageUrl = layout.backgroundImageField && card[layout.backgroundImageField as keyof CardData]
-    ? String(card[layout.backgroundImageField as keyof CardData])
-    : null;
+  // Background image logic was removed from default template, but keeping this for potential future use if `backgroundImageField` is added back.
+  // const backgroundImageUrl = layout.backgroundImageField && card[layout.backgroundImageField as keyof CardData]
+  //   ? String(card[layout.backgroundImageField as keyof CardData])
+  //   : null;
 
   return (
     <div style={cardStyle} className="select-none">
-      {backgroundImageUrl && (
+      {/* {backgroundImageUrl && (
         <Image
           src={backgroundImageUrl}
           alt={`${card.name || 'Card'} background`}
@@ -79,20 +80,20 @@ export default function DynamicCardRenderer({ card, template }: DynamicCardRende
           style={{ objectFit: 'cover', zIndex: 0 }}
           data-ai-hint={card.dataAiHint || "card background art"}
         />
-      )}
+      )} */}
       {layout.elements.map((element, index) => {
         const value = card[element.fieldKey as keyof CardData];
-        const elementStyle = { ...(element.style || {}), zIndex: 1 }; // Ensure elements are above background
+        const elementStyle = { ...(element.style || {}), zIndex: 1 }; 
 
-        if (!value && element.type !== 'image' && element.type !== 'iconValue' && !element.prefix && !element.suffix) { // Allow images/icons even if fieldKey value is empty, prefix/suffix might still be useful
-           if(!(element.type === 'text' && (element.prefix || element.suffix))) { // Allow text if prefix/suffix
-             return null; // Don't render if field value is missing and it's not an image or just prefix/suffix text
-           }
+        // Skip rendering if fieldKey is missing and it's not a decorative element or complex type
+        // This allows prefix/suffix to render even if value is empty for text types
+        if (value === undefined && element.type !== 'image' && !(element.prefix || element.suffix) && element.type !== 'iconValue' && element.type !== 'iconFromData') {
+           return null;
         }
         
         let content: React.ReactNode = String(value ?? '');
         if (element.prefix) content = element.prefix + content;
-        if (element.suffix) content = content + element.suffix;
+        if (element.suffix) content = content + String(value ?? ''); // Ensure suffix also gets the value if prefix was used
 
 
         switch (element.type) {
@@ -102,19 +103,41 @@ export default function DynamicCardRenderer({ card, template }: DynamicCardRende
                 {content}
               </div>
             );
-          case 'textarea': // Often implies multi-line and potentially scrollable
+          case 'textarea': 
             return (
               <ScrollArea key={index} style={elementStyle} className={element.className}>
                  <div className="whitespace-pre-wrap p-1">{content}</div>
               </ScrollArea>
             );
           case 'image':
-            const imageUrl = String(value || 'https://placehold.co/100x100.png');
+            const rawImgValue = card[element.fieldKey as keyof CardData];
+            let srcForImage: string;
+
+            if (typeof rawImgValue === 'string' && 
+                (rawImgValue.startsWith('http://') || 
+                 rawImgValue.startsWith('https://') || 
+                 rawImgValue.startsWith('/') || 
+                 rawImgValue.startsWith('data:'))) {
+              srcForImage = rawImgValue;
+            } else {
+              const imgStyle = element.style || {};
+              const widthStr = String(imgStyle.width || '100').replace(/px|%|em|rem|vw|vh/gi, '');
+              const heightStr = String(imgStyle.height || '100').replace(/px|%|em|rem|vw|vh/gi, '');
+              const widthNum = parseInt(widthStr, 10);
+              const heightNum = parseInt(heightStr, 10);
+              const placeholderWidth = isNaN(widthNum) || widthNum <= 0 ? 100 : widthNum;
+              const placeholderHeight = isNaN(heightNum) || heightNum <= 0 ? 100 : heightNum;
+              srcForImage = `https://placehold.co/${placeholderWidth}x${placeholderHeight}.png`;
+              
+              if (typeof rawImgValue === 'string' && rawImgValue.trim() !== '') {
+                console.warn(`DynamicCardRenderer: fieldKey "${element.fieldKey}" (value: "${rawImgValue}") used as image type but is not a valid URL. Using placeholder: ${srcForImage}`);
+              }
+            }
             const altText = card.name || `Image for ${element.fieldKey}`;
             return (
               <div key={index} style={elementStyle} className={cn("relative", element.className)}>
                 <Image 
-                    src={imageUrl} 
+                    src={srcForImage} 
                     alt={altText} 
                     fill 
                     style={{ objectFit: (element.style?.objectFit as any) || 'contain' }}
@@ -122,14 +145,22 @@ export default function DynamicCardRenderer({ card, template }: DynamicCardRende
                 />
               </div>
             );
-          case 'iconValue':
+          case 'iconValue': // Displays a fixed icon (from layout) next to card data
             return (
               <div key={index} style={elementStyle} className={cn("flex items-center gap-1", element.className)}>
-                {element.icon && <IconComponent name={element.icon} className="h-4 w-4 shrink-0" />}
+                {element.icon && <IconComponent name={element.icon} className="h-full w-auto" />} {/* Icon size can be controlled by parent style fontSize or explicit className */}
                 <span>{content}</span>
               </div>
             );
+          case 'iconFromData': // Displays an icon whose name is stored in card data
+            const iconNameFromData = String(value || '');
+            return (
+              <div key={index} style={elementStyle} className={cn("flex items-center justify-center", element.className)}>
+                 {iconNameFromData && <IconComponent name={iconNameFromData} className="h-full w-auto" />} {/* Icon size controlled by parent style or className */}
+              </div>
+            );
           default:
+            console.warn(`DynamicCardRenderer: Unknown element type "${(element as any).type}" for fieldKey "${element.fieldKey}"`);
             return null;
         }
       })}
