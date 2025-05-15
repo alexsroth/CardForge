@@ -2,30 +2,42 @@
 "use client";
 
 import type { CardData } from '@/lib/types';
-import type { CardTemplate, LayoutDefinition, LayoutElement } from '@/lib/card-templates';
+import type { CardTemplate, LayoutDefinition } from '@/lib/card-templates';
 import Image from 'next/image';
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import * as LucideIcons from 'lucide-react';
+import * as LucideIconsAll from 'lucide-react'; // For general lookup
+// Explicitly import commonly used icons and the fallback icon
+import { Coins, Sword, Shield, Moon, HelpCircle as FallbackIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface DynamicCardRendererProps {
-  card: CardData;
-  template: CardTemplate;
-  showElementOutlines?: boolean; 
-}
+// Create a registry for explicitly imported icons
+const iconRegistry: { [key: string]: React.ElementType<LucideIconsAll.LucideProps> } = {
+  Coins,
+  Sword,
+  Shield,
+  Moon,
+  HelpCircle: FallbackIcon, // Ensure FallbackIcon is always in the registry by its common name
+  // Add other frequently used icons here if you find they are being tree-shaken out
+};
 
-const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
-  const Icon = (LucideIcons as any)[name];
+const IconComponent = ({ name, ...props }: { name: string } & LucideIconsAll.LucideProps) => {
+  // Prioritize the registry, then fall back to dynamic lookup
+  const Icon = iconRegistry[name] || (LucideIconsAll as any)[name];
+
   if (!Icon || typeof Icon !== 'function') {
-    console.warn(`Lucide icon "${name}" not found or is not a component. Fallback HelpCircle will be used.`);
-    return <LucideIcons.HelpCircle {...props} />;
+    console.warn(`Lucide icon "${name}" not found or is not a component. Fallback 'HelpCircle' will be used.`);
+    return <FallbackIcon {...props} />; // Use the explicitly imported FallbackIcon
   }
   return <Icon {...props} />;
 };
 
 
-export default function DynamicCardRenderer({ card, template, showElementOutlines = false }: DynamicCardRendererProps) {
+export default function DynamicCardRenderer({ card, template, showElementOutlines = false }: {
+  card: CardData;
+  template: CardTemplate;
+  showElementOutlines?: boolean;
+}) {
   let layout: LayoutDefinition | null = null;
 
   if (template.layoutDefinition) {
@@ -69,27 +81,31 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
   return (
     <div style={cardStyle} className="select-none">
       {layout.elements.map((element, index) => {
-        const value = card[element.fieldKey as keyof CardData];
-        let elementStyle = { ...(element.style || {}), zIndex: 1 };
+        const rawValue = card[element.fieldKey as keyof CardData];
+        let elementStyle = { ...(element.style || {}), zIndex: index + 1 }; // Assign zIndex based on order
 
         if (showElementOutlines) {
           elementStyle = {
             ...elementStyle,
-            outline: '1px dashed rgba(255,0,0,0.7)', 
+            outline: '1px dashed rgba(255,0,0,0.7)',
             outlineOffset: '-1px',
           };
         }
         
-        const title = `fieldKey: ${element.fieldKey}`;
-
-        if (value === undefined && element.type !== 'image' && !(element.prefix || element.suffix) && element.type !== 'iconValue' && element.type !== 'iconFromData') {
-           return null;
+        const hoverTitle = `fieldKey: ${element.fieldKey}`;
+        
+        let valueForDisplay: any = rawValue;
+        if (rawValue === undefined || rawValue === null) {
+            if (element.type === 'number') valueForDisplay = '';
+            else if (element.type === 'boolean') valueForDisplay = false; // Though boolean isn't a layout type yet
+            else valueForDisplay = '';
         }
 
-        let content: React.ReactNode = String(value ?? '');
-        if (element.prefix) content = element.prefix + content;
-        if (element.suffix) content = String(value ?? '') + element.suffix; 
-        if (element.prefix && element.suffix) content = element.prefix + String(value ?? '') + element.suffix;
+
+        let content: React.ReactNode = String(valueForDisplay ?? '');
+        if (element.prefix) content = element.prefix + String(valueForDisplay ?? '');
+        if (element.suffix) content = String(valueForDisplay ?? '') + element.suffix;
+        if (element.prefix && element.suffix) content = element.prefix + String(valueForDisplay ?? '') + element.suffix;
 
 
         let elementContent: React.ReactNode;
@@ -102,15 +118,9 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
             elementContent = <div className="whitespace-pre-wrap p-1">{content}</div>;
             break;
           case 'image':
-            const rawImgValue = card[element.fieldKey as keyof CardData];
             let imageUrl: string;
-
-            if (typeof rawImgValue === 'string' &&
-                (rawImgValue.startsWith('http://') ||
-                 rawImgValue.startsWith('https://') ||
-                 rawImgValue.startsWith('/') ||
-                 rawImgValue.startsWith('data:'))) {
-              imageUrl = rawImgValue;
+            if (typeof rawValue === 'string' && (rawValue.startsWith('http://') || rawValue.startsWith('https://') || rawValue.startsWith('/') || rawValue.startsWith('data:'))) {
+              imageUrl = rawValue;
             } else {
               const imgStyle = element.style || {};
               const widthStr = String(imgStyle.width || '100').replace(/px|%|em|rem|vw|vh/gi, '');
@@ -120,8 +130,8 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
               const placeholderWidth = isNaN(widthNum) || widthNum <= 0 ? 100 : widthNum;
               const placeholderHeight = isNaN(heightNum) || heightNum <= 0 ? 100 : heightNum;
               
-              if (typeof rawImgValue === 'string' && rawImgValue.trim() !== '' && !(rawImgValue.startsWith('http://') || rawImgValue.startsWith('https://') || rawImgValue.startsWith('/') || rawImgValue.startsWith('data:'))) {
-                console.warn(`DynamicCardRenderer: fieldKey "${element.fieldKey}" (value: "${rawImgValue}") used as image type but is not a valid URL. Using placeholder.`);
+              if (typeof rawValue === 'string' && rawValue.trim() !== '' && !(rawValue.startsWith('http://') || rawValue.startsWith('https://') || rawValue.startsWith('/') || rawValue.startsWith('data:'))) {
+                console.warn(`DynamicCardRenderer: fieldKey "${element.fieldKey}" (value: "${rawValue}") used as image type but is not a valid URL. Using placeholder.`);
               }
               imageUrl = `https://placehold.co/${placeholderWidth}x${placeholderHeight}.png/E8E8E8/AAAAAA?text=Invalid+Src`;
             }
@@ -133,19 +143,20 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
                   fill 
                   style={{ objectFit: (element.style?.objectFit as any) || 'contain' }} 
                   data-ai-hint={card.dataAiHint || `${element.fieldKey} illustration`}
+                  priority={index < 3} // Prioritize loading for first few images
               />
             );
             break;
           case 'iconValue':
             elementContent = (
               <>
-                {element.icon && <IconComponent name={element.icon} className="h-[1em] w-[1em] shrink-0" />}
+                {element.icon && <IconComponent name={element.icon.trim()} className="h-[1em] w-[1em] shrink-0" />}
                 <span>{content}</span>
               </>
             );
             break;
           case 'iconFromData':
-            const iconNameFromData = String(value || '');
+            const iconNameFromData = String(valueForDisplay || '');
             elementContent = <>{iconNameFromData.trim() && <IconComponent name={iconNameFromData.trim()} className="h-[1em] w-[1em] shrink-0" />}</>;
             break;
           default:
@@ -161,11 +172,11 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
         );
         
         const finalElement = element.type === 'textarea' ? (
-          <ScrollArea key={index} style={elementStyle} className={wrapperClasses} title={title}>
+          <ScrollArea key={index} style={elementStyle} className={wrapperClasses} title={hoverTitle}>
             {elementContent}
           </ScrollArea>
         ) : (
-          <div key={index} style={elementStyle} className={wrapperClasses} title={title}>
+          <div key={index} style={elementStyle} className={wrapperClasses} title={hoverTitle}>
             {elementContent}
           </div>
         );
@@ -183,7 +194,7 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
                 padding: '1px 4px',
                 fontSize: '9px',
                 borderRadius: '3px',
-                zIndex: 1000, 
+                zIndex: 10000, // Ensure label is on top of other elements
                 pointerEvents: 'none',
                 lineHeight: '1',
                 whiteSpace: 'nowrap',
@@ -193,9 +204,7 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
             )}
           </React.Fragment>
         );
-
       })}
     </div>
   );
 }
-
