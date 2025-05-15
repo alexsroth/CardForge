@@ -33,9 +33,11 @@ function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): Templa
         placeholderConfigBgColor: def.placeholderConfigBgColor,
         placeholderConfigTextColor: def.placeholderConfigTextColor,
         placeholderConfigText: def.placeholderConfigText,
+        // Note: previewValue from TemplateFieldDefinition is not directly stored in TemplateField.
+        // It's a UI-only concept for controlling the live preview.
     };
     if (def.placeholder) field.placeholder = def.placeholder;
-    if (def.defaultValue !== undefined && def.defaultValue !== '') {
+    if (def.defaultValue !== undefined && String(def.defaultValue).trim() !== '') {
         if (def.type === 'number') {
             field.defaultValue = Number(def.defaultValue) || 0;
         } else if (def.type === 'boolean') {
@@ -82,14 +84,13 @@ const toCamelCase = (str: string): string => {
   return result;
 };
 
-function generateSamplePlaceholderUrl(fieldDef: TemplateFieldDefinition): string {
+function generateSamplePlaceholderUrl(fieldDef: Pick<TemplateFieldDefinition, 'placeholderConfigWidth' | 'placeholderConfigHeight' | 'placeholderConfigBgColor' | 'placeholderConfigTextColor' | 'placeholderConfigText'>): string {
   const width = fieldDef.placeholderConfigWidth || 100;
   const height = fieldDef.placeholderConfigHeight || 100;
   
   let path = `${width}x${height}`;
   const cleanBgColor = fieldDef.placeholderConfigBgColor?.replace('#', '').trim();
   const cleanTextColor = fieldDef.placeholderConfigTextColor?.replace('#', '').trim();
-  const cleanText = fieldDef.placeholderConfigText?.trim();
 
   if (cleanBgColor) {
     path += `/${cleanBgColor}`;
@@ -97,10 +98,10 @@ function generateSamplePlaceholderUrl(fieldDef: TemplateFieldDefinition): string
       path += `/${cleanTextColor}`;
     }
   }
-  path += '.png'; // Always request PNG for preview
+  path += '.png'; 
 
   let fullUrl = `https://placehold.co/${path}`;
-
+  const cleanText = fieldDef.placeholderConfigText?.trim();
   if (cleanText) {
     fullUrl += `?text=${encodeURIComponent(cleanText)}`;
   }
@@ -129,71 +130,78 @@ export default function TemplateDesignerPage() {
     }
   }, [templateName]);
 
+  // Generate sample card for preview based on current fields
   useEffect(() => {
     const currentTemplateIdForPreview = templateId || 'previewTemplateId';
-    const generatedSampleCard: CardData = {
+    const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
       templateId: currentTemplateIdForPreview as CardTemplateId,
-      name: 'Awesome Card Name',
-      description: 'This is a sample description for the card preview. It can contain multiple lines and will be used to test the layout of text areas.',
-      cost: 3,
-      attack: 2,
-      defense: 2,
-      imageUrl: 'https://placehold.co/250x140.png', 
-      dataAiHint: 'card art sample',
-      rarity: 'common',
-      effectText: 'Sample effect: Draw a card. This unit gets +1/+1 until end of turn. This text might be long to test scrolling in a textarea layout element.',
-      flavorText: 'This is some italicized flavor text.',
-      artworkUrl: 'https://placehold.co/280x400.png', 
-      cardType: 'Creature - Goblin', 
-      statusIcon: 'ShieldCheck', 
     };
 
     fields.forEach(fieldDef => {
       const key = fieldDef.key as keyof CardData;
-       if (fieldDef.type === 'placeholderImage') {
-          (generatedSampleCard as any)[key] = generateSamplePlaceholderUrl(fieldDef);
-       } else if (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '') {
-        if (fieldDef.type === 'number') {
-          (generatedSampleCard as any)[key] = Number(fieldDef.defaultValue);
-        } else if (fieldDef.type === 'boolean') {
-          (generatedSampleCard as any)[key] = String(fieldDef.defaultValue).toLowerCase() === 'true';
+      let valueForPreview: any;
+
+      const hasPreviewValue = fieldDef.previewValue !== undefined && fieldDef.previewValue.trim() !== '';
+      const hasDefaultValue = fieldDef.defaultValue !== undefined && String(fieldDef.defaultValue).trim() !== '';
+
+      if (fieldDef.type === 'placeholderImage') {
+        if (hasPreviewValue && typeof fieldDef.previewValue === 'string' && (fieldDef.previewValue.startsWith('http') || fieldDef.previewValue.startsWith('https://placehold.co'))) {
+          valueForPreview = fieldDef.previewValue;
         } else {
-          (generatedSampleCard as any)[key] = fieldDef.defaultValue;
+          valueForPreview = generateSamplePlaceholderUrl(fieldDef);
         }
-      } else {
-         if (!Object.prototype.hasOwnProperty.call(generatedSampleCard, key) || generatedSampleCard[key] === undefined) {
-           switch (fieldDef.type) {
-            case 'text': (generatedSampleCard as any)[key] = `Sample ${fieldDef.label}`; break;
-            case 'textarea': (generatedSampleCard as any)[key] = `Sample content for ${fieldDef.label}.`; break;
-            case 'number': (generatedSampleCard as any)[key] = 0; break;
-            case 'boolean': (generatedSampleCard as any)[key] = false; break;
-            case 'select':
-              const firstOptionValue = fieldDef.optionsString?.split(',')[0]?.split(':')[0]?.trim();
-              (generatedSampleCard as any)[key] = firstOptionValue || '';
-              break;
-            default: (generatedSampleCard as any)[key] = `Sample ${fieldDef.label}`;
-          }
+      } else if (hasPreviewValue) {
+        const pv = fieldDef.previewValue as string;
+        if (fieldDef.type === 'number') {
+          valueForPreview = !isNaN(Number(pv)) ? Number(pv) : 0;
+        } else if (fieldDef.type === 'boolean') {
+          valueForPreview = pv.toLowerCase() === 'true';
+        } else {
+          valueForPreview = pv;
+        }
+      } else if (hasDefaultValue) {
+        if (fieldDef.type === 'number') {
+          valueForPreview = Number(fieldDef.defaultValue) || 0;
+        } else if (fieldDef.type === 'boolean') {
+          valueForPreview = String(fieldDef.defaultValue).toLowerCase() === 'true';
+        } else {
+          valueForPreview = fieldDef.defaultValue;
+        }
+      } else { // No preview value, no default value - use type-based generic
+        switch (fieldDef.type) {
+          case 'text': valueForPreview = `Sample ${fieldDef.label}`; break;
+          case 'textarea': valueForPreview = `Sample content for ${fieldDef.label}.`; break;
+          case 'number': valueForPreview = 0; break;
+          case 'boolean': valueForPreview = false; break;
+          case 'select':
+            const firstOptionValue = fieldDef.optionsString?.split(',')[0]?.split(':')[0]?.trim();
+            valueForPreview = firstOptionValue || `Option for ${fieldDef.label}`;
+            break;
+          default: valueForPreview = `Sample ${fieldDef.label}`;
         }
       }
-      if (['name', 'description', 'cost', 'attack', 'defense', 'imageUrl', 'dataAiHint', 'rarity', 'effectText', 'flavorText', 'artworkUrl', 'cardType', 'statusIcon'].includes(fieldDef.key)) {
-        if ((fieldDef.type !== 'placeholderImage' && (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '')) ) {
-             if((fieldDef.key === 'imageUrl' || fieldDef.key === 'artworkUrl') && typeof fieldDef.defaultValue === 'string' && !fieldDef.defaultValue.startsWith('http') && !fieldDef.defaultValue.startsWith('https')) {
-                (generatedSampleCard as any)[key] = `https://placehold.co/${fieldDef.key === 'imageUrl' ? '250x140' : '280x400'}.png`;
-             }
-        } else if (fieldDef.type !== 'placeholderImage') { 
-            if(fieldDef.key === 'imageUrl' && !(generatedSampleCard as any)[key]) { 
-               (generatedSampleCard as any)[key] = 'https://placehold.co/250x140.png';
-            } else if(fieldDef.key === 'artworkUrl' && !(generatedSampleCard as any)[key]) {
-               (generatedSampleCard as any)[key] = 'https://placehold.co/280x400.png';
-            } else if(fieldDef.key === 'statusIcon' && !(generatedSampleCard as any)[key]) {
-               (generatedSampleCard as any)[key] = 'ShieldCheck';
-            }
-        }
-      }
+      (generatedSampleCard as any)[key] = valueForPreview;
     });
+    
+    // Ensure some base fields have sensible defaults if not defined by user fields
+    // These act as fallbacks if specific fields (like 'name', 'cost') are not added by the user
+    // but are referenced in a default layout.
+    if (generatedSampleCard.name === undefined && !fields.some(f => f.key === 'name')) generatedSampleCard.name = 'Awesome Card Name';
+    if (generatedSampleCard.cost === undefined && !fields.some(f => f.key === 'cost')) generatedSampleCard.cost = 3;
+    if (generatedSampleCard.imageUrl === undefined && !fields.some(f => f.key === 'imageUrl')) generatedSampleCard.imageUrl = 'https://placehold.co/250x140.png';
+    if (generatedSampleCard.dataAiHint === undefined && !fields.some(f => f.key === 'dataAiHint')) generatedSampleCard.dataAiHint = 'card art sample';
+    if (generatedSampleCard.cardType === undefined && !fields.some(f => f.key === 'cardType')) generatedSampleCard.cardType = 'Creature - Goblin';
+    if (generatedSampleCard.effectText === undefined && !fields.some(f => f.key === 'effectText')) generatedSampleCard.effectText = 'Sample effect text for preview.';
+    if (generatedSampleCard.attack === undefined && !fields.some(f => f.key === 'attack')) generatedSampleCard.attack = 2;
+    if (generatedSampleCard.defense === undefined && !fields.some(f => f.key === 'defense')) generatedSampleCard.defense = 2;
+    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) generatedSampleCard.artworkUrl = 'https://placehold.co/280x400.png';
+    if (generatedSampleCard.statusIcon === undefined && !fields.some(f => f.key === 'statusIcon')) generatedSampleCard.statusIcon = 'ShieldCheck';
+
+
     setSampleCardForPreview(generatedSampleCard as CardData);
-  }, [fields, templateId, templateName]);
+  }, [fields, templateId, templateName]); // Rerun when fields or templateId/name changes
+
 
   const templateForPreview = useMemo((): CardTemplate => ({
     id: (templateId || 'previewTemplateId') as CardTemplateId,
@@ -230,9 +238,10 @@ export default function TemplateDesignerPage() {
         type: 'text',
         placeholder: '',
         defaultValue: '',
+        previewValue: '',
         optionsString: '',
-        placeholderConfigWidth: 250, 
-        placeholderConfigHeight: 140, 
+        placeholderConfigWidth: 250,
+        placeholderConfigHeight: 140,
       }
     ]);
   };
@@ -281,13 +290,13 @@ export default function TemplateDesignerPage() {
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
     setLayoutDefinition(newLayoutDef);
-    if (layoutJsonError) setLayoutJsonError(null);
+    if (layoutJsonError) setLayoutJsonError(null); // Clear error as user types
   };
 
   const validateAndFormatLayoutJson = () => {
     try {
       const parsed = JSON.parse(layoutDefinition);
-      setLayoutDefinition(JSON.stringify(parsed, null, 2)); 
+      setLayoutDefinition(JSON.stringify(parsed, null, 2));
       setLayoutJsonError(null);
       return true;
     } catch (e: any) {
@@ -426,7 +435,7 @@ export default function TemplateDesignerPage() {
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Data Fields</h3>
-              <ScrollArea className="h-auto pr-3"> 
+              <ScrollArea className="h-auto pr-3">
                 <div className="p-2 space-y-3">
                   {fields.map((field, index) => (
                     <FieldRow
@@ -461,7 +470,7 @@ export default function TemplateDesignerPage() {
                  Field keys in the JSON must match the keys from your "Data Fields" section.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex-grow space-y-2 flex flex-col"> 
+            <CardContent className="flex-grow space-y-2 flex flex-col">
               <Textarea
                 id="layoutDefinition"
                 value={layoutDefinition}
@@ -469,7 +478,7 @@ export default function TemplateDesignerPage() {
                 onBlur={validateAndFormatLayoutJson}
                 placeholder='Enter JSON for card layout or use the default provided.'
                 rows={15}
-                className="font-mono text-xs flex-grow min-h-[300px] max-h-[350px]" 
+                className="font-mono text-xs flex-grow min-h-[300px] max-h-[350px]"
                 disabled={isSaving}
               />
               {layoutJsonError && (
@@ -591,7 +600,7 @@ export default function TemplateDesignerPage() {
             </CardFooter>
           </Card>
 
-          <Card className="md:w-[35%] sticky top-20 self-start"> 
+          <Card className="md:w-[35%] sticky top-20 self-start">
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center">
                 <Eye className="mr-2 h-5 w-5" />
@@ -615,3 +624,4 @@ export default function TemplateDesignerPage() {
     </div>
   );
 }
+

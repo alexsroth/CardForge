@@ -18,7 +18,8 @@ export interface TemplateFieldDefinition {
   type: 'text' | 'textarea' | 'number' | 'select' | 'boolean' | 'placeholderImage';
   placeholder?: string;
   defaultValue?: string | number | boolean;
-  optionsString?: string; 
+  previewValue?: string; // Stores the user-defined preview value as a string
+  optionsString?: string;
   placeholderConfigWidth?: number;
   placeholderConfigHeight?: number;
   placeholderConfigBgColor?: string;
@@ -41,8 +42,8 @@ function generatePreviewPlaceholderUrl(config: {
   text?: string;
 }): string {
   const {
-    width = 100, // Default width if not provided
-    height = 100, // Default height if not provided
+    width = 100,
+    height = 100,
     bgColor,
     textColor,
     text,
@@ -51,7 +52,6 @@ function generatePreviewPlaceholderUrl(config: {
   let path = `${width}x${height}`;
   const cleanBgColor = bgColor?.replace('#', '').trim();
   const cleanTextColor = textColor?.replace('#', '').trim();
-  const cleanText = text?.trim();
 
   if (cleanBgColor) {
     path += `/${cleanBgColor}`;
@@ -59,10 +59,10 @@ function generatePreviewPlaceholderUrl(config: {
       path += `/${cleanTextColor}`;
     }
   }
-  path += '.png'; // Always request PNG
+  path += `.png`;
 
   let fullUrl = `https://placehold.co/${path}`;
-
+  const cleanText = text?.trim();
   if (cleanText) {
     fullUrl += `?text=${encodeURIComponent(cleanText)}`;
   }
@@ -101,14 +101,17 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
   };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target as HTMLInputElement; 
+    const { name, value, type } = e.target as HTMLInputElement;
     let processedValue: string | number | boolean = value;
 
     if (type === 'checkbox') {
       processedValue = e.target.checked;
-    } else if (field.type === 'number' || name === 'placeholderConfigWidth' || name === 'placeholderConfigHeight') {
+    } else if (name === 'defaultValue' && field.type === 'number') { // Only parse defaultValue if field type is number
+      processedValue = value === '' ? '' : (isNaN(Number(value)) ? (field[name as keyof TemplateFieldDefinition] || '') : Number(value));
+    } else if (name === 'placeholderConfigWidth' || name === 'placeholderConfigHeight') {
       processedValue = value === '' ? '' : (isNaN(Number(value)) ? (field[name as keyof TemplateFieldDefinition] || '') : Number(value));
     }
+    // For previewValue, it's always kept as a string from the input
     handleGenericChange(name as keyof TemplateFieldDefinition, processedValue);
   };
 
@@ -129,12 +132,14 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
     onChange({ ...field, ...newFieldData });
   };
 
-  const hasSecondaryContent = field.type === 'placeholderImage' || field.placeholder || field.defaultValue !== undefined || field.type === 'select';
+  const hasSecondaryContentInput = field.placeholder || field.defaultValue !== undefined || field.type === 'select' || field.previewValue !== undefined;
+  const hasAnySecondaryContent = hasSecondaryContentInput || field.type === 'placeholderImage';
+
 
   return (
     <div className="p-3 border rounded-md bg-card shadow-sm space-y-2">
       <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
-        {hasSecondaryContent && (
+        {hasAnySecondaryContent && (
           <Button
             variant="ghost"
             size="icon"
@@ -146,7 +151,7 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
             {isSecondaryVisible ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </Button>
         )}
-         <div className={cn("flex-grow min-w-[180px] basis-full sm:basis-auto", !hasSecondaryContent && "sm:pl-12")}>
+         <div className={cn("flex-grow min-w-[180px] basis-full sm:basis-auto", !hasAnySecondaryContent && "sm:pl-12")}>
           <Label htmlFor={`field-label-${field.key}`} className="text-sm font-medium">Field Label</Label>
           <Input
             id={`field-label-${field.key}`}
@@ -202,155 +207,176 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
         </Button>
       </div>
 
-      {isSecondaryVisible && hasSecondaryContent && field.type !== 'placeholderImage' && (
-        <div className={cn(
-            "grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 pt-2 mt-1 border-t border-dashed"
-          )}
-        >
-          {(field.type !== 'boolean' || field.placeholder) && 
-            <div className={cn(field.type === 'boolean' && "sm:col-span-1")}>
-              <Label htmlFor={`field-placeholder-${field.key}`} className="text-xs text-muted-foreground">Placeholder</Label>
-              <Input
-                id={`field-placeholder-${field.key}`}
-                name="placeholder"
-                value={field.placeholder || ''}
-                onChange={handleInputChange}
-                className="h-8 text-xs"
-                disabled={isSaving}
-              />
-            </div>
-          }
-
-          {field.type === 'boolean' ? (
-            <div className="flex items-center space-x-2 self-end pb-1 min-h-[2rem] mt-3 sm:mt-0">
-              <Input
-                type="checkbox"
-                id={`field-defaultValue-bool-${field.key}`}
-                name="defaultValue"
-                checked={field.defaultValue === true || String(field.defaultValue).toLowerCase() === 'true'}
-                onChange={handleInputChange}
-                className="h-4 w-4"
-                disabled={isSaving}
-              />
-              <Label htmlFor={`field-defaultValue-bool-${field.key}`} className="font-normal text-xs text-muted-foreground">
-                Default to checked?
-              </Label>
-            </div>
-          ) : (
-            <div className={cn(field.type === 'boolean' && !field.placeholder && "hidden")}>
-              <Label htmlFor={`field-defaultValue-${field.key}`} className="text-xs text-muted-foreground">Default Value</Label>
-              <Input
-                id={`field-defaultValue-${field.key}`}
-                name="defaultValue"
-                type={field.type === 'number' ? 'number' : 'text'}
-                value={field.defaultValue === undefined || field.defaultValue === null ? '' : String(field.defaultValue)}
-                onChange={handleInputChange}
-                className="h-8 text-xs"
-                disabled={isSaving}
-              />
-            </div>
-          )}
-        </div>
-      )}
-      
-      {isSecondaryVisible && field.type === 'select' && (
-        <div className={cn("pt-2 mt-1", !hasSecondaryContent || !(field.placeholder || field.defaultValue !== undefined) || field.type === 'placeholderImage' ? "" : "border-t border-dashed")}>
-           {(!(field.placeholder || field.defaultValue !== undefined)) && <div className="border-t border-dashed -mx-3 mb-2"></div>}
-          <Label htmlFor={`field-options-${field.key}`} className="text-xs text-muted-foreground">Options (comma-separated value:label pairs)</Label>
-          <Textarea
-            id={`field-options-${field.key}`}
-            name="optionsString"
-            value={field.optionsString || ''}
-            onChange={handleInputChange}
-            placeholder="e.g., common:Common,rare:Rare"
-            className="text-xs min-h-[2.5rem]"
-            rows={1}
-            disabled={isSaving}
-          />
-          <p className="text-xs text-muted-foreground mt-0.5">Ex: <code>opt1:Option 1,opt2:Option 2</code></p>
-        </div>
-      )}
-
-      {isSecondaryVisible && field.type === 'placeholderImage' && (
+      {isSecondaryVisible && (
         <div className="pt-2 mt-1 border-t border-dashed space-y-3">
-          <p className="text-xs text-muted-foreground font-medium">Placeholder Image Configuration:</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2">
+          {/* Preview Value Input - Common to most types */}
+          {field.type !== 'placeholderImage' && ( // No separate preview for placeholderImage as it's derived
             <div>
-              <Label htmlFor={`field-ph-width-${field.key}`} className="text-xs text-muted-foreground">Width (px)</Label>
+              <Label htmlFor={`field-previewValue-${field.key}`} className="text-xs text-muted-foreground">
+                Preview Value (for live layout preview)
+              </Label>
               <Input
-                id={`field-ph-width-${field.key}`}
-                name="placeholderConfigWidth"
-                type="number"
-                value={field.placeholderConfigWidth || ''}
+                id={`field-previewValue-${field.key}`}
+                name="previewValue"
+                value={field.previewValue || ''}
                 onChange={handleInputChange}
-                placeholder="e.g., 300"
+                placeholder={field.type === 'boolean' ? 'true or false' : (field.type === 'number' ? 'e.g., 10' : 'Enter text for preview')}
                 className="h-8 text-xs"
                 disabled={isSaving}
               />
             </div>
-            <div>
-              <Label htmlFor={`field-ph-height-${field.key}`} className="text-xs text-muted-foreground">Height (px)</Label>
-              <Input
-                id={`field-ph-height-${field.key}`}
-                name="placeholderConfigHeight"
-                type="number"
-                value={field.placeholderConfigHeight || ''}
+          )}
+
+          {/* Placeholder and Default Value Grid */}
+          {(field.placeholder || field.defaultValue !== undefined || field.type === 'boolean' || field.type === 'number') && field.type !== 'placeholderImage' && (
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2">
+                {(field.type !== 'boolean' || field.placeholder) && (
+                  <div className={cn(field.type === 'boolean' && "sm:col-span-1")}>
+                    <Label htmlFor={`field-placeholder-${field.key}`} className="text-xs text-muted-foreground">Input Placeholder</Label>
+                    <Input
+                      id={`field-placeholder-${field.key}`}
+                      name="placeholder"
+                      value={field.placeholder || ''}
+                      onChange={handleInputChange}
+                      className="h-8 text-xs"
+                      disabled={isSaving}
+                    />
+                  </div>
+                )}
+
+                {field.type === 'boolean' ? (
+                  <div className="flex items-center space-x-2 self-end pb-1 min-h-[2rem] mt-3 sm:mt-0">
+                    <Input
+                      type="checkbox"
+                      id={`field-defaultValue-bool-${field.key}`}
+                      name="defaultValue"
+                      checked={field.defaultValue === true || String(field.defaultValue).toLowerCase() === 'true'}
+                      onChange={handleInputChange}
+                      className="h-4 w-4"
+                      disabled={isSaving}
+                    />
+                    <Label htmlFor={`field-defaultValue-bool-${field.key}`} className="font-normal text-xs text-muted-foreground">
+                      Default to checked?
+                    </Label>
+                  </div>
+                ) : (
+                  <div className={cn((field.type === 'boolean' && !field.placeholder) && "hidden")}>
+                    <Label htmlFor={`field-defaultValue-${field.key}`} className="text-xs text-muted-foreground">Default Value</Label>
+                    <Input
+                      id={`field-defaultValue-${field.key}`}
+                      name="defaultValue"
+                      type={field.type === 'number' ? 'number' : 'text'}
+                      value={field.defaultValue === undefined || field.defaultValue === null ? '' : String(field.defaultValue)}
+                      onChange={handleInputChange}
+                      className="h-8 text-xs"
+                      disabled={isSaving}
+                    />
+                  </div>
+                )}
+             </div>
+          )}
+          
+          {/* Select Options */}
+          {field.type === 'select' && (
+            <div className="pt-2">
+              <Label htmlFor={`field-options-${field.key}`} className="text-xs text-muted-foreground">Options (comma-separated value:label pairs)</Label>
+              <Textarea
+                id={`field-options-${field.key}`}
+                name="optionsString"
+                value={field.optionsString || ''}
                 onChange={handleInputChange}
-                placeholder="e.g., 200"
-                className="h-8 text-xs"
+                placeholder="e.g., common:Common,rare:Rare"
+                className="text-xs min-h-[2.5rem]"
+                rows={1}
                 disabled={isSaving}
               />
+              <p className="text-xs text-muted-foreground mt-0.5">Ex: <code>opt1:Option 1,opt2:Option 2</code></p>
             </div>
-            <div>
-              <Label htmlFor={`field-ph-bgcolor-${field.key}`} className="text-xs text-muted-foreground">Background Color (hex/name)</Label>
-              <Input
-                id={`field-ph-bgcolor-${field.key}`}
-                name="placeholderConfigBgColor"
-                type="text"
-                value={field.placeholderConfigBgColor || ''}
-                onChange={handleInputChange}
-                placeholder="e.g., cccccc or orange"
-                className="h-8 text-xs"
-                disabled={isSaving}
-              />
-            </div>
-            <div>
-              <Label htmlFor={`field-ph-textcolor-${field.key}`} className="text-xs text-muted-foreground">Text Color (hex/name)</Label>
-              <Input
-                id={`field-ph-textcolor-${field.key}`}
-                name="placeholderConfigTextColor"
-                type="text"
-                value={field.placeholderConfigTextColor || ''}
-                onChange={handleInputChange}
-                placeholder="e.g., 969696 or white"
-                className="h-8 text-xs"
-                disabled={isSaving}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Label htmlFor={`field-ph-text-${field.key}`} className="text-xs text-muted-foreground">Display Text (optional)</Label>
-              <Input
-                id={`field-ph-text-${field.key}`}
-                name="placeholderConfigText"
-                type="text"
-                value={field.placeholderConfigText || ''}
-                onChange={handleInputChange}
-                placeholder="e.g., My Card Art"
-                className="h-8 text-xs"
-                disabled={isSaving}
-              />
-            </div>
-          </div>
-          {generatedPlaceholderUrl && (
-            <div className="mt-2 space-y-1">
-              <Label className="text-xs text-muted-foreground">Generated URL Preview:</Label>
-              <Input
-                type="text"
-                value={generatedPlaceholderUrl}
-                readOnly
-                className="h-8 text-xs bg-muted/50 font-mono"
-                disabled={isSaving}
-              />
+          )}
+
+          {/* Placeholder Image Configuration */}
+          {field.type === 'placeholderImage' && (
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground font-medium">Placeholder Image Configuration:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2">
+                <div>
+                  <Label htmlFor={`field-ph-width-${field.key}`} className="text-xs text-muted-foreground">Width (px)</Label>
+                  <Input
+                    id={`field-ph-width-${field.key}`}
+                    name="placeholderConfigWidth"
+                    type="number"
+                    value={field.placeholderConfigWidth || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 300"
+                    className="h-8 text-xs"
+                    disabled={isSaving}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`field-ph-height-${field.key}`} className="text-xs text-muted-foreground">Height (px)</Label>
+                  <Input
+                    id={`field-ph-height-${field.key}`}
+                    name="placeholderConfigHeight"
+                    type="number"
+                    value={field.placeholderConfigHeight || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 200"
+                    className="h-8 text-xs"
+                    disabled={isSaving}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`field-ph-bgcolor-${field.key}`} className="text-xs text-muted-foreground">Background Color (hex/name)</Label>
+                  <Input
+                    id={`field-ph-bgcolor-${field.key}`}
+                    name="placeholderConfigBgColor"
+                    type="text"
+                    value={field.placeholderConfigBgColor || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g., cccccc or orange"
+                    className="h-8 text-xs"
+                    disabled={isSaving}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor={`field-ph-textcolor-${field.key}`} className="text-xs text-muted-foreground">Text Color (hex/name)</Label>
+                  <Input
+                    id={`field-ph-textcolor-${field.key}`}
+                    name="placeholderConfigTextColor"
+                    type="text"
+                    value={field.placeholderConfigTextColor || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g., 969696 or white"
+                    className="h-8 text-xs"
+                    disabled={isSaving}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label htmlFor={`field-ph-text-${field.key}`} className="text-xs text-muted-foreground">Display Text (optional)</Label>
+                  <Input
+                    id={`field-ph-text-${field.key}`}
+                    name="placeholderConfigText"
+                    type="text"
+                    value={field.placeholderConfigText || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g., My Card Art"
+                    className="h-8 text-xs"
+                    disabled={isSaving}
+                  />
+                </div>
+              </div>
+              {generatedPlaceholderUrl && (
+                <div className="mt-2 space-y-1">
+                  <Label className="text-xs text-muted-foreground">Generated URL (for reference):</Label>
+                  <Input
+                    type="text"
+                    value={generatedPlaceholderUrl}
+                    readOnly
+                    className="h-8 text-xs bg-muted/50 font-mono"
+                    disabled={isSaving}
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
