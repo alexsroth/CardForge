@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Save, AlertTriangle, Loader2, ArrowLeft, Eye, HelpCircle } from 'lucide-react';
+import { PlusCircle, Save, AlertTriangle, Loader2, ArrowLeft, Eye, HelpCircle, Copy } from 'lucide-react';
 import FieldRow, { type TemplateFieldDefinition } from '@/components/template-designer/field-row';
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates, type CardTemplateId } from '@/contexts/TemplateContext';
@@ -21,6 +21,7 @@ import Link from 'next/link';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 
 // Helper to convert TemplateField (from storage) to TemplateFieldDefinition (for UI)
 function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldDefinition {
@@ -99,14 +100,20 @@ const toCamelCase = (str: string): string => {
   return result;
 };
 
-function generateSamplePlaceholderUrl(fieldDef: TemplateFieldDefinition): string {
+function generateSamplePlaceholderUrl(config: {
+  width?: number;
+  height?: number;
+  bgColor?: string;
+  textColor?: string;
+  text?: string;
+}): string {
   const {
-    placeholderConfigWidth: width = 100,
-    placeholderConfigHeight: height = 100,
-    placeholderConfigBgColor: bgColor,
-    placeholderConfigTextColor: textColor,
-    placeholderConfigText: text,
-  } = fieldDef;
+    width = 100,
+    height = 100,
+    bgColor,
+    textColor,
+    text,
+  } = config;
 
   let path = `${width}x${height}`;
   const cleanBgColor = bgColor?.replace('#', '').trim();
@@ -128,6 +135,17 @@ function generateSamplePlaceholderUrl(fieldDef: TemplateFieldDefinition): string
   return fullUrl;
 }
 
+const commonLucideIconsForGuide = [
+  "Coins", "Sword", "Shield", "Zap", "Brain", "Heart", "Skull", "Star", "Gem",
+  "Settings", "PlusCircle", "MinusCircle", "XCircle", "CheckCircle2",
+  "AlertTriangle", "Info", "HelpCircle", "Wand2", "Sparkles", "Sun", "Moon",
+  "Cloud", "Flame", "Leaf", "Droplets", "Feather", "Eye", "Swords", "ShieldCheck",
+  "ShieldAlert", "Aperture", "Book", "Camera", "Castle", "Crown", "Diamond", "Dice5",
+  "Flag", "Flash", "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock",
+  "MapPin", "Medal", "Mountain", "Music", "Package", "Palette", "PawPrint", "Pencil",
+  "Phone", "Puzzle", "Rocket", "Save", "Search", "Ship", "Sprout", "Ticket", "Trash2",
+  "TreePine", "Trophy", "Umbrella", "User", "Video", "Wallet", "Watch", "Wifi", "Wrench"
+];
 
 export default function EditTemplatePage() {
   const router = useRouter();
@@ -169,67 +187,75 @@ export default function EditTemplatePage() {
 
   useEffect(() => {
     const currentTemplateIdForPreview = originalTemplateId || 'previewTemplateId';
-    const generatedSampleCard: CardData = {
+    const generatedSampleCard: Partial<CardData> = { // Use Partial<CardData>
       id: 'preview-card',
       templateId: currentTemplateIdForPreview as CardTemplateId,
-      name: 'Awesome Card Name',
-      description: 'This is a sample description for the card preview. It can contain multiple lines and will be used to test the layout of text areas.',
-      cost: 3,
-      attack: 2,
-      defense: 2,
-      imageUrl: 'https://placehold.co/250x140.png',
-      dataAiHint: 'card art sample',
-      rarity: 'rare',
-      effectText: 'Sample effect: Draw a card. This unit gets +1/+1 until end of turn. This text might be long to test scrolling in a textarea layout element.',
-      flavorText: 'This is some italicized flavor text.',
-      artworkUrl: 'https://placehold.co/280x400.png', 
-      cardType: 'Creature - Goblin', 
-      statusIcon: 'ShieldCheck', 
     };
 
     fields.forEach(fieldDef => {
       const key = fieldDef.key as keyof CardData;
-       if (fieldDef.type === 'placeholderImage') {
-          (generatedSampleCard as any)[key] = generateSamplePlaceholderUrl(fieldDef);
-       } else if (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '') {
-        if (fieldDef.type === 'number') {
-          (generatedSampleCard as any)[key] = Number(fieldDef.defaultValue);
-        } else if (fieldDef.type === 'boolean') {
-          (generatedSampleCard as any)[key] = String(fieldDef.defaultValue).toLowerCase() === 'true';
+      let valueForPreview: any;
+
+      const hasPreviewValue = fieldDef.previewValue !== undefined && fieldDef.previewValue.trim() !== '';
+      const hasDefaultValue = fieldDef.defaultValue !== undefined && String(fieldDef.defaultValue).trim() !== '';
+
+      if (fieldDef.type === 'placeholderImage') {
+        if (hasPreviewValue && typeof fieldDef.previewValue === 'string' && (fieldDef.previewValue.startsWith('http') || fieldDef.previewValue.startsWith('https://placehold.co'))) {
+          valueForPreview = fieldDef.previewValue;
         } else {
-          (generatedSampleCard as any)[key] = fieldDef.defaultValue;
+          valueForPreview = generateSamplePlaceholderUrl({
+            width: fieldDef.placeholderConfigWidth,
+            height: fieldDef.placeholderConfigHeight,
+            bgColor: fieldDef.placeholderConfigBgColor,
+            textColor: fieldDef.placeholderConfigTextColor,
+            text: fieldDef.placeholderConfigText
+          });
+        }
+      } else if (hasPreviewValue) {
+        const pv = fieldDef.previewValue as string;
+        if (fieldDef.type === 'number') {
+          valueForPreview = !isNaN(Number(pv)) ? Number(pv) : 0;
+        } else if (fieldDef.type === 'boolean') {
+          valueForPreview = pv.toLowerCase() === 'true';
+        } else {
+          valueForPreview = pv;
+        }
+      } else if (hasDefaultValue) {
+        if (fieldDef.type === 'number') {
+          valueForPreview = Number(fieldDef.defaultValue) || 0;
+        } else if (fieldDef.type === 'boolean') {
+          valueForPreview = String(fieldDef.defaultValue).toLowerCase() === 'true';
+        } else {
+          valueForPreview = fieldDef.defaultValue;
         }
       } else {
-         if (!Object.prototype.hasOwnProperty.call(generatedSampleCard, key) || generatedSampleCard[key] === undefined) {
-           switch (fieldDef.type) {
-            case 'text': (generatedSampleCard as any)[key] = `Sample ${fieldDef.label}`; break;
-            case 'textarea': (generatedSampleCard as any)[key] = `Sample content for ${fieldDef.label}.`; break;
-            case 'number': (generatedSampleCard as any)[key] = 0; break;
-            case 'boolean': (generatedSampleCard as any)[key] = false; break;
-            case 'select':
-              const firstOptionValue = fieldDef.optionsString?.split(',')[0]?.split(':')[0]?.trim();
-              (generatedSampleCard as any)[key] = firstOptionValue || '';
-              break;
-            default: (generatedSampleCard as any)[key] = `Sample ${fieldDef.label}`;
-          }
+        switch (fieldDef.type) {
+          case 'text': valueForPreview = `Sample ${fieldDef.label}`; break;
+          case 'textarea': valueForPreview = `Sample content for ${fieldDef.label}.`; break;
+          case 'number': valueForPreview = 0; break;
+          case 'boolean': valueForPreview = false; break;
+          case 'select':
+            const firstOptionValue = fieldDef.optionsString?.split(',')[0]?.split(':')[0]?.trim();
+            valueForPreview = firstOptionValue || `Option for ${fieldDef.label}`;
+            break;
+          default: valueForPreview = `Sample ${fieldDef.label}`;
         }
       }
-      if (['name', 'description', 'cost', 'attack', 'defense', 'imageUrl', 'dataAiHint', 'rarity', 'effectText', 'flavorText', 'artworkUrl', 'cardType', 'statusIcon'].includes(fieldDef.key)) {
-         if ((fieldDef.type !== 'placeholderImage' && (fieldDef.defaultValue !== undefined && fieldDef.defaultValue !== '')) ) {
-             if((fieldDef.key === 'imageUrl' || fieldDef.key === 'artworkUrl') && typeof fieldDef.defaultValue === 'string' && !fieldDef.defaultValue.startsWith('http') && !fieldDef.defaultValue.startsWith('https')) {
-                (generatedSampleCard as any)[key] = `https://placehold.co/${fieldDef.key === 'imageUrl' ? '250x140' : '280x400'}.png`;
-             }
-        } else if (fieldDef.type !== 'placeholderImage') {
-            if(fieldDef.key === 'imageUrl' && !(generatedSampleCard as any)[key]) { 
-                (generatedSampleCard as any)[key] = 'https://placehold.co/250x140.png';
-            } else if(fieldDef.key === 'artworkUrl' && !(generatedSampleCard as any)[key]) {
-                (generatedSampleCard as any)[key] = 'https://placehold.co/280x400.png';
-            } else if(fieldDef.key === 'statusIcon' && !(generatedSampleCard as any)[key]) {
-                (generatedSampleCard as any)[key] = 'ShieldCheck';
-            }
-        }
-      }
+      (generatedSampleCard as any)[key] = valueForPreview;
     });
+    
+    if (generatedSampleCard.name === undefined && !fields.some(f => f.key === 'name')) generatedSampleCard.name = 'Awesome Card Name';
+    if (generatedSampleCard.cost === undefined && !fields.some(f => f.key === 'cost')) generatedSampleCard.cost = 3;
+    if (generatedSampleCard.imageUrl === undefined && !fields.some(f => f.key === 'imageUrl')) generatedSampleCard.imageUrl = 'https://placehold.co/250x140.png';
+    if (generatedSampleCard.dataAiHint === undefined && !fields.some(f => f.key === 'dataAiHint')) generatedSampleCard.dataAiHint = 'card art sample';
+    if (generatedSampleCard.cardType === undefined && !fields.some(f => f.key === 'cardType')) generatedSampleCard.cardType = 'Creature - Goblin';
+    if (generatedSampleCard.effectText === undefined && !fields.some(f => f.key === 'effectText')) generatedSampleCard.effectText = 'Sample effect text for preview.';
+    if (generatedSampleCard.attack === undefined && !fields.some(f => f.key === 'attack')) generatedSampleCard.attack = 2;
+    if (generatedSampleCard.defense === undefined && !fields.some(f => f.key === 'defense')) generatedSampleCard.defense = 2;
+    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) generatedSampleCard.artworkUrl = 'https://placehold.co/280x400.png';
+    if (generatedSampleCard.statusIcon === undefined && !fields.some(f => f.key === 'statusIcon')) generatedSampleCard.statusIcon = 'ShieldCheck';
+
+
     setSampleCardForPreview(generatedSampleCard as CardData);
   }, [fields, originalTemplateId, templateName]);
 
@@ -310,7 +336,6 @@ export default function EditTemplatePage() {
         modifiedField.placeholderConfigWidth = modifiedField.placeholderConfigWidth || 250;
         modifiedField.placeholderConfigHeight = modifiedField.placeholderConfigHeight || 140;
     }
-
 
     newFields[index] = modifiedField;
     setFields(newFields);
@@ -396,6 +421,25 @@ export default function EditTemplatePage() {
     setIsSaving(false);
   };
 
+  const handleCopyIconName = async (iconName: string) => {
+    try {
+      await navigator.clipboard.writeText(iconName);
+      toast({
+        title: "Copied!",
+        description: `Icon name "${iconName}" copied to clipboard.`,
+        duration: 2000,
+      });
+    } catch (err) {
+      console.error("Failed to copy icon name: ", err);
+      toast({
+        title: "Copy Failed",
+        description: "Could not copy icon name to clipboard.",
+        variant: "destructive",
+        duration: 2000,
+      });
+    }
+  };
+
   if (isLoadingPage) {
     return (
       <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center">
@@ -419,156 +463,171 @@ export default function EditTemplatePage() {
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-8">
-        {/* Top Section: Template Info & Data Fields */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-2xl font-bold">Edit Template</CardTitle>
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/templates"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Library</Link>
-              </Button>
-            </div>
-            <CardDescription>
-              Modify the template's name, fields, and layout definition. The Template ID (<code>{originalTemplateId}</code>) cannot be changed.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="templateName">Template Name</Label>
-                <Input
-                  id="templateName"
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                  placeholder="Hero Unit Card"
-                  disabled={isSaving}
-                />
-              </div>
-              <div>
-                <Label htmlFor="templateId">Template ID (Auto-generated, Read-only)</Label>
-                <Input
-                  id="templateId"
-                  value={originalTemplateId || ''}
-                  readOnly
-                  disabled={isSaving}
-                  className="bg-muted/50"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">Data Fields</h3>
-              <ScrollArea className="h-auto pr-3"> 
-                <div className="p-2 space-y-3">
-                  {fields.map((field, index) => (
-                    <FieldRow
-                      key={index} 
-                      field={field}
-                      onChange={(updatedField) => handleFieldChange(index, updatedField)}
-                      onRemove={() => handleRemoveField(index)}
-                      isSaving={isSaving}
-                    />
-                  ))}
-                   {fields.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                          No fields added yet. Click "Add Field" to begin.
-                      </p>
-                  )}
-                </div>
-              </ScrollArea>
-              <Button onClick={handleAddField} variant="outline" size="sm" disabled={isSaving} className="mt-2">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Field
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Bottom Section: Layout Editor (Left) and Preview (Right) */}
-        <div className="flex flex-col md:flex-row gap-8">
-          <Card className="md:w-[65%] flex flex-col">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold">Layout Definition (JSON)</CardTitle>
-              <CardDescription>
-                Define how card data is visually presented. Use the live preview on the right.
-                 Field keys in the JSON must match the keys from your "Data Fields" section.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow space-y-2 flex flex-col">
-              <Textarea
-                id="layoutDefinition"
-                value={layoutDefinition}
-                onChange={handleLayoutDefinitionChange}
-                onBlur={validateAndFormatLayoutJson}
-                placeholder='Enter JSON for card layout, e.g., { "width": "280px", "elements": [...] }'
-                rows={15}
-                className="font-mono text-xs flex-grow min-h-[300px] max-h-[350px]" 
+      {/* Top Section: Template Info & Data Fields */}
+      <Card className="mb-8">
+        <CardHeader>
+        <div className="flex justify-between items-center">
+            <CardTitle className="text-2xl font-bold">Edit Template</CardTitle>
+            <Button variant="outline" size="sm" asChild>
+            <Link href="/templates"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Library</Link>
+            </Button>
+        </div>
+        <CardDescription>
+            Modify the template's name, fields, and layout definition. The Template ID (<code>{originalTemplateId}</code>) cannot be changed.
+        </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+            <Label htmlFor="templateName">Template Name</Label>
+            <Input
+                id="templateName"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="Hero Unit Card"
                 disabled={isSaving}
-              />
-              {layoutJsonError && (
-                <Alert variant="destructive" className="mt-2">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertTitle>JSON Error</AlertTitle>
-                  <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
-                </Alert>
-              )}
-               <Accordion type="single" collapsible className="w-full mt-2">
-                <AccordionItem value="layout-guide">
-                  <AccordionTrigger className="text-sm py-2 hover:no-underline">
-                    <div className="flex items-center text-muted-foreground">
-                      <HelpCircle className="mr-2 h-4 w-4" />
-                      Show Layout JSON Guide
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent className="text-xs p-3 border rounded-md bg-muted/30">
-                    <p className="font-semibold mb-1">Top-level properties:</p>
-                    <ul className="list-disc list-inside pl-2 mb-2 space-y-0.5">
-                      <li><code>width</code>, <code>height</code>: Card dimensions (e.g., "280px").</li>
-                      <li><code>backgroundColor</code>, <code>borderColor</code>, <code>borderRadius</code>: CSS values.</li>
-                    </ul>
-                     <p className="font-semibold mb-1 mt-3">Available Field Keys for this Template:</p>
-                    {fields.length > 0 ? (
-                      <ScrollArea className="max-h-[100px] bg-background/50 p-2 rounded border text-xs">
-                        <ul className="list-disc list-inside space-y-0.5">
-                          {fields.map(f => <li key={f.key}><code>{f.key}</code> ({f.label})</li>)}
-                        </ul>
-                      </ScrollArea>
-                    ) : (
-                      <p className="italic text-muted-foreground">No data fields defined yet for this template.</p>
-                    )}
-                    <p className="text-xs mt-1 mb-2">Use these keys in the <code>fieldKey</code> property of elements below.</p>
+            />
+            </div>
+            <div>
+            <Label htmlFor="templateId">Template ID (Auto-generated, Read-only)</Label>
+            <Input
+                id="templateId"
+                value={originalTemplateId || ''}
+                readOnly
+                disabled={isSaving}
+                className="bg-muted/50"
+            />
+            </div>
+        </div>
+        <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Data Fields</h3>
+            <ScrollArea className="h-auto pr-3"> 
+            <div className="p-2 space-y-3">
+                {fields.map((field, index) => (
+                <FieldRow
+                    key={index} 
+                    field={field}
+                    onChange={(updatedField) => handleFieldChange(index, updatedField)}
+                    onRemove={() => handleRemoveField(index)}
+                    isSaving={isSaving}
+                />
+                ))}
+                {fields.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                        No fields added yet. Click "Add Field" to begin.
+                    </p>
+                )}
+            </div>
+            </ScrollArea>
+            <Button onClick={handleAddField} variant="outline" size="sm" disabled={isSaving} className="mt-2">
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Field
+            </Button>
+        </div>
+        </CardContent>
+      </Card>
 
-                    <p className="font-semibold mb-1 mt-3"><code>elements</code> array (each object defines one visual piece):</p>
-                    <ul className="list-disc list-inside pl-2 space-y-1">
-                      <li>
-                        <strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above.
-                      </li>
-                      <li>
-                        <strong><code>type</code></strong>: (String) One of: <code>"text"</code>, <code>"textarea"</code>, <code>"image"</code>, <code>"iconValue"</code>, <code>"iconFromData"</code>.
-                         <ul className="list-['-_'] list-inside pl-4 mt-1 space-y-1 text-muted-foreground/90">
-                            <li><code>text</code>: Single line text.</li>
-                            <li><code>textarea</code>: Multi-line text, often scrollable.</li>
-                            <li><code>image</code>: Displays an image from URL in <code>fieldKey</code>.</li>
-                            <li><code>iconValue</code>: Displays text from <code>fieldKey</code> alongside a fixed <code>icon</code>.</li>
-                            <li><code>iconFromData</code>: Displays an icon whose name is stored in <code>fieldKey</code>.</li>
-                        </ul>
-                      </li>
-                      <li>
-                        <strong><code>style</code></strong>: (Object) CSS-in-JS (e.g., <code>{'{ "position": "absolute", "top": "10px", "fontSize": "1.2em" }'}</code>). Use camelCase for CSS properties.
-                      </li>
-                      <li>
-                        <strong><code>className</code></strong>: (String, Optional) Tailwind CSS classes.
-                      </li>
-                      <li>
-                        <strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue". Text added before/after the field's value.
-                      </li>
-                      <li>
-                        <strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon (e.g., "Coins", "Sword"). **Ensure the icon exists in <code>lucide-react</code>.**
-                      </li>
+      {/* Bottom Section: Layout Editor (Left) and Preview (Right) */}
+      <div className="flex flex-col md:flex-row gap-8">
+        <Card className="md:w-[65%] flex flex-col">
+        <CardHeader>
+            <CardTitle className="text-xl font-bold">Layout Definition (JSON)</CardTitle>
+            <CardDescription>
+            Define how card data is visually presented. Use the live preview on the right.
+            Field keys in the JSON must match the keys from your "Data Fields" section.
+            </CardDescription>
+        </CardHeader>
+        <CardContent className="flex-grow space-y-2 flex flex-col">
+            <Textarea
+            id="layoutDefinition"
+            value={layoutDefinition}
+            onChange={handleLayoutDefinitionChange}
+            onBlur={validateAndFormatLayoutJson}
+            placeholder='Enter JSON for card layout, e.g., { "width": "280px", "elements": [...] }'
+            rows={15}
+            className="font-mono text-xs flex-grow min-h-[300px] max-h-[350px]" 
+            disabled={isSaving}
+            />
+            {layoutJsonError && (
+            <Alert variant="destructive" className="mt-2">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>JSON Error</AlertTitle>
+                <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
+            </Alert>
+            )}
+            <Accordion type="single" collapsible className="w-full mt-2">
+            <AccordionItem value="layout-guide">
+                <AccordionTrigger className="text-sm py-2 hover:no-underline">
+                <div className="flex items-center text-muted-foreground">
+                    <HelpCircle className="mr-2 h-4 w-4" />
+                    Show Layout JSON Guide
+                </div>
+                </AccordionTrigger>
+                <AccordionContent className="text-xs p-3 border rounded-md bg-muted/30">
+                <p className="font-semibold mb-1">Top-level properties:</p>
+                <ul className="list-disc list-inside pl-2 mb-2 space-y-0.5">
+                    <li><code>width</code>, <code>height</code>: Card dimensions (e.g., "280px").</li>
+                    <li><code>backgroundColor</code>, <code>borderColor</code>, <code>borderRadius</code>: CSS values.</li>
+                </ul>
+                <p className="font-semibold mb-1 mt-3">Available Field Keys for this Template:</p>
+                {fields.length > 0 ? (
+                    <ScrollArea className="max-h-[100px] bg-background/50 p-2 rounded border text-xs">
+                    <ul className="list-disc list-inside space-y-0.5">
+                        {fields.map(f => <li key={f.key}><code>{f.key}</code> ({f.label})</li>)}
                     </ul>
-                     <p className="mt-3 italic">The live preview updates as you edit. Ensure your JSON is valid. Customize <code>fieldKey</code> values to match your defined data fields.</p>
-                    
-                     <p className="font-semibold mb-1 mt-4">Example Element Snippets:</p>
-                     <pre className="text-xs bg-background/50 p-2 rounded border whitespace-pre-wrap">
+                    </ScrollArea>
+                ) : (
+                    <p className="italic text-muted-foreground">No data fields defined yet for this template.</p>
+                )}
+                <p className="text-xs mt-1 mb-2">Use these keys in the <code>fieldKey</code> property of elements below.</p>
+
+                <p className="font-semibold mb-1 mt-3"><code>elements</code> array (each object defines one visual piece):</p>
+                <ul className="list-disc list-inside pl-2 space-y-1">
+                    <li>
+                    <strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above.
+                    </li>
+                    <li>
+                    <strong><code>type</code></strong>: (String) One of: <code>"text"</code>, <code>"textarea"</code>, <code>"image"</code>, <code>"iconValue"</code>, <code>"iconFromData"</code>.
+                        <ul className="list-['-_'] list-inside pl-4 mt-1 space-y-1 text-muted-foreground/90">
+                        <li><code>text</code>: Single line text.</li>
+                        <li><code>textarea</code>: Multi-line text, often scrollable.</li>
+                        <li><code>image</code>: Displays an image from URL in <code>fieldKey</code>.</li>
+                        <li><code>iconValue</code>: Displays text from <code>fieldKey</code> alongside a fixed <code>icon</code>.</li>
+                        <li><code>iconFromData</code>: Displays an icon whose name is stored in <code>fieldKey</code>.</li>
+                    </ul>
+                    </li>
+                    <li>
+                    <strong><code>style</code></strong>: (Object) CSS-in-JS (e.g., <code>{'{ "position": "absolute", "top": "10px", "fontSize": "1.2em" }'}</code>). Use camelCase for CSS properties.
+                    </li>
+                    <li>
+                    <strong><code>className</code></strong>: (String, Optional) Tailwind CSS classes.
+                    </li>
+                    <li>
+                    <strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue". Text added before/after the field's value.
+                    </li>
+                    <li>
+                    <strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon (e.g., "Coins", "Sword"). **Ensure the icon exists in <code>lucide-react</code>.**
+                    </li>
+                </ul>
+                 <p className="font-semibold mb-1 mt-4">Common Lucide Icons (Click to Copy Name):</p>
+                  <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-1.5">
+                      {commonLucideIconsForGuide.map(iconName => (
+                        <Badge
+                          key={iconName}
+                          variant="outline"
+                          onClick={() => handleCopyIconName(iconName)}
+                          className="cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors text-xs justify-center py-1"
+                          title={`Copy "${iconName}"`}
+                        >
+                          {iconName}
+                        </Badge>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                <p className="mt-3 italic">The live preview updates as you edit. Ensure your JSON is valid. Customize <code>fieldKey</code> values to match your defined data fields.</p>
+                
+                <p className="font-semibold mb-1 mt-4">Example Element Snippets:</p>
+                <pre className="text-xs bg-background/50 p-2 rounded border whitespace-pre-wrap">
 {`// For a simple text display
 {
   "fieldKey": "yourCardNameFieldKey", // Replace with one of YOUR field keys from above
@@ -601,49 +660,47 @@ export default function EditTemplatePage() {
   "type": "iconFromData",
   "style": { "position": "absolute", "bottom": "20px", "left": "20px" }
 }`}
-                     </pre>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </CardContent>
-            <CardFooter className="mt-auto">
-              <Button
-                onClick={handleSaveTemplate}
-                className="w-full md:w-auto"
-                disabled={isSaving || !templateName.trim() || fields.length === 0 || !originalTemplateId}
-              >
-                {isSaving ? (
-                  <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving Changes... </>
-                ) : (
-                  <> <Save className="mr-2 h-4 w-4" /> Save Changes </>
-                )}
-              </Button>
-            </CardFooter>
-          </Card>
+                </pre>
+                </AccordionContent>
+            </AccordionItem>
+            </Accordion>
+        </CardContent>
+        <CardFooter className="mt-auto">
+            <Button
+            onClick={handleSaveTemplate}
+            className="w-full md:w-auto"
+            disabled={isSaving || !templateName.trim() || fields.length === 0 || !originalTemplateId}
+            >
+            {isSaving ? (
+                <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving Changes... </>
+            ) : (
+                <> <Save className="mr-2 h-4 w-4" /> Save Changes </>
+            )}
+            </Button>
+        </CardFooter>
+        </Card>
 
-          <Card className="md:w-[35%] sticky top-20 self-start">
-            <CardHeader>
-              <CardTitle className="text-xl font-bold flex items-center">
-                <Eye className="mr-2 h-5 w-5" />
-                Live Layout Preview
-              </CardTitle>
-              <CardDescription>
-                This preview updates as you modify the Layout Definition JSON or template fields.
-                Uses sample data based on your field definitions.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center justify-center p-4 min-h-[450px] bg-muted/30 rounded-b-md">
-              {sampleCardForPreview && templateForPreview ? (
-                <DynamicCardRenderer card={sampleCardForPreview} template={templateForPreview} />
-              ) : (
-                <p className="text-muted-foreground">Loading preview or define fields...</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="md:w-[35%] sticky top-20 self-start">
+        <CardHeader>
+            <CardTitle className="text-xl font-bold flex items-center">
+            <Eye className="mr-2 h-5 w-5" />
+            Live Layout Preview
+            </CardTitle>
+            <CardDescription>
+            This preview updates as you modify the Layout Definition JSON or template fields.
+            Uses sample data based on your field definitions.
+            </CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center p-4 min-h-[450px] bg-muted/30 rounded-b-md">
+            {sampleCardForPreview && templateForPreview ? (
+            <DynamicCardRenderer card={sampleCardForPreview} template={templateForPreview} />
+            ) : (
+            <p className="text-muted-foreground">Loading preview or define fields...</p>
+            )}
+        </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
 
-    
