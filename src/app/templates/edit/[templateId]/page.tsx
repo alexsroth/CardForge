@@ -118,27 +118,27 @@ function generateSamplePlaceholderUrl(config: {
   const {
     width = 100,
     height = 100,
-    bgColor,
-    textColor,
-    text,
+    bgColor: rawBgColor,
+    textColor: rawTextColor,
+    text: rawText,
   } = config;
 
   let path = `${width}x${height}`;
-  const cleanBgColor = bgColor?.replace('#', '').trim();
-  const cleanTextColor = textColor?.replace('#', '').trim();
+  const bgColor = rawBgColor?.replace('#', '').trim();
+  const textColor = rawTextColor?.replace('#', '').trim();
+  const text = rawText?.trim();
 
-  if (cleanBgColor) {
-    path += `/${cleanBgColor}`;
-    if (cleanTextColor) {
-      path += `/${cleanTextColor}`;
+  if (bgColor) {
+    path += `/${bgColor}`;
+    if (textColor) {
+      path += `/${textColor}`;
     }
   }
-  path += `.png`;
+  path += `.png`; // Ensure PNG format
 
   let fullUrl = `https://placehold.co/${path}`;
-  const cleanText = text?.trim();
-  if (cleanText) {
-    fullUrl += `?text=${encodeURIComponent(cleanText)}`;
+  if (text) {
+    fullUrl += `?text=${encodeURIComponent(text)}`;
   }
   return fullUrl;
 }
@@ -175,7 +175,7 @@ export default function EditTemplatePage() {
   const [originalTemplateId, setOriginalTemplateId] = useState<CardTemplateId | undefined>(templateIdToEdit);
   const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<TemplateFieldDefinition[]>([]);
-  const [layoutDefinition, setLayoutDefinition] = useState<string>(''); // Initialize empty, will be set by useEffect
+  const [layoutDefinition, setLayoutDefinition] = useState<string>('');
   const [layoutJsonError, setLayoutJsonError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingPage, setIsLoadingPage] = useState(true);
@@ -194,7 +194,6 @@ export default function EditTemplatePage() {
       setOriginalTemplateId(templateToEdit.id as CardTemplateId);
       setTemplateName(templateToEdit.name);
       setFields(templateToEdit.fields.map(mapTemplateFieldToFieldDefinition));
-      // Ensure layoutDefinition is set, defaulting if necessary
       setLayoutDefinition(templateToEdit.layoutDefinition?.trim() ? templateToEdit.layoutDefinition : DEFAULT_CARD_LAYOUT_JSON_STRING);
       setErrorLoading(null);
     } else {
@@ -203,7 +202,6 @@ export default function EditTemplatePage() {
     setIsLoadingPage(false);
   }, [templateIdToEdit, getTemplateById, templatesLoading]);
 
-  // Effect to update sampleCardForPreview based on changes in fields or templateName
   useEffect(() => {
     const currentTemplateIdForPreview = originalTemplateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> = { 
@@ -247,7 +245,7 @@ export default function EditTemplatePage() {
         } else {
           valueForPreview = fieldDef.defaultValue;
         }
-      } else { // Fallback if no preview or default value
+      } else { 
         switch (fieldDef.type) {
           case 'text': valueForPreview = `Sample ${fieldDef.label}`; break;
           case 'textarea': valueForPreview = `Sample content for ${fieldDef.label}.`; break;
@@ -263,7 +261,6 @@ export default function EditTemplatePage() {
       (generatedSampleCard as any)[key] = valueForPreview;
     });
     
-    // Add some base properties if they aren't defined by the fields, to make the default preview richer
     if (generatedSampleCard.name === undefined && !fields.some(f => f.key === 'name')) generatedSampleCard.name = 'Awesome Card Name';
     if (generatedSampleCard.cost === undefined && !fields.some(f => f.key === 'cost')) generatedSampleCard.cost = 3;
     if (generatedSampleCard.imageUrl === undefined && !fields.some(f => f.key === 'imageUrl')) {
@@ -274,14 +271,14 @@ export default function EditTemplatePage() {
     if (generatedSampleCard.effectText === undefined && !fields.some(f => f.key === 'effectText')) generatedSampleCard.effectText = 'Sample effect text for preview.';
     if (generatedSampleCard.attack === undefined && !fields.some(f => f.key === 'attack')) generatedSampleCard.attack = 2;
     if (generatedSampleCard.defense === undefined && !fields.some(f => f.key === 'defense')) generatedSampleCard.defense = 2;
-    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) { // Used by default layout.
+    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) { 
       generatedSampleCard.artworkUrl = generateSamplePlaceholderUrl({width: 280, height: 400, text: 'Artwork'});
     }
     if (generatedSampleCard.statusIcon === undefined && !fields.some(f => f.key === 'statusIcon')) generatedSampleCard.statusIcon = 'ShieldCheck';
 
 
     setSampleCardForPreview(generatedSampleCard as CardData);
-  }, [fields, originalTemplateId, templateName]); // Re-run if fields, original ID, or name changes
+  }, [fields, originalTemplateId, templateName]); 
 
   const templateForPreview = useMemo((): CardTemplate => ({
     id: (originalTemplateId || 'previewTemplateId') as CardTemplateId,
@@ -301,7 +298,7 @@ export default function EditTemplatePage() {
     }
 
     let baseKey = toCamelCase(newFieldLabel);
-    if (!baseKey) baseKey = `newField`; // Fallback
+    if (!baseKey) baseKey = `newField`; 
 
     let newKey = baseKey;
     let keyCounter = 1;
@@ -318,7 +315,7 @@ export default function EditTemplatePage() {
         type: 'text',
         placeholder: '',
         defaultValue: '',
-        previewValue: '', // Initialize previewValue
+        previewValue: '', 
         optionsString: '',
         placeholderConfigWidth: 250, 
         placeholderConfigHeight: 140, 
@@ -336,10 +333,9 @@ export default function EditTemplatePage() {
 
     let modifiedField = { ...oldField, ...updatedFieldDefinition };
 
-    // Auto-generate key from label if label changed
     if (updatedFieldDefinition.label !== undefined && updatedFieldDefinition.label !== oldField.label) {
         let baseKey = toCamelCase(updatedFieldDefinition.label);
-        if (!baseKey) { // Fallback if label is empty or only symbols
+        if (!baseKey) { 
             const prefix = 'field';
             let fallbackCounter = 1;
             let potentialKey = `${prefix}${fallbackCounter}`;
@@ -352,14 +348,12 @@ export default function EditTemplatePage() {
 
         let newKey = baseKey;
         let keyCounter = 1;
-        // Ensure new key is unique among other fields
         while (newFields.some((f, i) => i !== index && f.key === newKey)) {
             newKey = `${baseKey}${keyCounter}`;
             keyCounter++;
         }
         modifiedField.key = newKey;
     }
-    // Default placeholder image config if type changed to placeholderImage
     if (updatedFieldDefinition.type === 'placeholderImage' && oldField.type !== 'placeholderImage') {
         modifiedField.placeholderConfigWidth = modifiedField.placeholderConfigWidth || 250;
         modifiedField.placeholderConfigHeight = modifiedField.placeholderConfigHeight || 140;
@@ -372,13 +366,13 @@ export default function EditTemplatePage() {
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
     setLayoutDefinition(newLayoutDef);
-    if (layoutJsonError) setLayoutJsonError(null); // Clear error as user types
+    if (layoutJsonError) setLayoutJsonError(null); 
   };
 
   const validateAndFormatLayoutJson = () => {
     try {
       const parsed = JSON.parse(layoutDefinition);
-      setLayoutDefinition(JSON.stringify(parsed, null, 2)); // Prettify
+      setLayoutDefinition(JSON.stringify(parsed, null, 2)); 
       setLayoutJsonError(null);
       return true;
     } catch (e: any) {
@@ -401,7 +395,6 @@ export default function EditTemplatePage() {
       return;
     }
 
-    // Check for duplicate field keys (should be rare with auto-generation but good to have)
     const fieldKeys = fields.map(f => f.key);
     const duplicateFieldKeys = fieldKeys.filter((key, index) => fieldKeys.indexOf(key) !== index);
     if (duplicateFieldKeys.length > 0) {
@@ -413,7 +406,7 @@ export default function EditTemplatePage() {
         return;
     }
 
-    if (layoutDefinition.trim() && !validateAndFormatLayoutJson()) { // Also validate JSON on explicit save
+    if (layoutDefinition.trim() && !validateAndFormatLayoutJson()) { 
       toast({
         title: "Invalid Layout JSON",
         description: `Please correct the Layout Definition JSON. Error: ${layoutJsonError || 'Unknown JSON error.'}`,
@@ -425,7 +418,7 @@ export default function EditTemplatePage() {
     setIsSaving(true);
 
     const updatedTemplateData: CardTemplate = {
-      id: originalTemplateId, // Use original ID for updates
+      id: originalTemplateId, 
       name: templateName.trim(),
       fields: fields.map(mapFieldDefinitionToTemplateField),
       layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : DEFAULT_CARD_LAYOUT_JSON_STRING,
@@ -439,7 +432,7 @@ export default function EditTemplatePage() {
         description: result.message,
         variant: "default",
       });
-      router.push('/templates'); // Navigate to library after successful save
+      router.push('/templates'); 
     } else {
       toast({
         title: "Update Failed",
@@ -491,9 +484,8 @@ export default function EditTemplatePage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      {/* Top Section: Template Info & Data Fields */}
-      <Card className="mb-8">
+    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8">
+      <Card>
         <CardHeader>
         <div className="flex justify-between items-center">
             <CardTitle className="text-2xl font-bold">Edit Template</CardTitle>
@@ -534,7 +526,7 @@ export default function EditTemplatePage() {
             <div className="p-2 space-y-3">
                 {fields.map((field, index) => (
                 <FieldRow
-                    key={index} // Consider using a more stable key if fields can be reordered
+                    key={index} 
                     field={field}
                     onChange={(updatedField) => handleFieldChange(index, updatedField)}
                     onRemove={() => handleRemoveField(index)}
@@ -555,7 +547,6 @@ export default function EditTemplatePage() {
         </CardContent>
       </Card>
 
-      {/* Bottom Section: Layout Editor (Left) and Preview (Right) */}
       <div className="flex flex-col md:flex-row gap-8">
         <Card className="md:w-[65%] flex flex-col">
         <CardHeader>
@@ -570,13 +561,13 @@ export default function EditTemplatePage() {
             id="layoutDefinition"
             value={layoutDefinition}
             onChange={handleLayoutDefinitionChange}
-            onBlur={validateAndFormatLayoutJson} // Auto-format and validate on blur
+            onBlur={validateAndFormatLayoutJson} 
             placeholder='Enter JSON for card layout, e.g., { "width": "280px", "elements": [...] }'
             rows={15}
             className="font-mono text-xs flex-grow min-h-[300px] max-h-[350px]" 
             disabled={isSaving}
             />
-            {layoutJsonError && ( // Display JSON errors directly below textarea
+            {layoutJsonError && ( 
             <Alert variant="destructive" className="mt-2">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>JSON Error</AlertTitle>
