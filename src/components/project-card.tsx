@@ -31,11 +31,10 @@ export default function ProjectCard({ project, onEditDetailsClick }: ProjectCard
           />
            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent"></div>
            <div className="absolute bottom-2 left-2 right-2 p-2">
-             <Link href={`/project/${project.id}/editor`}>
-                <CardTitle className="text-xl font-semibold text-white hover:text-primary transition-colors line-clamp-2">
-                  {project.name}
-                </CardTitle>
-              </Link>
+             {/* Removed the inner Link component here */}
+             <CardTitle className="text-xl font-semibold text-white hover:text-primary transition-colors line-clamp-2">
+               {project.name}
+             </CardTitle>
            </div>
         </Link>
       </CardHeader>
