@@ -114,7 +114,9 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${cleanTextColor}`;
     }
   }
-  // Ensure .png is appended if colors are present, or as default if no colors
+  
+  // Append .png if colors are specified or if it's just dimensions for a PNG.
+  // This ensures a consistent request for PNG format.
   path += `.png`;
 
   let fullUrl = `https://placehold.co/${path}`;
@@ -125,7 +127,7 @@ function generateSamplePlaceholderUrl(config: {
   return fullUrl;
 }
 
-const commonLucideIconsForGuide = [
+const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
   "Coins", "Sword", "Shield", "Zap", "Brain", "Heart", "Skull", "Star", "Gem",
   "Settings", "PlusCircle", "MinusCircle", "XCircle", "CheckCircle2",
   "AlertTriangle", "Info", "HelpCircle", "Wand2", "Sparkles", "Sun", "Moon",
@@ -141,7 +143,7 @@ const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.Lucide
   const Icon = (LucideIcons as any)[name];
   if (!Icon) {
     console.warn(`Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
-    return <LucideIcons.HelpCircle {...props} />; 
+    return <LucideIcons.HelpCircle {...props} />;
   }
   return <Icon {...props} />;
 };
@@ -227,6 +229,7 @@ export default function TemplateDesignerPage() {
       (generatedSampleCard as any)[key] = valueForPreview;
     });
     
+    // Add some base properties if they aren't defined by the fields, to make the default preview richer
     if (generatedSampleCard.name === undefined && !fields.some(f => f.key === 'name')) generatedSampleCard.name = 'Awesome Card Name';
     if (generatedSampleCard.cost === undefined && !fields.some(f => f.key === 'cost')) generatedSampleCard.cost = 3;
     if (generatedSampleCard.imageUrl === undefined && !fields.some(f => f.key === 'imageUrl')) {
@@ -237,10 +240,10 @@ export default function TemplateDesignerPage() {
     if (generatedSampleCard.effectText === undefined && !fields.some(f => f.key === 'effectText')) generatedSampleCard.effectText = 'Sample effect: Draw a card. This unit gets +1/+1 until end of turn. This text might be long to test scrolling in a textarea layout element.';
     if (generatedSampleCard.attack === undefined && !fields.some(f => f.key === 'attack')) generatedSampleCard.attack = 2;
     if (generatedSampleCard.defense === undefined && !fields.some(f => f.key === 'defense')) generatedSampleCard.defense = 2;
-    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) {
+    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) { // Used by default layout.
       generatedSampleCard.artworkUrl = generateSamplePlaceholderUrl({width: 280, height: 400, text: 'Artwork'});
     }
-    if (generatedSampleCard.statusIcon === undefined && !fields.some(f => f.key === 'statusIcon')) generatedSampleCard.statusIcon = 'ShieldCheck';
+     if (generatedSampleCard.statusIcon === undefined && !fields.some(f => f.key === 'statusIcon')) generatedSampleCard.statusIcon = 'ShieldCheck';
 
 
     setSampleCardForPreview(generatedSampleCard as CardData);
@@ -300,9 +303,10 @@ export default function TemplateDesignerPage() {
 
     let modifiedField = { ...oldField, ...updatedFieldDefinition };
 
+    // Auto-generate key from label if label changed
     if (updatedFieldDefinition.label !== undefined && updatedFieldDefinition.label !== oldField.label) {
         let baseKey = toCamelCase(updatedFieldDefinition.label);
-        if (!baseKey) {
+        if (!baseKey) { // Fallback if label is empty or only symbols
             const prefix = 'field';
             let fallbackCounter = 1;
             let potentialKey = `${prefix}${fallbackCounter}`;
@@ -315,16 +319,19 @@ export default function TemplateDesignerPage() {
 
         let newKey = baseKey;
         let keyCounter = 1;
+        // Ensure new key is unique among other fields
         while (newFields.some((f, i) => i !== index && f.key === newKey)) {
             newKey = `${baseKey}${keyCounter}`;
             keyCounter++;
         }
         modifiedField.key = newKey;
     }
+    // Default placeholder image config if type changed to placeholderImage
     if (updatedFieldDefinition.type === 'placeholderImage' && oldField.type !== 'placeholderImage') {
         modifiedField.placeholderConfigWidth = modifiedField.placeholderConfigWidth || 250;
         modifiedField.placeholderConfigHeight = modifiedField.placeholderConfigHeight || 140;
     }
+
 
     newFields[index] = modifiedField;
     setFields(newFields);
@@ -333,13 +340,13 @@ export default function TemplateDesignerPage() {
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
     setLayoutDefinition(newLayoutDef);
-    if (layoutJsonError) setLayoutJsonError(null);
+    if (layoutJsonError) setLayoutJsonError(null); // Clear error as user types
   };
 
   const validateAndFormatLayoutJson = () => {
     try {
       const parsed = JSON.parse(layoutDefinition);
-      setLayoutDefinition(JSON.stringify(parsed, null, 2));
+      setLayoutDefinition(JSON.stringify(parsed, null, 2)); // Prettify
       setLayoutJsonError(null);
       return true;
     } catch (e: any) {
@@ -367,7 +374,7 @@ export default function TemplateDesignerPage() {
       return;
     }
 
-    const finalTemplateId = toCamelCase(templateName);
+    const finalTemplateId = toCamelCase(templateName); // Ensure ID is based on final name
      if (existingTemplates.some(t => t.id === finalTemplateId)) {
         toast({
             title: "Duplicate ID",
@@ -376,6 +383,7 @@ export default function TemplateDesignerPage() {
         });
         return;
     }
+    // Check for duplicate field keys (should be rare with auto-generation but good to have)
     const fieldKeys = fields.map(f => f.key);
     const duplicateFieldKeys = fieldKeys.filter((key, index) => fieldKeys.indexOf(key) !== index);
     if (duplicateFieldKeys.length > 0) {
@@ -387,7 +395,7 @@ export default function TemplateDesignerPage() {
         return;
     }
 
-    if (layoutDefinition.trim() && !validateAndFormatLayoutJson()) {
+    if (layoutDefinition.trim() && !validateAndFormatLayoutJson()) { // Also validate JSON on explicit save
         toast({
           title: "Invalid Layout JSON",
           description: `Please correct the Layout Definition JSON. Error: ${layoutJsonError || 'Unknown JSON error.'}`,
@@ -414,7 +422,7 @@ export default function TemplateDesignerPage() {
         variant: "default",
         duration: 7000,
       });
-      router.push('/templates');
+      router.push('/templates'); // Navigate to library after successful save
     } else {
       toast({
         title: "Save Failed",
@@ -500,7 +508,7 @@ export default function TemplateDesignerPage() {
             <div className="p-2 space-y-3">
                 {fields.map((field, index) => (
                 <FieldRow
-                    key={index} 
+                    key={index} // Consider using a more stable key if fields can be reordered
                     field={field}
                     onChange={(updatedField) => handleFieldChange(index, updatedField)}
                     onRemove={() => handleRemoveField(index)}
@@ -536,13 +544,13 @@ export default function TemplateDesignerPage() {
                 id="layoutDefinition"
                 value={layoutDefinition}
                 onChange={handleLayoutDefinitionChange}
-                onBlur={validateAndFormatLayoutJson}
+                onBlur={validateAndFormatLayoutJson} // Auto-format and validate on blur
                 placeholder='Enter JSON for card layout or use the default provided.'
                 rows={15}
                 className="font-mono text-xs flex-grow min-h-[300px] max-h-[350px]" 
                 disabled={isSaving}
             />
-            {layoutJsonError && (
+            {layoutJsonError && ( // Display JSON errors directly below textarea
                 <Alert variant="destructive" className="mt-2">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>JSON Error</AlertTitle>
@@ -654,7 +662,7 @@ export default function TemplateDesignerPage() {
                   </AccordionTrigger>
                   <AccordionContent className="text-xs p-3 border rounded-md bg-muted/30">
                     <p className="font-semibold mb-1">Common Lucide Icons (Click to Copy Name):</p>
-                      <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border">
+                      <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border overflow-y-auto">
                          <div className={cn(
                           "grid gap-1",
                           "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16" 
@@ -722,3 +730,4 @@ export default function TemplateDesignerPage() {
     </div>
   );
 }
+
