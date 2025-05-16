@@ -18,7 +18,9 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTemplates, type CardTemplateId } from '@/contexts/TemplateContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, LibrarySquare } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import Link from 'next/link';
 
 interface CreateProjectDialogProps {
   isOpen: boolean;
@@ -32,7 +34,10 @@ export default function CreateProjectDialog({ isOpen, onClose, onSubmit }: Creat
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { templates: globalTemplates, isLoading: templatesLoading } = useTemplates();
 
+  console.log('[DEBUG] CreateProjectDialog: Rendering. Global templates loading:', templatesLoading, 'Count:', globalTemplates.length);
+
   const handleTemplateSelectionChange = (templateId: CardTemplateId, checked: boolean | string) => {
+    console.log('[DEBUG] CreateProjectDialog/handleTemplateSelectionChange: Template ID:', templateId, 'Checked:', checked);
     setSelectedTemplateIds(prev => {
       if (checked) {
         return [...prev, templateId];
@@ -43,6 +48,7 @@ export default function CreateProjectDialog({ isOpen, onClose, onSubmit }: Creat
   };
 
   const handleSubmit = async () => {
+    console.log('[DEBUG] CreateProjectDialog/handleSubmit: Submitting. Project name:', projectName, 'Selected templates:', selectedTemplateIds);
     setIsSubmitting(true);
     await onSubmit(projectName, selectedTemplateIds);
     setIsSubmitting(false);
@@ -57,6 +63,9 @@ export default function CreateProjectDialog({ isOpen, onClose, onSubmit }: Creat
       setIsSubmitting(false);
     }
   };
+  
+  const canSubmit = projectName.trim() !== '' && (!templatesLoading && globalTemplates.length > 0);
+
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -65,6 +74,7 @@ export default function CreateProjectDialog({ isOpen, onClose, onSubmit }: Creat
           <DialogTitle>Create New Project</DialogTitle>
           <DialogDescription>
             Enter a name for your new project and select any initial card templates to associate with it.
+            Card templates define the structure of your cards.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -77,7 +87,7 @@ export default function CreateProjectDialog({ isOpen, onClose, onSubmit }: Creat
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               placeholder="My Awesome Game"
-              disabled={isSubmitting}
+              disabled={isSubmitting || templatesLoading}
             />
           </div>
 
@@ -86,6 +96,7 @@ export default function CreateProjectDialog({ isOpen, onClose, onSubmit }: Creat
             {templatesLoading ? (
               <div className="flex items-center justify-center h-24">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <p className="ml-2 text-muted-foreground">Loading templates...</p>
               </div>
             ) : globalTemplates.length > 0 ? (
               <ScrollArea className="h-48 rounded-md border p-2">
@@ -109,9 +120,16 @@ export default function CreateProjectDialog({ isOpen, onClose, onSubmit }: Creat
                 </div>
               </ScrollArea>
             ) : (
-              <p className="text-sm text-muted-foreground p-2 border rounded-md">
-                No global templates available. You can associate them later.
-              </p>
+               <Alert variant="default" className="bg-accent/10 border-accent/30">
+                <LibrarySquare className="h-4 w-4 text-accent" />
+                <AlertTitle className="text-accent">No Card Templates Exist</AlertTitle>
+                <AlertDescription className="text-accent/90">
+                  You must define at least one card template before creating a project.
+                  <Link href="/templates/new" className="font-semibold underline hover:text-accent ml-1" onClick={onClose}>
+                    Go to Template Designer.
+                  </Link>
+                </AlertDescription>
+              </Alert>
             )}
           </div>
         </div>
@@ -121,8 +139,8 @@ export default function CreateProjectDialog({ isOpen, onClose, onSubmit }: Creat
               Cancel
             </Button>
           </DialogClose>
-          <Button type="button" onClick={handleSubmit} disabled={isSubmitting || !projectName.trim()}>
-            {isSubmitting ? 'Creating...' : 'Create Project'}
+          <Button type="button" onClick={handleSubmit} disabled={isSubmitting || !canSubmit}>
+            {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</>) : 'Create Project'}
           </Button>
         </DialogFooter>
       </DialogContent>
