@@ -13,7 +13,7 @@ import FieldRow, { type TemplateFieldDefinition } from '@/components/template-de
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates } from '@/contexts/TemplateContext';
 import type { TemplateField, CardTemplate, CardTemplateId } from '@/lib/card-templates';
-import { DEFAULT_CARD_LAYOUT_JSON_STRING, DEFAULT_CANVAS_HEIGHT, DEFAULT_CANVAS_WIDTH } from '@/lib/card-templates';
+import { DEFAULT_CARD_LAYOUT_JSON_STRING, DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT } from '@/lib/card-templates';
 import type { CardData } from '@/lib/types';
 import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-renderer';
 import { useRouter } from 'next/navigation';
@@ -30,10 +30,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CardLayoutEditor, type LayoutElement as VisualLayoutElement } from '@/components/CardLayoutEditor';
+// import { CardLayoutEditor, type LayoutElement as VisualLayoutElement } from '@/components/CardLayoutEditor';
+import dynamic from 'next/dynamic';
+
+const CardLayoutEditor = dynamic(() => import('@/components/CardLayoutEditor').then(mod => mod.CardLayoutEditor), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-[550px] w-full border rounded-md bg-muted text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Visual Editor...</div>
+});
+type VisualLayoutElement = import('@/components/CardLayoutEditor').LayoutElement;
 
 
 function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
+    console.log('[DEBUG] TemplateDesignerPage/mapFieldDefinitionToTemplateField: Mapping def', def);
     const field: TemplateField = {
         key: def.key,
         label: def.label,
@@ -63,6 +71,7 @@ function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): Templa
             };
         }).filter(opt => opt.value);
     }
+    console.log('[DEBUG] TemplateDesignerPage/mapFieldDefinitionToTemplateField: Resulting field', field);
     return field;
 }
 
@@ -83,6 +92,7 @@ const toCamelCase = (str: string): string => {
   if (/^[0-9]/.test(result)) {
     result = '_' + result;
   }
+  console.log(`[DEBUG] TemplateDesignerPage/toCamelCase: Input: "${str}", Output: "${result}"`);
   return result;
 };
 
@@ -111,13 +121,14 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  path += `.png`; // Always request PNG
+  path += `.png`; 
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
   if (text) {
     fullUrl += `?text=${encodeURIComponent(text)}`;
   }
+  console.log('[DEBUG] TemplateDesignerPage/generateSamplePlaceholderUrl: Generated URL', fullUrl, 'from config', config);
   return fullUrl;
 }
 
@@ -144,6 +155,7 @@ const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.Lucide
 
 
 export default function TemplateDesignerPage() {
+  console.log('[DEBUG] TemplateDesignerPage: Component rendering/re-rendering.');
   const [templateId, setTemplateId] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<TemplateFieldDefinition[]>([]);
@@ -157,8 +169,8 @@ export default function TemplateDesignerPage() {
     try {
       const parsed = JSON.parse(DEFAULT_CARD_LAYOUT_JSON_STRING || '{}');
       return Array.isArray(parsed.elements) ? parsed.elements : [];
-    } catch {
-      console.error('[DEBUG] TemplateDesignerPage: Error parsing DEFAULT_CARD_LAYOUT_JSON_STRING for initial editorLayoutElements');
+    } catch(e) {
+      console.error('[DEBUG] TemplateDesignerPage: Error parsing DEFAULT_CARD_LAYOUT_JSON_STRING for initial editorLayoutElements', e);
       return [];
     }
   });
@@ -168,6 +180,7 @@ export default function TemplateDesignerPage() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('[DEBUG] TemplateDesignerPage: templateName effect running. Name:', templateName);
     if (templateName) {
       setTemplateId(toCamelCase(templateName));
     } else {
@@ -176,7 +189,7 @@ export default function TemplateDesignerPage() {
   }, [templateName]);
 
   useEffect(() => {
-    // console.log('[DEBUG] TemplateDesignerPage: Generating sampleCardForPreview. Fields count:', fields.length);
+    console.log('[DEBUG] TemplateDesignerPage: Generating sampleCardForPreview. Fields count:', fields.length, 'Template ID:', templateId);
     const currentTemplateIdForPreview = templateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
@@ -243,7 +256,7 @@ export default function TemplateDesignerPage() {
     if (generatedSampleCard.attack === undefined && !fields.some(f => f.key === 'attack')) generatedSampleCard.attack = 2;
     if (generatedSampleCard.defense === undefined && !fields.some(f => f.key === 'defense')) generatedSampleCard.defense = 2;
     if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) {
-      generatedSampleCard.artworkUrl = generateSamplePlaceholderUrl({width: 280, height: 400, text: 'Background Art', bgColor: '222', textColor: 'ddd'});
+      generatedSampleCard.artworkUrl = generateSamplePlaceholderUrl({width: DEFAULT_CANVAS_WIDTH, height: DEFAULT_CANVAS_HEIGHT, text: 'Background Art', bgColor: '222', textColor: 'ddd'});
     }
     if (generatedSampleCard.statusIcon === undefined && !fields.some(f => f.key === 'statusIcon')) generatedSampleCard.statusIcon = 'ShieldCheck';
     setSampleCardForPreview(generatedSampleCard as CardData);
@@ -295,7 +308,7 @@ export default function TemplateDesignerPage() {
   };
 
   const handleFieldChange = (index: number, updatedFieldDefinition: TemplateFieldDefinition) => {
-    // console.log('[DEBUG] TemplateDesignerPage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
+    console.log('[DEBUG] TemplateDesignerPage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
     const newFields = [...fields];
     const oldField = newFields[index];
     let modifiedField = { ...oldField, ...updatedFieldDefinition };
@@ -329,7 +342,7 @@ export default function TemplateDesignerPage() {
 
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
-    // console.log('[DEBUG] TemplateDesignerPage/handleLayoutDefinitionChange: Layout string changed.');
+    console.log('[DEBUG] TemplateDesignerPage/handleLayoutDefinitionChange: Layout string changed.');
     setLayoutDefinition(newLayoutDef);
     if (layoutJsonError) setLayoutJsonError(null);
   };
@@ -461,18 +474,18 @@ export default function TemplateDesignerPage() {
   }, [layoutDefinition, layoutJsonError]); 
 
   useEffect(() => {
-    // console.log('[DEBUG] TemplateDesignerPage: layoutDefinition string changed, attempting to parse for visual editor. Current editorLayoutElements length:', editorLayoutElements.length);
+    console.log('[DEBUG] TemplateDesignerPage: layoutDefinition string effect running.');
     try {
       const parsed = JSON.parse(layoutDefinition || '{}');
       const newElements = Array.isArray(parsed.elements) ? parsed.elements : [];
       if (JSON.stringify(newElements) !== JSON.stringify(editorLayoutElements)) {
-          // console.log('[DEBUG] TemplateDesignerPage: Parsed elements from layoutDefinition differ. Updating editorLayoutElements.');
+          console.log('[DEBUG] TemplateDesignerPage: Parsed elements from layoutDefinition differ. Updating editorLayoutElements.');
           setEditorLayoutElements(newElements);
       }
     } catch (e) {
-      // console.warn("[DEBUG] TemplateDesignerPage: Could not parse layoutDefinition for visual editor prop update", e);
+      console.warn("[DEBUG] TemplateDesignerPage: Could not parse layoutDefinition for visual editor prop update", e);
     }
-  }, [layoutDefinition]); // Only depends on layoutDefinition string
+  }, [layoutDefinition]); 
 
 
   if (templatesLoading) {
@@ -486,6 +499,7 @@ export default function TemplateDesignerPage() {
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
+      {/* Top Section: Template Info and Data Fields */}
       <Card className="shadow-md">
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -524,8 +538,8 @@ export default function TemplateDesignerPage() {
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-1">Data Fields</h3>
-            <ScrollArea className="h-auto pr-0">
-              <div className="space-y-3">
+            <ScrollArea className="h-auto pr-0"> {/* Removed max-h for dynamic resizing */}
+              <div className="space-y-3 border rounded-md p-3">
                 {fields.map((field, index) => (
                   <FieldRow
                     key={index} 
@@ -536,7 +550,7 @@ export default function TemplateDesignerPage() {
                   />
                 ))}
                 {fields.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4 border rounded-md">
+                  <p className="text-sm text-muted-foreground text-center py-4">
                     No fields added yet. Click "Add Field" to begin.
                   </p>
                 )}
@@ -549,12 +563,14 @@ export default function TemplateDesignerPage() {
         </CardContent>
       </Card>
 
+      {/* Bottom Section: Layout Editor and Preview */}
       <div className="my-4">
         <div className="flex items-center space-x-2 mb-2">
           <Switch
             id="visual-editor-toggle"
             checked={showVisualEditor}
             onCheckedChange={setShowVisualEditor}
+            disabled={isSaving}
           />
           <Label htmlFor="visual-editor-toggle">Use Visual Layout Editor (Experimental)</Label>
         </div>
@@ -577,9 +593,18 @@ export default function TemplateDesignerPage() {
                   canvasHeight={DEFAULT_CANVAS_HEIGHT}
                 />
               </CardContent>
+               <CardFooter className="mt-auto pt-4">
+                <Button
+                  onClick={handleSaveTemplate}
+                  className="w-full md:w-auto"
+                  disabled={isSaving || !templateName.trim() || fields.length === 0}
+                >
+                  {isSaving ? ( <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving... </> ) : ( <> <Save className="mr-2 h-4 w-4" /> Save Template </>)}
+                </Button>
+              </CardFooter>
             </Card>
           ) : (
-            <Card className="md:w-[65%] flex flex-col shadow-md"> 
+            <Card className="flex flex-col shadow-md"> 
               <CardHeader>
                 <CardTitle className="text-xl font-bold">Layout Definition (JSON)</CardTitle>
                 <CardDescription>

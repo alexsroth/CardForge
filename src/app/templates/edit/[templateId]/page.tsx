@@ -30,17 +30,25 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CardLayoutEditor, type LayoutElement as VisualLayoutElement } from '@/components/CardLayoutEditor';
+// import { CardLayoutEditor, type LayoutElement as VisualLayoutElement } from '@/components/CardLayoutEditor';
+import dynamic from 'next/dynamic';
+
+const CardLayoutEditor = dynamic(() => import('@/components/CardLayoutEditor').then(mod => mod.CardLayoutEditor), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-[550px] w-full border rounded-md bg-muted text-muted-foreground"><Loader2 className="h-8 w-8 animate-spin mr-2" /> Loading Visual Editor...</div>
+});
+type VisualLayoutElement = import('@/components/CardLayoutEditor').LayoutElement;
 
 
 function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldDefinition {
+    console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Mapping field', field);
     const definition: TemplateFieldDefinition = {
         key: field.key,
         label: field.label,
         type: field.type,
         placeholder: field.placeholder || '',
         defaultValue: field.defaultValue,
-        previewValue: typeof field.defaultValue === 'string' ? field.defaultValue : (field.defaultValue !== undefined ? String(field.defaultValue) : undefined),
+        previewValue: typeof field.defaultValue === 'string' ? field.defaultValue : (field.defaultValue !== undefined ? String(field.defaultValue) : undefined), // Initial preview same as default
         placeholderConfigWidth: field.placeholderConfigWidth,
         placeholderConfigHeight: field.placeholderConfigHeight,
         placeholderConfigBgColor: field.placeholderConfigBgColor,
@@ -50,10 +58,12 @@ function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldD
     if (field.type === 'select' && field.options) {
         definition.optionsString = field.options.map(opt => `${opt.value}:${opt.label}`).join(',');
     }
+    console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Resulting definition', definition);
     return definition;
 }
 
 function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
+    console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Mapping def', def);
     const field: TemplateField = {
         key: def.key,
         label: def.label,
@@ -83,6 +93,7 @@ function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): Templa
             };
         }).filter(opt => opt.value);
     }
+    console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Resulting field', field);
     return field;
 }
 
@@ -100,6 +111,7 @@ const toCamelCase = (str: string): string => {
    if (/^[0-9]/.test(result)) {
     result = '_' + result;
   }
+  console.log(`[DEBUG] EditTemplatePage/toCamelCase: Input: "${str}", Output: "${result}"`);
   return result;
 };
 
@@ -135,6 +147,7 @@ function generateSamplePlaceholderUrl(config: {
   if (text) {
     fullUrl += `?text=${encodeURIComponent(text)}`;
   }
+  console.log('[DEBUG] EditTemplatePage/generateSamplePlaceholderUrl: Generated URL', fullUrl, 'from config', config);
   return fullUrl;
 }
 
@@ -160,6 +173,7 @@ const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.Lucide
 };
 
 export default function EditTemplatePage() {
+  console.log('[DEBUG] EditTemplatePage: Component rendering/re-rendering.');
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
@@ -198,8 +212,8 @@ export default function EditTemplatePage() {
       try {
         const parsed = JSON.parse(initialLayoutDef || '{}');
         setEditorLayoutElements(Array.isArray(parsed.elements) ? parsed.elements : []);
-      } catch {
-        console.error('[DEBUG] EditTemplatePage: Error parsing initialLayoutDef for editorLayoutElements');
+      } catch(e) {
+        console.error('[DEBUG] EditTemplatePage: Error parsing initialLayoutDef for editorLayoutElements', e);
         setEditorLayoutElements([]);
       }
       setErrorLoading(null);
@@ -211,7 +225,7 @@ export default function EditTemplatePage() {
   }, [templateIdToEdit, getTemplateById, templatesLoading]);
 
   useEffect(() => {
-    // console.log('[DEBUG] EditTemplatePage: Generating sampleCardForPreview. Fields count:', fields.length);
+    console.log('[DEBUG] EditTemplatePage: Generating sampleCardForPreview. Fields count:', fields.length, 'Original ID:', originalTemplateId);
     const currentTemplateIdForPreview = originalTemplateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
@@ -278,7 +292,7 @@ export default function EditTemplatePage() {
     if (generatedSampleCard.attack === undefined && !fields.some(f => f.key === 'attack')) generatedSampleCard.attack = 2;
     if (generatedSampleCard.defense === undefined && !fields.some(f => f.key === 'defense')) generatedSampleCard.defense = 2;
     if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) {
-      generatedSampleCard.artworkUrl = generateSamplePlaceholderUrl({width: 280, height: 400, text: 'Background Art', bgColor: '222', textColor: 'ddd'});
+      generatedSampleCard.artworkUrl = generateSamplePlaceholderUrl({width: DEFAULT_CANVAS_WIDTH, height: DEFAULT_CANVAS_HEIGHT, text: 'Background Art', bgColor: '222', textColor: 'ddd'});
     }
     if (generatedSampleCard.statusIcon === undefined && !fields.some(f => f.key === 'statusIcon')) generatedSampleCard.statusIcon = 'ShieldCheck';
     setSampleCardForPreview(generatedSampleCard as CardData);
@@ -330,7 +344,7 @@ export default function EditTemplatePage() {
   };
 
   const handleFieldChange = (index: number, updatedFieldDefinition: TemplateFieldDefinition) => {
-    // console.log('[DEBUG] EditTemplatePage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
+    console.log('[DEBUG] EditTemplatePage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
     const newFields = [...fields];
     const oldField = newFields[index];
     let modifiedField = { ...oldField, ...updatedFieldDefinition };
@@ -366,7 +380,7 @@ export default function EditTemplatePage() {
 
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
-    // console.log('[DEBUG] EditTemplatePage/handleLayoutDefinitionChange: Layout string changed.');
+    console.log('[DEBUG] EditTemplatePage/handleLayoutDefinitionChange: Layout string changed.');
     setLayoutDefinition(newLayoutDef);
     if (layoutJsonError) setLayoutJsonError(null);
   };
@@ -487,18 +501,18 @@ export default function EditTemplatePage() {
   }, [layoutDefinition, layoutJsonError]); 
 
   useEffect(() => {
-    // console.log('[DEBUG] EditTemplatePage: layoutDefinition string changed, attempting to parse for visual editor. Current editorLayoutElements length:', editorLayoutElements.length);
+    console.log('[DEBUG] EditTemplatePage: layoutDefinition string effect running.');
     try {
       const parsed = JSON.parse(layoutDefinition || '{}');
       const newElements = Array.isArray(parsed.elements) ? parsed.elements : [];
       if (JSON.stringify(newElements) !== JSON.stringify(editorLayoutElements)) {
-          // console.log('[DEBUG] EditTemplatePage: Parsed elements from layoutDefinition differ. Updating editorLayoutElements.');
+          console.log('[DEBUG] EditTemplatePage: Parsed elements from layoutDefinition differ. Updating editorLayoutElements.');
           setEditorLayoutElements(newElements);
       }
     } catch (e) {
-      // console.warn("[DEBUG] EditTemplatePage: Could not parse layoutDefinition for visual editor prop update", e);
+      console.warn("[DEBUG] EditTemplatePage: Could not parse layoutDefinition for visual editor prop update", e);
     }
-  }, [layoutDefinition]); // Only depends on layoutDefinition string
+  }, [layoutDefinition]);
 
 
   if (isLoadingPage) {
@@ -524,6 +538,7 @@ export default function EditTemplatePage() {
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
+      {/* Top Section: Template Info and Data Fields */}
       <Card className="shadow-md">
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -561,8 +576,8 @@ export default function EditTemplatePage() {
           </div>
            <div>
             <h3 className="text-lg font-semibold mb-1">Data Fields</h3>
-            <ScrollArea className="h-auto pr-0">
-              <div className="space-y-3">
+            <ScrollArea className="h-auto pr-0"> {/* Removed max-h for dynamic resizing */}
+              <div className="space-y-3 border rounded-md p-3">
                 {fields.map((field, index) => (
                   <FieldRow
                     key={index}
@@ -573,7 +588,7 @@ export default function EditTemplatePage() {
                   />
                 ))}
                 {fields.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4 border rounded-md">
+                  <p className="text-sm text-muted-foreground text-center py-4">
                     No fields added yet. Click "Add Field" to begin.
                   </p>
                 )}
@@ -586,12 +601,14 @@ export default function EditTemplatePage() {
         </CardContent>
       </Card>
 
+      {/* Bottom Section: Layout Editor and Preview */}
       <div className="my-4">
         <div className="flex items-center space-x-2 mb-2">
           <Switch
             id="visual-editor-toggle"
             checked={showVisualEditor}
             onCheckedChange={setShowVisualEditor}
+            disabled={isSaving}
           />
           <Label htmlFor="visual-editor-toggle">Use Visual Layout Editor (Experimental)</Label>
         </div>
@@ -614,9 +631,18 @@ export default function EditTemplatePage() {
                     canvasHeight={DEFAULT_CANVAS_HEIGHT}
                   />
                </CardContent>
+               <CardFooter className="mt-auto pt-4">
+                <Button
+                  onClick={handleSaveTemplate}
+                  className="w-full md:w-auto"
+                  disabled={isSaving || !templateName.trim() || fields.length === 0 || !originalTemplateId}
+                >
+                  {isSaving ? ( <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving Changes... </> ) : ( <> <Save className="mr-2 h-4 w-4" /> Save Changes </> )}
+                </Button>
+              </CardFooter>
              </Card>
           ) : (
-            <Card className="md:w-[65%] flex flex-col shadow-md"> 
+            <Card className="flex flex-col shadow-md"> 
               <CardHeader>
                 <CardTitle className="text-xl font-bold">Layout Definition (JSON)</CardTitle>
                 <CardDescription>
