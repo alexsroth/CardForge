@@ -7,13 +7,14 @@ import {
   Tldraw,
   Editor,
   createShapeId,
-  TLGeoShape,
-  TLShape,
+  TLGeoShape, // Represents shapes like rectangles, ellipses, etc.
+  TLShape,    // Base type for all shapes
 } from '@tldraw/tldraw';
 import '@tldraw/tldraw/tldraw.css';
 import { DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT } from '@/lib/card-templates';
 
 
+// 1. Define the output structure for an element (matches existing app structure)
 interface LayoutElementStyle extends React.CSSProperties {
   top?: string;
   left?: string;
@@ -21,10 +22,10 @@ interface LayoutElementStyle extends React.CSSProperties {
   height?: string;
   fontSize?: string;
   fontWeight?: string;
-  position?: 'absolute';
+  // position will always be 'absolute'
 }
 
-export interface LayoutElement {
+export interface LayoutElement { // Export this if parent needs it
   fieldKey: string;
   type: 'text' | 'image' | 'textarea' | 'iconValue' | 'iconFromData';
   style: LayoutElementStyle;
@@ -34,7 +35,8 @@ export interface LayoutElement {
   suffix?: string;
 }
 
-export interface CardLayoutEditorProps {
+// 2. Define props for the CardLayoutEditor component
+export interface CardLayoutEditorProps { // Export this if parent needs it
   fieldKeys: string[];
   initialElements?: LayoutElement[];
   onChange: (elements: LayoutElement[]) => void;
@@ -42,10 +44,12 @@ export interface CardLayoutEditorProps {
   canvasHeight?: number;
 }
 
-const DEFAULT_SHAPE_WIDTH = 120;
-const DEFAULT_SHAPE_HEIGHT = 36;
-const DEFAULT_FONT_SIZE = '12px';
+// Constants (defaults if not provided in props)
+const DEFAULT_SHAPE_WIDTH = 100;
+const DEFAULT_SHAPE_HEIGHT = 30;
+const DEFAULT_FONT_SIZE = '12px'; // Default font size for JSON output
 
+// --- Custom Shape for representing layout fields ---
 type CardFieldTldrawShape = TLGeoShape & {
   meta: {
     fieldKey: string;
@@ -54,13 +58,16 @@ type CardFieldTldrawShape = TLGeoShape & {
   };
 };
 
+// Type guard to identify our specific shapes
 function isCardFieldTldrawShape(shape: TLShape): shape is CardFieldTldrawShape {
   return shape.type === 'geo' && !!shape.meta && (shape.meta as any).isLayoutElement === true && typeof (shape.meta as any).fieldKey === 'string';
 }
 
+
+// Helper to convert our LayoutElement to something tldraw can create
 function layoutElementToInitialShape(element: LayoutElement, index: number): Omit<CardFieldTldrawShape, 'parentId' | 'index' | 'rotation' | 'isLocked'> {
   return {
-    id: createShapeId(`${element.fieldKey}-${index}-${Date.now()}`),
+    id: createShapeId(`${element.fieldKey}-${index}-${Date.now()}`), // Ensure unique IDs
     type: 'geo',
     x: parseFloat(element.style.left || '10'),
     y: parseFloat(element.style.top || '10'),
@@ -69,12 +76,12 @@ function layoutElementToInitialShape(element: LayoutElement, index: number): Omi
       w: parseFloat(element.style.width || `${DEFAULT_SHAPE_WIDTH}`),
       h: parseFloat(element.style.height || `${DEFAULT_SHAPE_HEIGHT}`),
       text: element.fieldKey,
-      font: 'sans',
-      size: 's',
-      color: 'black',
-      fill: 'solid',
+      font: 'sans', // tldraw default font
+      size: 's',     // tldraw default small size. Options: 's', 'm', 'l', 'xl'
+      color: 'black', // Default shape outline/text color
+      fill: 'solid',  // Make it slightly visible
       fillOpacity: 0.05,
-      dash: 'draw',
+      dash: 'draw',   // Default dash style
       verticalAlign: 'middle',
       align: 'middle',
     },
@@ -86,11 +93,12 @@ function layoutElementToInitialShape(element: LayoutElement, index: number): Omi
   };
 }
 
+// Helper to convert a tldraw shape back to our LayoutElement
 function tldrawShapeToLayoutElement(shape: CardFieldTldrawShape): LayoutElement {
-  const round = (num: number) => Math.round(num);
+  const round = (num: number) => Math.round(num); // Helper to round pixels
   return {
     fieldKey: shape.meta.fieldKey,
-    type: 'text',
+    type: 'text', // Defaulting to 'text' as per minimal requirement
     style: {
       position: 'absolute',
       top: `${round(shape.y)}px`,
@@ -102,13 +110,15 @@ function tldrawShapeToLayoutElement(shape: CardFieldTldrawShape): LayoutElement 
   };
 }
 
+
+// --- FieldBankItem Component ---
 interface FieldBankItemProps {
   fieldKey: string;
 }
 
 const FieldBankItem: React.FC<FieldBankItemProps> = ({ fieldKey }) => {
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    e.dataTransfer.setData('application/x-cardforge-fieldkey', fieldKey);
+    e.dataTransfer.setData('application/x-cardforge-fieldkey', fieldKey); // Use a custom type
     e.dataTransfer.effectAllowed = 'copy';
   };
 
@@ -124,14 +134,16 @@ const FieldBankItem: React.FC<FieldBankItemProps> = ({ fieldKey }) => {
   );
 };
 
+// --- Main CardLayoutEditor Component ---
 export function CardLayoutEditor({
   fieldKeys,
   initialElements = [],
   onChange,
-  canvasWidth = DEFAULT_CANVAS_WIDTH,
-  canvasHeight = DEFAULT_CANVAS_HEIGHT,
+  canvasWidth = DEFAULT_CANVAS_WIDTH, // Use imported default
+  canvasHeight = DEFAULT_CANVAS_HEIGHT, // Use imported default
 }: CardLayoutEditorProps) {
   const [editor, setEditor] = useState<Editor | null>(null);
+  // This state stores the elements derived from the tldraw canvas.
   const [currentLayoutJsonElements, setCurrentLayoutJsonElements] = useState<LayoutElement[]>(initialElements);
   const onChangeRef = useRef(onChange);
 
@@ -141,14 +153,18 @@ export function CardLayoutEditor({
 
   const onEditorMount = useCallback((editorInstance: Editor) => {
     setEditor(editorInstance);
-    editorInstance.updateInstanceState({ isGridMode: true });
+    editorInstance.updateInstanceState({ isGridMode: true }); // Snap to grid
 
     // Initial population is handled by the useEffect watching `initialElements`
   }, [setEditor]); // Removed initialElements from here
 
   // Effect to sync `initialElements` prop with the tldraw canvas
   useEffect(() => {
-    if (!editor) return;
+    if (!editor || !editor.currentPageShapesArray) { // ADDED CHECK for editor.currentPageShapesArray
+      // If editor or its shapes array isn't ready, wait for the next render.
+      // This can happen during initial setup or if tldraw is still loading its state.
+      return;
+    }
 
     const currentShapesOnCanvas = editor.currentPageShapesArray.filter(isCardFieldTldrawShape);
     const currentElementsOnCanvas = currentShapesOnCanvas.map(tldrawShapeToLayoutElement);
@@ -165,10 +181,16 @@ export function CardLayoutEditor({
         
         const shapesToCreate = initialElements.map((el, index) => layoutElementToInitialShape(el, index) as CardFieldTldrawShape);
         if (shapesToCreate.length > 0) {
-            editor.createShapes(shapesToCreate);
+            // Ensure shapes are created with valid props before passing to createShapes
+            const validShapesToCreate = shapesToCreate.filter(shape => shape && shape.id && shape.type);
+            if (validShapesToCreate.length > 0) {
+              editor.createShapes(validShapesToCreate);
+            }
         }
       });
-      setCurrentLayoutJsonElements(initialElements); // Reflect that the canvas now matches initialElements
+      // This effect syncs CANVAS from initialElements.
+      // DO NOT call setCurrentLayoutJsonElements here as it creates a loop with the parent.
+      // The state `currentLayoutJsonElements` is updated by the *other* useEffect listening to editor.store.
     }
   }, [editor, initialElements]); // Watch for changes in initialElements prop
 
@@ -178,10 +200,13 @@ export function CardLayoutEditor({
     if (!editor) return;
 
     const handleChange = () => {
-      const shapes = editor.currentPageShapesArray.filter(isCardFieldTldrawShape);
+      // Guard against accessing currentPageShapesArray if editor state is not fully ready
+      if (!editor.currentPageShapesArray) return;
+      
+      const shapes = editor.currentPageShapesArray.filter(isCardFieldTldrawShape) as CardFieldTldrawShape[];
       const newLayoutElements = shapes.map(tldrawShapeToLayoutElement);
       
-      // Only call external onChange if the elements array structurally changed
+      // Only call external onChange if the elements array structurally changed from what's on canvas
       if (JSON.stringify(newLayoutElements) !== JSON.stringify(currentLayoutJsonElements)) {
         setCurrentLayoutJsonElements(newLayoutElements); // Update internal representation for comparison
         onChangeRef.current(newLayoutElements);
@@ -225,7 +250,7 @@ export function CardLayoutEditor({
             h: DEFAULT_SHAPE_HEIGHT,
             text: fieldKey,
             font: 'sans',
-            size: 's',
+            size: 's', 
             color: 'black',
             fill: 'solid',
             fillOpacity: 0.05,
@@ -250,6 +275,7 @@ export function CardLayoutEditor({
 
   return (
     <div className="flex h-[550px] w-full border border-border rounded-md bg-background text-foreground shadow-sm">
+      {/* 1. Field Bank (left panel) */}
       <div className="w-[160px] p-3 border-r border-border overflow-y-auto flex flex-col shrink-0">
         <h3 className="text-sm font-semibold mb-3 sticky top-0 bg-background pt-1 pb-2 z-10 border-b border-border">
           Available Fields
@@ -262,14 +288,15 @@ export function CardLayoutEditor({
           )}
         </div>
       </div>
+      {/* 2. Canvas (center panel) */}
       <div
-        className="flex-grow relative flex items-center justify-center bg-muted/20 p-4"
+        className="flex-grow relative flex items-center justify-center bg-muted/20 p-4" // Updated for flex-grow and padding
         onDrop={handleDropOnCanvasContainer}
         onDragOver={handleDragOverCanvasContainer}
       >
         <div 
           style={{ width: canvasWidth, height: canvasHeight }}
-          className="bg-card shadow-lg border border-input overflow-hidden" 
+          className="bg-card shadow-lg border border-input overflow-hidden" // Ensure tldraw canvas is visible
         >
           <Tldraw
             key={`tldraw-editor-${canvasWidth}-${canvasHeight}-${JSON.stringify(initialElements.map(e => e.fieldKey))}`}
@@ -281,6 +308,7 @@ export function CardLayoutEditor({
           />
         </div>
       </div>
+      {/* 3. Live JSON Output (right panel) */}
       <div className="w-[220px] p-3 border-l border-border overflow-y-auto flex flex-col shrink-0">
         <h3 className="text-sm font-semibold mb-3 sticky top-0 bg-background pt-1 pb-2 z-10 border-b border-border">
           Layout Elements (JSON)
