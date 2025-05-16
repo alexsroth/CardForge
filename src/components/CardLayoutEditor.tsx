@@ -261,6 +261,7 @@ export function CardLayoutEditor({
     [editor, fieldKeys]
   );
 
+  // Allow dropping by preventing default drag over behavior
   const handleDragOverCanvasContainer = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault(); // Necessary to allow dropping
   };

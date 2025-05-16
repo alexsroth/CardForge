@@ -120,7 +120,8 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  path += `.png`; 
+  // Add .png extension after colors but before text query
+  path += `.png`;
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
@@ -162,6 +163,7 @@ export default function TemplateDesignerPage() {
   const [sampleCardForPreview, setSampleCardForPreview] = useState<CardData | null>(null);
   const [showElementOutlines, setShowElementOutlines] = useState(false);
   const [showVisualEditor, setShowVisualEditor] = useState(false);
+  const [editorLayoutElements, setEditorLayoutElements] = useState<VisualLayoutElement[]>([]);
 
 
   const { toast } = useToast();
@@ -456,21 +458,15 @@ export default function TemplateDesignerPage() {
   };
 
   const currentTemplateFieldKeys = useMemo(() => fields.map(f => f.key), [fields]);
-  const initialVisualLayoutElements = useMemo(() => {
-    try {
-      const parsed = JSON.parse(layoutDefinition || '{}');
-      return Array.isArray(parsed.elements) ? parsed.elements : [];
-    } catch {
-      return [];
-    }
-  }, [layoutDefinition]);
+  
+  const handleVisualLayoutChange = useCallback((newElementsFromCanvas: VisualLayoutElement[]) => {
+    setEditorLayoutElements(newElementsFromCanvas); 
 
-  const handleVisualLayoutChange = useCallback((newElements: VisualLayoutElement[]) => {
     try {
       const currentFullLayout = JSON.parse(layoutDefinition || `{ "width": "${DEFAULT_CANVAS_WIDTH}px", "height": "${DEFAULT_CANVAS_HEIGHT}px", "elements": [] }`);
       const updatedFullLayout = {
         ...currentFullLayout,
-        elements: newElements,
+        elements: newElementsFromCanvas,
       };
       const newLayoutString = JSON.stringify(updatedFullLayout, null, 2);
       setLayoutDefinition(newLayoutString);
@@ -480,24 +476,21 @@ export default function TemplateDesignerPage() {
        const fallbackLayout = {
         width: `${DEFAULT_CANVAS_WIDTH}px`,
         height: `${DEFAULT_CANVAS_HEIGHT}px`,
-        elements: newElements,
+        elements: newElementsFromCanvas,
       };
       setLayoutDefinition(JSON.stringify(fallbackLayout, null, 2));
     }
-  }, [layoutDefinition, setLayoutDefinition, layoutJsonError]);
+  }, [layoutDefinition, setLayoutDefinition, layoutJsonError, DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT]);
 
-  useEffect(() => { // Effect to parse layoutDefinition string when it changes (e.g. from textarea)
+  useEffect(() => {
     try {
       const parsed = JSON.parse(layoutDefinition || '{}');
-      if (Array.isArray(parsed.elements)) {
-        // Avoid feedback loop by checking if elements actually differ
-        // This is a shallow check; for deep check, JSON.stringify might be too slow if frequent.
-        // Considering the visual editor might reorder or change coordinates, this might need a more robust diff.
-        // For now, this ensures the initial load or major text changes propagate.
-        // setCurrentLayoutJsonElements(parsed.elements); // Assuming CardLayoutEditor handles its own initialElements correctly
+      const newElements = Array.isArray(parsed.elements) ? parsed.elements : [];
+      if (JSON.stringify(newElements) !== JSON.stringify(editorLayoutElements)) {
+          setEditorLayoutElements(newElements);
       }
     } catch (e) {
-      // console.warn("Could not parse layoutDefinition for visual editor elements on text change", e);
+      // console.warn("Could not parse external layoutDefinition for visual editor", e);
     }
   }, [layoutDefinition]);
 
@@ -552,7 +545,7 @@ export default function TemplateDesignerPage() {
           </div>
           <div className="space-y-2">
             <h3 className="text-lg font-semibold">Data Fields</h3>
-            <ScrollArea className="h-auto pr-3 border rounded-md"> {/* Removed max-h */}
+            <ScrollArea className="h-auto pr-3 border rounded-md">
               <div className="p-2 space-y-3">
                 {fields.map((field, index) => (
                   <FieldRow
@@ -591,14 +584,14 @@ export default function TemplateDesignerPage() {
       {showVisualEditor ? (
          <CardLayoutEditor
             fieldKeys={currentTemplateFieldKeys}
-            initialElements={initialVisualLayoutElements}
+            initialElements={editorLayoutElements}
             onChange={handleVisualLayoutChange}
-            canvasWidth={280}
+            canvasWidth={280} // Same as card preview for consistency
             canvasHeight={400}
           />
       ) : (
         <div className="flex flex-col md:flex-row gap-8">
-          <Card className="md:w-[65%] flex flex-col shadow-md"> {/* Existing JSON editor card */}
+          <Card className="md:w-[65%] flex flex-col shadow-md">
             <CardHeader>
               <CardTitle className="text-xl font-bold">Layout Definition (JSON)</CardTitle>
               <CardDescription>
@@ -654,7 +647,7 @@ export default function TemplateDesignerPage() {
                     <p className="font-semibold mb-1 mt-3"><code>elements</code> array (each object defines one visual piece):</p>
                     <ul className="list-disc list-inside pl-2 space-y-1">
                       <li>
-                        <strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above.
+                        <strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above (e.g., if you have "Card Title" with key "cardTitle", use "cardTitle").
                       </li>
                       <li>
                         <strong><code>type</code></strong>: (String) One of: <code>"text"</code>, <code>"textarea"</code>, <code>"image"</code>, <code>"iconValue"</code>, <code>"iconFromData"</code>.
@@ -667,16 +660,16 @@ export default function TemplateDesignerPage() {
                         </ul>
                       </li>
                       <li>
-                        <strong><code>style</code></strong>: (Object) CSS-in-JS. Use camelCase for CSS properties.
+                        <strong><code>style</code></strong>: (Object) CSS-in-JS (e.g., {`{ "position": "absolute", "top": "10px", "fontSize": "1.2em" }`}). Use camelCase for CSS properties.
                       </li>
                       <li>
                         <strong><code>className</code></strong>: (String, Optional) Tailwind CSS classes.
                       </li>
                       <li>
-                        <strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue".
+                        <strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue". Text added before/after the field's value.
                       </li>
                       <li>
-                        <strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon. <strong>Ensure the icon exists in <code>lucide-react</code>.</strong>
+                        <strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon (e.g., "Coins", "Sword"). **Ensure the icon exists in lucide-react.**
                       </li>
                     </ul>
                     <p className="mt-3 italic">The live preview updates as you edit. Ensure your JSON is valid. The default layout provided is a starting point; customize its <code>fieldKey</code> values to match your defined data fields.</p>
@@ -685,12 +678,12 @@ export default function TemplateDesignerPage() {
                     <pre className="text-xs bg-background/50 p-2 rounded border whitespace-pre-wrap">
       {`// For a simple text display
       {
-        "fieldKey": "yourCardNameFieldKey", // Replace
+        "fieldKey": "yourCardNameFieldKey", // Replace with one of YOUR field keys from above
         "type": "text",
         "style": { "position": "absolute", "top": "20px", "left": "20px", "fontWeight": "bold" }
       }
 
-      // For an image
+      // For an image (ensure 'yourImageUrlFieldKey' is a field of type 'text' or 'placeholderImage' in Data Fields)
       {
         "fieldKey": "yourImageUrlFieldKey", // Replace
         "type": "image",
@@ -698,6 +691,22 @@ export default function TemplateDesignerPage() {
           "position": "absolute", "top": "50px", "left": "20px", 
           "width": "240px", "height": "120px", "objectFit": "cover", "borderRadius": "4px" 
         }
+      }
+
+      // For text with a preceding icon (ensure 'yourManaCostFieldKey' exists)
+      {
+        "fieldKey": "yourManaCostFieldKey", // Replace
+        "type": "iconValue",
+        "icon": "Coins", // Lucide icon name
+        "style": { "position": "absolute", "top": "20px", "right": "20px" }
+      }
+
+      // For an icon whose name is stored in your card data
+      // (ensure 'yourIconDataFieldKey' exists and is a 'text' field where you'd store "Zap" or "Shield")
+      {
+        "fieldKey": "yourIconDataFieldKey", // Replace
+        "type": "iconFromData",
+        "style": { "position": "absolute", "bottom": "20px", "left": "20px" }
       }
   `}
                     </pre>
@@ -757,7 +766,7 @@ export default function TemplateDesignerPage() {
             </CardFooter>
           </Card>
 
-          <Card className="md:w-[35%] sticky top-20 self-start shadow-md"> {/* Existing Preview card */}
+          <Card className="md:w-[35%] sticky top-20 self-start shadow-md">
             <CardHeader>
               <div className="flex items-center justify-between">
                   <CardTitle className="text-xl font-bold flex items-center">
@@ -792,7 +801,7 @@ export default function TemplateDesignerPage() {
             </CardContent>
           </Card>
         </div>
-      )} {/* End of conditional rendering for JSON vs Visual editor */}
+      )}
     </div>
   );
 }
