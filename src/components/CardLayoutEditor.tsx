@@ -1,3 +1,4 @@
+
 // src/components/CardLayoutEditor.tsx
 "use client";
 
@@ -8,9 +9,10 @@ import {
   createShapeId,
   TLGeoShape,
   TLShape,
-  // TLBaseShape, // TLShape is generally preferred for type guards
 } from '@tldraw/tldraw';
 import '@tldraw/tldraw/tldraw.css';
+import { DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT } from '@/lib/card-templates';
+
 
 interface LayoutElementStyle extends React.CSSProperties {
   top?: string;
@@ -40,10 +42,8 @@ export interface CardLayoutEditorProps {
   canvasHeight?: number;
 }
 
-const DEFAULT_CANVAS_WIDTH = 280;
-const DEFAULT_CANVAS_HEIGHT = 400;
-const DEFAULT_SHAPE_WIDTH = 120; 
-const DEFAULT_SHAPE_HEIGHT = 36; 
+const DEFAULT_SHAPE_WIDTH = 120;
+const DEFAULT_SHAPE_HEIGHT = 36;
 const DEFAULT_FONT_SIZE = '12px';
 
 type CardFieldTldrawShape = TLGeoShape & {
@@ -70,9 +70,9 @@ function layoutElementToInitialShape(element: LayoutElement, index: number): Omi
       h: parseFloat(element.style.height || `${DEFAULT_SHAPE_HEIGHT}`),
       text: element.fieldKey,
       font: 'sans',
-      size: 's', 
+      size: 's',
       color: 'black',
-      fill: 'solid', 
+      fill: 'solid',
       fillOpacity: 0.05,
       dash: 'draw',
       verticalAlign: 'middle',
@@ -90,7 +90,7 @@ function tldrawShapeToLayoutElement(shape: CardFieldTldrawShape): LayoutElement 
   const round = (num: number) => Math.round(num);
   return {
     fieldKey: shape.meta.fieldKey,
-    type: 'text', 
+    type: 'text',
     style: {
       position: 'absolute',
       top: `${round(shape.y)}px`,
@@ -126,7 +126,7 @@ const FieldBankItem: React.FC<FieldBankItemProps> = ({ fieldKey }) => {
 
 export function CardLayoutEditor({
   fieldKeys,
-  initialElements = [], // Default to empty array
+  initialElements = [],
   onChange,
   canvasWidth = DEFAULT_CANVAS_WIDTH,
   canvasHeight = DEFAULT_CANVAS_HEIGHT,
@@ -139,43 +139,25 @@ export function CardLayoutEditor({
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  // This onMount is for tldraw's initialization.
-  // It should be stable and not cause re-mounts if its reference changes.
   const onEditorMount = useCallback((editorInstance: Editor) => {
     setEditor(editorInstance);
     editorInstance.updateInstanceState({ isGridMode: true });
-    // Load initial elements ONCE on mount
-    // `initialElements` here is captured from the props at the time of mount
-    // If `initialElements` changes later, the `useEffect` below handles it.
-    const shapesToCreate = initialElements.map((el, index) => layoutElementToInitialShape(el, index) as CardFieldTldrawShape);
-    if (shapesToCreate.length > 0) {
-        editorInstance.batch(() => {
-            editorInstance.createShapes(shapesToCreate);
-        });
-    }
-    // Reflect this initial canvas state to parent
-    const currentShapesOnCanvas = editorInstance.currentPageShapesArray.filter(isCardFieldTldrawShape);
-    const currentElementsOnCanvas = currentShapesOnCanvas.map(tldrawShapeToLayoutElement);
-    setCurrentLayoutJsonElements(currentElementsOnCanvas);
-    onChangeRef.current(currentElementsOnCanvas);
-  }, [setEditor, initialElements]); // `initialElements` needed here for correct closure on mount if it has a default
 
-  // Effect to react to changes in `initialElements` prop from parent
-  // This is crucial for when the parent updates elements (e.g., from textarea or loading a new template)
+    // Initial population is handled by the useEffect watching `initialElements`
+  }, [setEditor]); // Removed initialElements from here
+
+  // Effect to sync `initialElements` prop with the tldraw canvas
   useEffect(() => {
-    if (!editor || !initialElements) return;
+    if (!editor) return;
 
-    // Get current elements from tldraw canvas for comparison
     const currentShapesOnCanvas = editor.currentPageShapesArray.filter(isCardFieldTldrawShape);
     const currentElementsOnCanvas = currentShapesOnCanvas.map(tldrawShapeToLayoutElement);
 
-    // Only update tldraw if the incoming `initialElements` from parent
-    // is actually different from what's currently rendered on the canvas.
+    // Simple deep comparison for arrays of objects
     if (JSON.stringify(initialElements) !== JSON.stringify(currentElementsOnCanvas)) {
-      console.log("CardLayoutEditor: initialElements prop changed, updating tldraw canvas.");
       editor.batch(() => {
         const idsToDelete = editor.currentPageShapesArray
-            .filter(isCardFieldTldrawShape)
+            .filter(isCardFieldTldrawShape) // Only delete shapes managed by this editor
             .map(s => s.id);
         if (idsToDelete.length > 0) {
             editor.deleteShapes(idsToDelete);
@@ -186,13 +168,12 @@ export function CardLayoutEditor({
             editor.createShapes(shapesToCreate);
         }
       });
-      // After updating tldraw, also update the internal JSON preview to match the new initialElements
-      setCurrentLayoutJsonElements(initialElements);
+      setCurrentLayoutJsonElements(initialElements); // Reflect that the canvas now matches initialElements
     }
-  }, [editor, initialElements]); // This effect now handles syncing prop changes to tldraw
+  }, [editor, initialElements]); // Watch for changes in initialElements prop
 
 
-  // Effect to listen to tldraw store changes and propagate them outwards
+  // Effect to listen to tldraw store changes and call the external onChange
   useEffect(() => {
     if (!editor) return;
 
@@ -200,20 +181,20 @@ export function CardLayoutEditor({
       const shapes = editor.currentPageShapesArray.filter(isCardFieldTldrawShape);
       const newLayoutElements = shapes.map(tldrawShapeToLayoutElement);
       
-      // Only call onChange (and update internal preview) if the elements have actually changed
+      // Only call external onChange if the elements array structurally changed
       if (JSON.stringify(newLayoutElements) !== JSON.stringify(currentLayoutJsonElements)) {
-        setCurrentLayoutJsonElements(newLayoutElements);
+        setCurrentLayoutJsonElements(newLayoutElements); // Update internal representation for comparison
         onChangeRef.current(newLayoutElements);
       }
     };
 
     const cleanup = editor.store.listen(handleChange, {
-      source: 'user', // Listen to user-driven changes (drag, resize, create, delete)
-      scope: 'document', // Listen to shape/document changes
+      source: 'user', 
+      scope: 'document', 
     });
     
-    return () => cleanup(); // Unsubscribe on component unmount or when editor changes
-  }, [editor, currentLayoutJsonElements]); // currentLayoutJsonElements is a dependency to re-evaluate string comparison
+    return () => cleanup(); 
+  }, [editor, currentLayoutJsonElements]); // Depend on internal representation
 
   const handleDropOnCanvasContainer = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
@@ -291,11 +272,8 @@ export function CardLayoutEditor({
           className="bg-card shadow-lg border border-input overflow-hidden" 
         >
           <Tldraw
-            // Using a more dynamic key to encourage re-mount if critical aspects change,
-            // though ideally useEffect for initialElements handles updates.
-            // If tldraw has issues with prop updates, a key change can force full re-initialization.
             key={`tldraw-editor-${canvasWidth}-${canvasHeight}-${JSON.stringify(initialElements.map(e => e.fieldKey))}`}
-            persistenceKey={`card_layout_editor_instance_${canvasWidth}x${canvasHeight}`} // Unique persistence key
+            persistenceKey={`card_layout_editor_instance_${canvasWidth}x${canvasHeight}`} 
             onMount={onEditorMount}
             assetUrls={{
                 baseUrl: typeof window !== 'undefined' ? window.location.origin + '/tldraw-assets/' : '/tldraw-assets/'
@@ -314,3 +292,4 @@ export function CardLayoutEditor({
     </div>
   );
 }
+

@@ -49,6 +49,8 @@ export interface CardTemplate {
 // This CardTemplateId is a generic representation, used by CardData
 export type CardTemplateId = string;
 
+export const DEFAULT_CANVAS_WIDTH = 280;
+export const DEFAULT_CANVAS_HEIGHT = 400;
 
 // DEFAULT_CARD_LAYOUT_JSON_STRING
 // This is a comprehensive default layout.
@@ -56,8 +58,8 @@ export type CardTemplateId = string;
 // - `fieldKey` values MUST match the "Field Key" you define in your "Data Fields" section.
 // - For `style` objects, use camelCase for CSS properties (e.g., `fontSize`, not `font-size`).
 export const DEFAULT_CARD_LAYOUT_JSON_STRING = `{
-  "width": "280px",
-  "height": "400px",
+  "width": "${DEFAULT_CANVAS_WIDTH}px",
+  "height": "${DEFAULT_CANVAS_HEIGHT}px",
   "backgroundColor": "hsl(var(--card))",
   "borderColor": "hsl(var(--border))",
   "borderRadius": "calc(var(--radius) - 2px)",
@@ -90,9 +92,9 @@ export const DEFAULT_CARD_LAYOUT_JSON_STRING = `{
         "fontSize": "1.1em",
         "fontWeight": "bold",
         "padding": "5px",
-        "backgroundColor": "hsla(var(--primary-foreground), 0.1)",
+        "backgroundColor": "hsl(var(--muted))",
         "borderRadius": "9999px",
-        "border": "1px solid hsla(var(--primary), 0.5)"
+        "border": "1px solid hsl(var(--primary))"
       },
       "className": "text-primary"
     },
@@ -178,8 +180,8 @@ export const cardTemplates: CardTemplate[] = [
     name: 'Generic Card (Seed)',
     fields: [
       { key: 'name', label: 'Name', type: 'text', placeholder: 'Card Name', defaultValue: 'Generic Card' },
-      { key: 'artworkUrl', label: 'Artwork URL', type: 'placeholderImage', placeholderConfigWidth: 280, placeholderConfigHeight: 400, placeholderConfigText: 'Artwork' },
-      { key: 'imageUrl', label: 'Main Image URL', type: 'placeholderImage', placeholderConfigWidth: 250, placeholderConfigHeight: 140, placeholderConfigText: 'Main Image' },
+      { key: 'artworkUrl', label: 'Artwork URL', type: 'placeholderImage', placeholderConfigWidth: DEFAULT_CANVAS_WIDTH, placeholderConfigHeight: DEFAULT_CANVAS_HEIGHT, placeholderConfigText: 'Artwork Background', placeholderConfigBgColor: '333', placeholderConfigTextColor: 'aaa' },
+      { key: 'imageUrl', label: 'Main Image URL', type: 'placeholderImage', placeholderConfigWidth: 250, placeholderConfigHeight: 140, placeholderConfigText: 'Main Image', placeholderConfigBgColor: '444', placeholderConfigTextColor: 'ccc' },
       { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., abstract pattern', defaultValue: 'abstract pattern' },
       { key: 'description', label: 'Description', type: 'textarea', placeholder: 'General card text if specific fields are not used.', defaultValue: 'This is a generic card description.' },
       { key: 'cardType', label: 'Card Type Line', type: 'text', placeholder: 'e.g., Basic Unit', defaultValue: 'Unit' },
@@ -201,8 +203,8 @@ export const cardTemplates: CardTemplate[] = [
     name: 'Creature Card (Seed)',
     fields: [
       { key: 'name', label: 'Name', type: 'text', placeholder: 'Grizzly Bear', defaultValue: 'Creature Sample' },
-      { key: 'artworkUrl', label: 'Artwork URL', type: 'placeholderImage', placeholderConfigWidth: 280, placeholderConfigHeight: 400, placeholderConfigText: 'Creature Artwork' },
-      { key: 'imageUrl', label: 'Main Image URL', type: 'placeholderImage', placeholderConfigWidth: 250, placeholderConfigHeight: 140, placeholderConfigText: 'Creature Image' },
+      { key: 'artworkUrl', label: 'Artwork URL', type: 'placeholderImage', placeholderConfigWidth: DEFAULT_CANVAS_WIDTH, placeholderConfigHeight: DEFAULT_CANVAS_HEIGHT, placeholderConfigText: 'Creature Artwork', placeholderConfigBgColor: '2d3a32', placeholderConfigTextColor: '9cb2a1'  },
+      { key: 'imageUrl', label: 'Main Image URL', type: 'placeholderImage', placeholderConfigWidth: 250, placeholderConfigHeight: 140, placeholderConfigText: 'Creature Image', placeholderConfigBgColor: '5a6a5f', placeholderConfigTextColor: 'c8d8ca' },
       { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., forest beast', defaultValue: 'forest beast' },
       { key: 'cost', label: 'Cost', type: 'number', defaultValue: 3, placeholder: '3' },
       { key: 'attack', label: 'Attack', type: 'number', defaultValue: 2, placeholder: '2' },
@@ -226,8 +228,8 @@ export const cardTemplates: CardTemplate[] = [
     name: 'Spell Card (Seed)',
     fields: [
       { key: 'name', label: 'Name', type: 'text', placeholder: 'Fireball', defaultValue: 'Spell Sample' },
-      { key: 'artworkUrl', label: 'Artwork URL', type: 'placeholderImage', placeholderConfigWidth: 280, placeholderConfigHeight: 400, placeholderConfigText: 'Spell Artwork' },
-      { key: 'imageUrl', label: 'Main Image URL', type: 'placeholderImage', placeholderConfigWidth: 250, placeholderConfigHeight: 140, placeholderConfigText: 'Spell Image' },
+      { key: 'artworkUrl', label: 'Artwork URL', type: 'placeholderImage', placeholderConfigWidth: DEFAULT_CANVAS_WIDTH, placeholderConfigHeight: DEFAULT_CANVAS_HEIGHT, placeholderConfigText: 'Spell Artwork', placeholderConfigBgColor: '4a2f4a', placeholderConfigTextColor: 'b29cb2' },
+      { key: 'imageUrl', label: 'Main Image URL', type: 'placeholderImage', placeholderConfigWidth: 250, placeholderConfigHeight: 140, placeholderConfigText: 'Spell Image', placeholderConfigBgColor: '7a5f7a', placeholderConfigTextColor: 'd8cad8' },
       { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., magical explosion', defaultValue: 'magical explosion' },
       { key: 'cost', label: 'Cost', type: 'number', defaultValue: 1, placeholder: '1' },
       { key: 'cardType', label: 'Card Type Line', type: 'text', defaultValue: 'Spell - Instant', placeholder: 'e.g., Instant Spell' },
@@ -249,8 +251,8 @@ export const cardTemplates: CardTemplate[] = [
     name: 'Item Card (Seed)',
     fields: [
       { key: 'name', label: 'Name', type: 'text', placeholder: 'Healing Potion', defaultValue: 'Item Sample' },
-      { key: 'artworkUrl', label: 'Artwork URL', type: 'placeholderImage', placeholderConfigWidth: 280, placeholderConfigHeight: 400, placeholderConfigText: 'Item Artwork' },
-      { key: 'imageUrl', label: 'Main Image URL', type: 'placeholderImage', placeholderConfigWidth: 250, placeholderConfigHeight: 140, placeholderConfigText: 'Item Image' },
+      { key: 'artworkUrl', label: 'Artwork URL', type: 'placeholderImage', placeholderConfigWidth: DEFAULT_CANVAS_WIDTH, placeholderConfigHeight: DEFAULT_CANVAS_HEIGHT, placeholderConfigText: 'Item Artwork', placeholderConfigBgColor: '4a422f', placeholderConfigTextColor: 'b2a79c' },
+      { key: 'imageUrl', label: 'Main Image URL', type: 'placeholderImage', placeholderConfigWidth: 250, placeholderConfigHeight: 140, placeholderConfigText: 'Item Image', placeholderConfigBgColor: '7a705f', placeholderConfigTextColor: 'd8d2ca' },
       { key: 'dataAiHint', label: 'AI Image Hint', type: 'text', placeholder: 'e.g., glowing artifact', defaultValue: 'glowing artifact' },
       { key: 'cost', label: 'Cost', type: 'number', defaultValue: 2, placeholder: '2' },
       { key: 'cardType', label: 'Card Type Line', type: 'text', defaultValue: 'Item - Equipment', placeholder: 'e.g., Equipment' },
@@ -269,3 +271,21 @@ export const cardTemplates: CardTemplate[] = [
   },
 ];
 
+// Function to get a template by its ID - THIS IS NOW HANDLED BY TEMPLATECONTEXT
+// export const getTemplateById = (id: CardTemplateId | undefined): CardTemplate | undefined => {
+//   if (!id) return undefined;
+//   // In a real app, this might fetch from a store or API
+//   return cardTemplates.find(template => template.id === id);
+// };
+
+// Function to get a list of templates for a Select component - THIS IS NOW HANDLED BY TEMPLATECONTEXT
+// export const getAvailableTemplatesForSelect = (allowedTemplateIds?: CardTemplateId[]) => {
+//   const templatesToConsider = allowedTemplateIds
+//     ? cardTemplates.filter(template => allowedTemplateIds.includes(template.id as CardTemplateId))
+//     : cardTemplates;
+//
+//   return templatesToConsider.map(template => ({
+//     value: template.id as CardTemplateId,
+//     label: template.name,
+//   }));
+// };
