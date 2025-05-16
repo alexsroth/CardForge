@@ -1,3 +1,4 @@
+
 // src/app/templates/edit/[templateId]/page.tsx
 "use client";
 
@@ -31,7 +32,6 @@ import {
 } from "@/components/ui/tooltip";
 import { CardLayoutEditor, type LayoutElement as VisualLayoutElement } from '@/components/CardLayoutEditor';
 
-// Removed DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT as they are imported from lib
 
 function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldDefinition {
     const definition: TemplateFieldDefinition = {
@@ -128,7 +128,7 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  path += `.png`;
+  path += `.png`; 
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
@@ -153,7 +153,7 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
   if (!Icon) { 
-    console.warn(`Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
+    console.warn(`[DEBUG] IconComponent (EditTemplatePage): Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
     return <LucideIcons.HelpCircle {...props} />; 
   }
   return <Icon {...props} />; 
@@ -186,8 +186,10 @@ export default function EditTemplatePage() {
       setIsLoadingPage(templatesLoading);
       return;
     }
+    console.log('[DEBUG] EditTemplatePage: Loading template for editing. ID:', templateIdToEdit);
     const templateToEdit = getTemplateById(templateIdToEdit);
     if (templateToEdit) {
+      console.log('[DEBUG] EditTemplatePage: Template found.', templateToEdit);
       setOriginalTemplateId(templateToEdit.id as CardTemplateId);
       setTemplateName(templateToEdit.name);
       setFields(templateToEdit.fields.map(mapTemplateFieldToFieldDefinition));
@@ -197,16 +199,19 @@ export default function EditTemplatePage() {
         const parsed = JSON.parse(initialLayoutDef || '{}');
         setEditorLayoutElements(Array.isArray(parsed.elements) ? parsed.elements : []);
       } catch {
+        console.error('[DEBUG] EditTemplatePage: Error parsing initialLayoutDef for editorLayoutElements');
         setEditorLayoutElements([]);
       }
       setErrorLoading(null);
     } else {
+      console.warn('[DEBUG] EditTemplatePage: Template not found for editing. ID:', templateIdToEdit);
       setErrorLoading(`Template with ID "${templateIdToEdit}" not found.`);
     }
     setIsLoadingPage(false);
   }, [templateIdToEdit, getTemplateById, templatesLoading]);
 
   useEffect(() => {
+    // console.log('[DEBUG] EditTemplatePage: Generating sampleCardForPreview. Fields count:', fields.length);
     const currentTemplateIdForPreview = originalTemplateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
@@ -287,6 +292,7 @@ export default function EditTemplatePage() {
   }), [originalTemplateId, templateName, fields, layoutDefinition]);
 
   const handleAddField = () => {
+    console.log('[DEBUG] EditTemplatePage/handleAddField: Adding new field.');
     const newFieldBaseLabel = `New Field`;
     let newFieldLabel = `${newFieldBaseLabel} ${fields.length + 1}`;
     let counter = fields.length + 1;
@@ -319,10 +325,12 @@ export default function EditTemplatePage() {
   };
 
   const handleRemoveField = (index: number) => {
+    console.log('[DEBUG] EditTemplatePage/handleRemoveField: Removing field at index', index);
     setFields(fields.filter((_, i) => i !== index));
   };
 
   const handleFieldChange = (index: number, updatedFieldDefinition: TemplateFieldDefinition) => {
+    // console.log('[DEBUG] EditTemplatePage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
     const newFields = [...fields];
     const oldField = newFields[index];
     let modifiedField = { ...oldField, ...updatedFieldDefinition };
@@ -358,6 +366,7 @@ export default function EditTemplatePage() {
 
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
+    // console.log('[DEBUG] EditTemplatePage/handleLayoutDefinitionChange: Layout string changed.');
     setLayoutDefinition(newLayoutDef);
     if (layoutJsonError) setLayoutJsonError(null);
   };
@@ -367,14 +376,17 @@ export default function EditTemplatePage() {
       const parsed = JSON.parse(layoutDefinition);
       setLayoutDefinition(JSON.stringify(parsed, null, 2));
       setLayoutJsonError(null);
+      console.log('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: JSON is valid and formatted.');
       return true;
     } catch (e: any) {
       setLayoutJsonError(`Invalid JSON: ${e.message}`);
+      console.warn('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: Invalid JSON', e.message);
       return false;
     }
   };
 
   const handleSaveTemplate = async () => {
+    console.log('[DEBUG] EditTemplatePage/handleSaveTemplate: Attempting to save.');
     if (!originalTemplateId) {
         toast({ title: "Error", description: "Original template ID is missing. Cannot update.", variant: "destructive" });
         return;
@@ -412,6 +424,7 @@ export default function EditTemplatePage() {
       fields: fields.map(mapFieldDefinitionToTemplateField),
       layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : DEFAULT_CARD_LAYOUT_JSON_STRING,
     };
+    console.log('[DEBUG] EditTemplatePage/handleSaveTemplate: Calling updateTemplate with:', updatedTemplateData);
     const result = await updateTemplate(updatedTemplateData);
     if (result.success) {
       toast({
@@ -452,6 +465,7 @@ export default function EditTemplatePage() {
   const currentTemplateFieldKeys = useMemo(() => fields.map(f => f.key), [fields]);
 
   const handleVisualLayoutChange = useCallback((newElementsFromCanvas: VisualLayoutElement[]) => {
+    console.log('[DEBUG] EditTemplatePage/handleVisualLayoutChange: Visual layout changed. Elements count:', newElementsFromCanvas.length);
     try {
       const currentFullLayout = JSON.parse(layoutDefinition || `{ "width": "${DEFAULT_CANVAS_WIDTH}px", "height": "${DEFAULT_CANVAS_HEIGHT}px", "elements": [] }`);
       const updatedFullLayout = {
@@ -462,7 +476,7 @@ export default function EditTemplatePage() {
       setLayoutDefinition(newLayoutString);
       if (layoutJsonError) setLayoutJsonError(null); 
     } catch (e) {
-      console.error("Error updating layout definition string from visual editor:", e);
+      console.error("[DEBUG] EditTemplatePage/handleVisualLayoutChange: Error updating layout definition string from visual editor:", e);
        const fallbackLayout = {
         width: `${DEFAULT_CANVAS_WIDTH}px`,
         height: `${DEFAULT_CANVAS_HEIGHT}px`,
@@ -470,19 +484,21 @@ export default function EditTemplatePage() {
       };
       setLayoutDefinition(JSON.stringify(fallbackLayout, null, 2));
     }
-  }, [layoutDefinition, layoutJsonError]); // Removed setLayoutDefinition from dependencies
+  }, [layoutDefinition, layoutJsonError]); 
 
   useEffect(() => {
+    // console.log('[DEBUG] EditTemplatePage: layoutDefinition string changed, attempting to parse for visual editor. Current editorLayoutElements length:', editorLayoutElements.length);
     try {
       const parsed = JSON.parse(layoutDefinition || '{}');
       const newElements = Array.isArray(parsed.elements) ? parsed.elements : [];
       if (JSON.stringify(newElements) !== JSON.stringify(editorLayoutElements)) {
+          // console.log('[DEBUG] EditTemplatePage: Parsed elements from layoutDefinition differ. Updating editorLayoutElements.');
           setEditorLayoutElements(newElements);
       }
     } catch (e) {
-      // console.warn("Could not parse layoutDefinition for visual editor prop update", e);
+      // console.warn("[DEBUG] EditTemplatePage: Could not parse layoutDefinition for visual editor prop update", e);
     }
-  }, [layoutDefinition]);
+  }, [layoutDefinition]); // Only depends on layoutDefinition string
 
 
   if (isLoadingPage) {
@@ -600,7 +616,7 @@ export default function EditTemplatePage() {
                </CardContent>
              </Card>
           ) : (
-            <Card className="shadow-md flex flex-col h-full"> 
+            <Card className="md:w-[65%] flex flex-col shadow-md"> 
               <CardHeader>
                 <CardTitle className="text-xl font-bold">Layout Definition (JSON)</CardTitle>
                 <CardDescription>
@@ -652,7 +668,7 @@ export default function EditTemplatePage() {
                       <p className="text-xs mt-1 mb-2">Use these keys in the <code>fieldKey</code> property of elements below.</p>
                       <p className="font-semibold mb-1 mt-3"><code>elements</code> array (each object defines one visual piece):</p>
                       <ul className="list-disc list-inside pl-2 space-y-1">
-                        <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above.</li>
+                        <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above (e.g., if you have "Card Title" with key "cardTitle", use "cardTitle").</li>
                         <li><strong><code>type</code></strong>: (String) One of: <code>"text"</code>, <code>"textarea"</code>, <code>"image"</code>, <code>"iconValue"</code>, <code>"iconFromData"</code>.</li>
                          <ul className="list-['-_'] list-inside pl-4 mt-1 space-y-1 text-muted-foreground/90">
                            <li><code>text</code>: Single line text.</li>
@@ -671,14 +687,14 @@ export default function EditTemplatePage() {
                       <pre className="text-xs bg-background/50 p-2 rounded border whitespace-pre-wrap">
 {`// For a simple text display
 {
-  "fieldKey": "yourCardNameFieldKey",
+  "fieldKey": "yourCardNameFieldKey", // Replace with one of YOUR field keys from above
   "type": "text",
   "style": { "position": "absolute", "top": "20px", "left": "20px", "fontWeight": "bold" }
 }
 
-// For an image
+// For an image (ensure 'yourImageUrlFieldKey' is a field of type 'text' or 'placeholderImage' in Data Fields)
 {
-  "fieldKey": "yourImageUrlFieldKey",
+  "fieldKey": "yourImageUrlFieldKey", // Replace
   "type": "image",
   "style": { 
     "position": "absolute", "top": "50px", "left": "20px", 
@@ -686,17 +702,18 @@ export default function EditTemplatePage() {
   }
 }
 
-// For text with a preceding icon
+// For text with a preceding icon (ensure 'yourManaCostFieldKey' exists)
 {
-  "fieldKey": "yourManaCostFieldKey",
+  "fieldKey": "yourManaCostFieldKey", // Replace
   "type": "iconValue",
-  "icon": "Coins",
+  "icon": "Coins", // Lucide icon name
   "style": { "position": "absolute", "top": "20px", "right": "20px" }
 }
 
 // For an icon whose name is stored in your card data
+// (ensure 'yourIconDataFieldKey' exists and is a 'text' field where you'd store "Zap" or "Shield")
 {
-  "fieldKey": "yourIconDataFieldKey",
+  "fieldKey": "yourIconDataFieldKey", // Replace
   "type": "iconFromData",
   "style": { "position": "absolute", "bottom": "20px", "left": "20px" }
 }`}
@@ -717,11 +734,11 @@ export default function EditTemplatePage() {
                             <TooltipProvider key={iconName} delayDuration={100}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" onClick={() => handleCopyIconName(iconName)} className="h-7 w-7 p-1" >
-                                    <IconComponent name={iconName} className="h-4 w-4" />
+                                  <Button variant="ghost" size="icon" onClick={() => handleCopyIconName(iconName as string)} className="h-7 w-7 p-1" >
+                                    <IconComponent name={iconName as string} className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent><p>{iconName}</p></TooltipContent>
+                                <TooltipContent><p>{iconName as string}</p></TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           ))}
@@ -778,3 +795,4 @@ export default function EditTemplatePage() {
     </div>
   );
 }
+

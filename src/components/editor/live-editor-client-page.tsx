@@ -88,70 +88,80 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   const [isMounted, setIsMounted] = useState(false);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const initialCardsRef = useRef<CardData[] | null>(null); 
-
+  
   useEffect(() => {
+    console.log('[DEBUG] LiveEditorClientPage: Mounted.');
     setIsMounted(true);
-    initialCardsRef.current = initialProjectData.cards || [];
     if (initialProjectData.cards && initialProjectData.cards.length > 0 && !selectedCardId) {
       setSelectedCardId(initialProjectData.cards[0].id);
     }
-  // Run only on initial mount, selectedCardId is an internal state here.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
-  // This effect handles updates from the initialProjectData prop (e.g., when navigating to a new project or context updates)
   useEffect(() => {
+    console.log('[DEBUG] LiveEditorClientPage: initialProjectData prop changed or editorProjectId changed.', {
+      newId: initialProjectData.id,
+      currentEditorId: editorProjectId,
+      newName: initialProjectData.name,
+      currentName: projectName,
+    });
     if (initialProjectData.id !== editorProjectId) {
-      // Switched to a new project
+      console.log('[DEBUG] LiveEditorClientPage: Project ID changed. Full re-initialization.', initialProjectData.id);
       setEditorProjectId(initialProjectData.id);
       setProjectName(initialProjectData.name);
       const currentCards = initialProjectData.cards || [];
       setCards(currentCards);
-      initialCardsRef.current = currentCards; 
       setAssociatedTemplateIds(initialProjectData.associatedTemplateIds || []);
       setSelectedCardId(currentCards.length > 0 && currentCards[0]?.id ? currentCards[0].id : null);
     } else {
-      // Same project, but metadata might have updated from context
+      // Same project ID, check for metadata updates
       if (initialProjectData.name !== projectName) {
+        console.log('[DEBUG] LiveEditorClientPage: Project name updated from prop.', initialProjectData.name);
         setProjectName(initialProjectData.name);
       }
-      // Use JSON.stringify for comparing arrays of primitives if order matters and they are simple
       if (JSON.stringify(initialProjectData.associatedTemplateIds || []) !== JSON.stringify(associatedTemplateIds)) {
+         console.log('[DEBUG] LiveEditorClientPage: Associated templates updated from prop.');
          setAssociatedTemplateIds(initialProjectData.associatedTemplateIds || []);
       }
     }
   }, [initialProjectData, editorProjectId, projectName, associatedTemplateIds]);
 
 
-  // Debounced save effect
+  // Debounced save effect for project data
   useEffect(() => {
-    if (!isMounted || !editorProjectId) { 
-      return; 
+    if (!isMounted || !editorProjectId) {
+      return;
     }
-    
+    console.log('[DEBUG] LiveEditorClientPage: Save effect triggered. Dependencies changed:', { cardsLength: cards.length, projectName, associatedTemplateIdsLength: associatedTemplateIds.length });
+
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
     debounceTimerRef.current = setTimeout(() => {
-      const projectToUpdate = getProjectById(editorProjectId); 
+      console.log('[DEBUG] LiveEditorClientPage: Debounce timer expired. Attempting to save project:', editorProjectId);
+      const projectToUpdate = getProjectById(editorProjectId);
       if (projectToUpdate) {
         const updatedFullProject: Project = {
-          ...projectToUpdate, 
-          name: projectName,  
-          cards: cards,       
-          associatedTemplateIds: associatedTemplateIds, 
+          ...projectToUpdate,
+          name: projectName,
+          cards: cards,
+          associatedTemplateIds: associatedTemplateIds,
+          // lastModified will be updated by ProjectContext.updateProject
         };
+        console.log('[DEBUG] LiveEditorClientPage: Calling updateProject for', editorProjectId, 'with', cards.length, 'cards.');
         updateProject(updatedFullProject).then(result => {
           if (!result.success) {
             toast({ title: "Save Error", description: `Failed to save project changes: ${result.message}`, variant: "destructive" });
+            console.error('[DEBUG] LiveEditorClientPage: Project update failed', result.message);
+          } else {
+            // console.log('[DEBUG] LiveEditorClientPage: Project update successful.');
           }
         });
       } else {
-        console.warn(`Debounced save: Project with ID ${editorProjectId} not found in context.`);
+        console.warn(`[DEBUG] LiveEditorClientPage: Debounced save - Project with ID ${editorProjectId} not found in context.`);
       }
-    }, 750); 
+    }, 1000); // Increased debounce time to 1 second
 
     return () => {
       if (debounceTimerRef.current) {
@@ -161,7 +171,6 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   }, [cards, projectName, associatedTemplateIds, editorProjectId, getProjectById, updateProject, toast, isMounted]);
   
 
-  // Cleanup timer on unmount
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
@@ -171,13 +180,16 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   }, []);
 
   const handleSelectCard = useCallback((cardId: string) => {
+    console.log('[DEBUG] LiveEditorClientPage/handleSelectCard: Selected card ID:', cardId);
     setSelectedCardId(cardId);
   }, []);
 
   const handleUpdateCard = useCallback((updatedCard: CardData) => {
+    console.log('[DEBUG] LiveEditorClientPage/handleUpdateCard: Updating card ID:', updatedCard.id, 'New name:', updatedCard.name);
     setCards(prevCards => 
       prevCards.map(card => card.id === updatedCard.id ? updatedCard : card)
     );
+    // Debounced save effect will pick this up
   }, []);
 
   const handleAddCard = useCallback(() => {
@@ -190,11 +202,14 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
       imageUrl: 'https://placehold.co/280x400.png', 
       dataAiHint: 'new card art',
     };
+    console.log('[DEBUG] LiveEditorClientPage/handleAddCard: Adding new card ID:', newCardId);
     setCards(prevCards => [...prevCards, newCard]);
     setSelectedCardId(newCardId);
+    // Debounced save effect will pick this up
   }, []);
 
   const handleDeleteCard = useCallback((cardIdToDelete: string) => {
+    console.log('[DEBUG] LiveEditorClientPage/handleDeleteCard: Deleting card ID:', cardIdToDelete);
     setCards(currentCards => {
       const newCardsList = currentCards.filter(card => card.id !== cardIdToDelete);
       if (selectedCardId === cardIdToDelete) {
@@ -202,9 +217,11 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
       }
       return newCardsList;
     });
+    // Debounced save effect will pick this up
   }, [selectedCardId]);
   
   const handleGenerateName = useCallback(async (description: string): Promise<string> => {
+    console.log('[DEBUG] LiveEditorClientPage/handleGenerateName: Generating name for description:', description.substring(0, 30) + '...');
     if (!description.trim()) {
       toast({ title: "Cannot generate name", description: "Card description is empty.", variant: "destructive" });
       return '';
@@ -213,10 +230,12 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     try {
       const name = await generateCardNameAction({ cardDescription: description });
       toast({ title: "Name Generated!", description: `Suggested name: ${name}` });
+      console.log('[DEBUG] LiveEditorClientPage/handleGenerateName: Success - Generated name:', name);
       return name;
     } catch (error) {
-      console.error("Failed to generate name:", error);
-      toast({ title: "Error", description: "Could not generate card name.", variant: "destructive" });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error("Failed to generate name:", errorMessage);
+      toast({ title: "Error", description: `Could not generate card name: ${errorMessage}`, variant: "destructive" });
       return '';
     } finally {
       setIsLoadingName(false);
@@ -224,6 +243,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   }, [toast]);
 
   const handleImportData = useCallback((importedCards: CardData[]) => {
+    console.log('[DEBUG] LiveEditorClientPage/handleImportData: Importing', importedCards.length, 'cards.');
     const validImportedCards = importedCards.map(card => ({
       ...card,
       templateId: associatedTemplateIds.includes(card.templateId as CardTemplateId) 
@@ -233,14 +253,17 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     setCards(validImportedCards);
     setSelectedCardId(validImportedCards.length > 0 ? validImportedCards[0].id : null);
     toast({ title: "Data Imported", description: `${validImportedCards.length} cards loaded.` });
+    // Debounced save effect will pick this up
   }, [toast, associatedTemplateIds]);
 
 
   if (!isMounted) {
+    console.log('[DEBUG] LiveEditorClientPage: Not mounted yet, showing skeleton.');
     return <EditorClientPageSkeleton />;
   }
 
   const selectedEditorCard = cards.find(card => card.id === selectedCardId);
+  // console.log('[DEBUG] LiveEditorClientPage: Rendering. Selected card ID:', selectedCardId, 'Found:', !!selectedEditorCard);
 
   return (
       <div className="flex h-full bg-muted/40">
@@ -268,7 +291,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
             <Separator orientation="vertical" />
              {selectedEditorCard ? (
               <CardDetailPanel
-                key={selectedCardId} 
+                key={selectedCardId} // Important: re-mounts CardDetailPanel when card selection changes
                 card={selectedEditorCard}
                 onUpdateCard={handleUpdateCard} 
                 onGenerateName={handleGenerateName}

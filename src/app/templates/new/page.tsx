@@ -1,3 +1,4 @@
+
 // src/app/templates/new/page.tsx
 "use client";
 
@@ -31,7 +32,6 @@ import {
 } from "@/components/ui/tooltip";
 import { CardLayoutEditor, type LayoutElement as VisualLayoutElement } from '@/components/CardLayoutEditor';
 
-// Removed DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT as they are imported from lib
 
 function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
     const field: TemplateField = {
@@ -111,7 +111,7 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  path += `.png`;
+  path += `.png`; // Always request PNG
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
@@ -136,7 +136,7 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
   if (!Icon) { 
-    console.warn(`Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
+    console.warn(`[DEBUG] IconComponent (TemplateDesigner): Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
     return <LucideIcons.HelpCircle {...props} />; 
   }
   return <Icon {...props} />; 
@@ -158,6 +158,7 @@ export default function TemplateDesignerPage() {
       const parsed = JSON.parse(DEFAULT_CARD_LAYOUT_JSON_STRING || '{}');
       return Array.isArray(parsed.elements) ? parsed.elements : [];
     } catch {
+      console.error('[DEBUG] TemplateDesignerPage: Error parsing DEFAULT_CARD_LAYOUT_JSON_STRING for initial editorLayoutElements');
       return [];
     }
   });
@@ -175,6 +176,7 @@ export default function TemplateDesignerPage() {
   }, [templateName]);
 
   useEffect(() => {
+    // console.log('[DEBUG] TemplateDesignerPage: Generating sampleCardForPreview. Fields count:', fields.length);
     const currentTemplateIdForPreview = templateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
@@ -255,6 +257,7 @@ export default function TemplateDesignerPage() {
   }), [templateId, templateName, fields, layoutDefinition]);
 
   const handleAddField = () => {
+    console.log('[DEBUG] TemplateDesignerPage/handleAddField: Adding new field.');
     const newFieldBaseLabel = `New Field`;
     let newFieldLabel = `${newFieldBaseLabel} ${fields.length + 1}`;
     let counter = fields.length + 1;
@@ -287,10 +290,12 @@ export default function TemplateDesignerPage() {
   };
 
   const handleRemoveField = (index: number) => {
+    console.log('[DEBUG] TemplateDesignerPage/handleRemoveField: Removing field at index', index);
     setFields(fields.filter((_, i) => i !== index));
   };
 
   const handleFieldChange = (index: number, updatedFieldDefinition: TemplateFieldDefinition) => {
+    // console.log('[DEBUG] TemplateDesignerPage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
     const newFields = [...fields];
     const oldField = newFields[index];
     let modifiedField = { ...oldField, ...updatedFieldDefinition };
@@ -324,6 +329,7 @@ export default function TemplateDesignerPage() {
 
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
+    // console.log('[DEBUG] TemplateDesignerPage/handleLayoutDefinitionChange: Layout string changed.');
     setLayoutDefinition(newLayoutDef);
     if (layoutJsonError) setLayoutJsonError(null);
   };
@@ -333,14 +339,17 @@ export default function TemplateDesignerPage() {
       const parsed = JSON.parse(layoutDefinition);
       setLayoutDefinition(JSON.stringify(parsed, null, 2));
       setLayoutJsonError(null);
+      console.log('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: JSON is valid and formatted.');
       return true;
     } catch (e: any) {
       setLayoutJsonError(`Invalid JSON: ${e.message}`);
+      console.warn('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: Invalid JSON', e.message);
       return false;
     }
   };
 
   const handleSaveTemplate = async () => {
+    console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Attempting to save.');
     if (!templateName.trim()) {
       toast({ title: "Missing Name", description: "Template Name cannot be empty.", variant: "destructive" });
       return;
@@ -387,6 +396,7 @@ export default function TemplateDesignerPage() {
       fields: fields.map(mapFieldDefinitionToTemplateField),
       layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : DEFAULT_CARD_LAYOUT_JSON_STRING,
     };
+    console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Calling saveTemplateToContext with:', newTemplate);
     const result = await saveTemplateToContext(newTemplate);
     if (result.success) {
       toast({
@@ -429,6 +439,7 @@ export default function TemplateDesignerPage() {
   const currentTemplateFieldKeys = useMemo(() => fields.map(f => f.key), [fields]);
   
   const handleVisualLayoutChange = useCallback((newElementsFromCanvas: VisualLayoutElement[]) => {
+    console.log('[DEBUG] TemplateDesignerPage/handleVisualLayoutChange: Visual layout changed. Elements count:', newElementsFromCanvas.length);
     try {
       const currentFullLayout = JSON.parse(layoutDefinition || `{ "width": "${DEFAULT_CANVAS_WIDTH}px", "height": "${DEFAULT_CANVAS_HEIGHT}px", "elements": [] }`);
       const updatedFullLayout = {
@@ -439,7 +450,7 @@ export default function TemplateDesignerPage() {
       setLayoutDefinition(newLayoutString); 
       if (layoutJsonError) setLayoutJsonError(null);
     } catch (e) {
-      console.error("Error updating layout definition string from visual editor:", e);
+      console.error("[DEBUG] TemplateDesignerPage/handleVisualLayoutChange: Error updating layout definition string from visual editor:", e);
        const fallbackLayout = {
         width: `${DEFAULT_CANVAS_WIDTH}px`,
         height: `${DEFAULT_CANVAS_HEIGHT}px`,
@@ -447,19 +458,21 @@ export default function TemplateDesignerPage() {
       };
       setLayoutDefinition(JSON.stringify(fallbackLayout, null, 2));
     }
-  }, [layoutDefinition, layoutJsonError]); // Removed setLayoutDefinition from dependencies
+  }, [layoutDefinition, layoutJsonError]); 
 
   useEffect(() => {
+    // console.log('[DEBUG] TemplateDesignerPage: layoutDefinition string changed, attempting to parse for visual editor. Current editorLayoutElements length:', editorLayoutElements.length);
     try {
       const parsed = JSON.parse(layoutDefinition || '{}');
       const newElements = Array.isArray(parsed.elements) ? parsed.elements : [];
       if (JSON.stringify(newElements) !== JSON.stringify(editorLayoutElements)) {
+          // console.log('[DEBUG] TemplateDesignerPage: Parsed elements from layoutDefinition differ. Updating editorLayoutElements.');
           setEditorLayoutElements(newElements);
       }
     } catch (e) {
-      // console.warn("Could not parse layoutDefinition for visual editor prop update", e);
+      // console.warn("[DEBUG] TemplateDesignerPage: Could not parse layoutDefinition for visual editor prop update", e);
     }
-  }, [layoutDefinition]);
+  }, [layoutDefinition]); // Only depends on layoutDefinition string
 
 
   if (templatesLoading) {
@@ -482,7 +495,7 @@ export default function TemplateDesignerPage() {
             </Button>
           </div>
           <CardDescription>
-            Define the structure and layout for a new card template. Changes are saved to browser local storage.
+            Define the structure for a new card template. Template ID is auto-generated from the name. Field Keys are auto-generated from Field Labels. Templates are saved to browser local storage.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -566,7 +579,7 @@ export default function TemplateDesignerPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card className="shadow-md flex flex-col h-full"> 
+            <Card className="md:w-[65%] flex flex-col shadow-md"> 
               <CardHeader>
                 <CardTitle className="text-xl font-bold">Layout Definition (JSON)</CardTitle>
                 <CardDescription>
@@ -618,7 +631,7 @@ export default function TemplateDesignerPage() {
                       <p className="text-xs mt-1 mb-2">Use these keys in the <code>fieldKey</code> property of elements below.</p>
                       <p className="font-semibold mb-1 mt-3"><code>elements</code> array (each object defines one visual piece):</p>
                       <ul className="list-disc list-inside pl-2 space-y-1">
-                        <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above.</li>
+                        <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above (e.g., if you have "Card Title" with key "cardTitle", use "cardTitle").</li>
                         <li><strong><code>type</code></strong>: (String) One of: <code>"text"</code>, <code>"textarea"</code>, <code>"image"</code>, <code>"iconValue"</code>, <code>"iconFromData"</code>.</li>
                         <ul className="list-['-_'] list-inside pl-4 mt-1 space-y-1 text-muted-foreground/90">
                            <li><code>text</code>: Single line text.</li>
@@ -632,19 +645,19 @@ export default function TemplateDesignerPage() {
                         <li><strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue". Text added before/after the field's value.</li>
                         <li><strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon. **Ensure the icon exists in lucide-react.**</li>
                       </ul>
-                      <p className="mt-3 italic">The live preview updates as you edit. The default layout is a starting point; customize its <code>fieldKey</code> values.</p>
+                      <p className="mt-3 italic">The live preview updates as you edit. Ensure your JSON is valid. The default layout provided is a starting point; customize its <code>fieldKey</code> values to match your defined data fields.</p>
                       <p className="font-semibold mb-1 mt-4">Example Element Snippets:</p>
                       <pre className="text-xs bg-background/50 p-2 rounded border whitespace-pre-wrap">
 {`// For a simple text display
 {
-  "fieldKey": "yourCardNameFieldKey",
+  "fieldKey": "yourCardNameFieldKey", // Replace with one of YOUR field keys from above
   "type": "text",
   "style": { "position": "absolute", "top": "20px", "left": "20px", "fontWeight": "bold" }
 }
 
-// For an image
+// For an image (ensure 'yourImageUrlFieldKey' is a field of type 'text' or 'placeholderImage' in Data Fields)
 {
-  "fieldKey": "yourImageUrlFieldKey",
+  "fieldKey": "yourImageUrlFieldKey", // Replace
   "type": "image",
   "style": { 
     "position": "absolute", "top": "50px", "left": "20px", 
@@ -652,17 +665,18 @@ export default function TemplateDesignerPage() {
   }
 }
 
-// For text with a preceding icon
+// For text with a preceding icon (ensure 'yourManaCostFieldKey' exists)
 {
-  "fieldKey": "yourManaCostFieldKey",
+  "fieldKey": "yourManaCostFieldKey", // Replace
   "type": "iconValue",
-  "icon": "Coins",
+  "icon": "Coins", // Lucide icon name
   "style": { "position": "absolute", "top": "20px", "right": "20px" }
 }
 
 // For an icon whose name is stored in your card data
+// (ensure 'yourIconDataFieldKey' exists and is a 'text' field where you'd store "Zap" or "Shield")
 {
-  "fieldKey": "yourIconDataFieldKey",
+  "fieldKey": "yourIconDataFieldKey", // Replace
   "type": "iconFromData",
   "style": { "position": "absolute", "bottom": "20px", "left": "20px" }
 }`}
@@ -683,11 +697,11 @@ export default function TemplateDesignerPage() {
                             <TooltipProvider key={iconName} delayDuration={100}>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" onClick={() => handleCopyIconName(iconName)} className="h-7 w-7 p-1">
-                                    <IconComponent name={iconName} className="h-4 w-4" />
+                                  <Button variant="ghost" size="icon" onClick={() => handleCopyIconName(iconName as string)} className="h-7 w-7 p-1">
+                                    <IconComponent name={iconName as string} className="h-4 w-4" />
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent><p>{iconName}</p></TooltipContent>
+                                <TooltipContent><p>{iconName as string}</p></TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           ))}
@@ -744,3 +758,4 @@ export default function TemplateDesignerPage() {
     </div>
   );
 }
+
