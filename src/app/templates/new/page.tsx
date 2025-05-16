@@ -1,4 +1,3 @@
-
 // src/app/templates/new/page.tsx
 "use client";
 
@@ -121,7 +120,8 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  path += `.png`;
+  
+  path += `.png`; // Specify PNG format
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
@@ -453,39 +453,49 @@ export default function TemplateDesignerPage() {
 
   const handleVisualLayoutChange = useCallback((newElementsFromCanvas: VisualLayoutElement[]) => {
     console.log('[DEBUG] TemplateDesignerPage/handleVisualLayoutChange: Visual layout changed. Elements count:', newElementsFromCanvas.length);
+    // Update the internal representation for the visual editor's preview
+    setEditorLayoutElements(newElementsFromCanvas);
+
+    // Update the main layoutDefinition string
     try {
       const currentFullLayout = JSON.parse(layoutDefinition || `{ "width": "${DEFAULT_CANVAS_WIDTH}px", "height": "${DEFAULT_CANVAS_HEIGHT}px", "elements": [] }`);
       const updatedFullLayout = {
-        ...currentFullLayout,
+        ...currentFullLayout, // Preserve top-level props like width, height, backgroundColor
         elements: newElementsFromCanvas,
       };
       const newLayoutString = JSON.stringify(updatedFullLayout, null, 2);
-      setLayoutDefinition(newLayoutString);
-      if (layoutJsonError) setLayoutJsonError(null);
+      setLayoutDefinition(newLayoutString); // This will trigger the useEffect below
+      if (layoutJsonError) setLayoutJsonError(null); // Clear any old JSON error
     } catch (e) {
       console.error("[DEBUG] TemplateDesignerPage/handleVisualLayoutChange: Error updating layout definition string from visual editor:", e);
+       // Fallback: construct a minimal valid layout definition string
        const fallbackLayout = {
-        width: `${DEFAULT_CANVAS_WIDTH}px`,
+        width: `${DEFAULT_CANVAS_WIDTH}px`, // Use imported constants
         height: `${DEFAULT_CANVAS_HEIGHT}px`,
         elements: newElementsFromCanvas,
       };
       setLayoutDefinition(JSON.stringify(fallbackLayout, null, 2));
     }
-  }, [layoutDefinition, layoutJsonError]);
+  }, [layoutDefinition, layoutJsonError]); // Add layoutDefinition, layoutJsonError as dependencies
 
+  // Effect to parse layoutDefinition string from textarea into editorLayoutElements for the visual editor
   useEffect(() => {
     console.log('[DEBUG] TemplateDesignerPage: layoutDefinition string effect running.');
     try {
       const parsed = JSON.parse(layoutDefinition || '{}');
       const newElements = Array.isArray(parsed.elements) ? parsed.elements : [];
+      // Only update if the new elements derived from the string are different
+      // This comparison helps prevent infinite loops.
       if (JSON.stringify(newElements) !== JSON.stringify(editorLayoutElements)) {
           console.log('[DEBUG] TemplateDesignerPage: Parsed elements from layoutDefinition differ. Updating editorLayoutElements.');
           setEditorLayoutElements(newElements);
       }
     } catch (e) {
-      console.warn("[DEBUG] TemplateDesignerPage: Could not parse layoutDefinition for visual editor prop update", e);
+      // If JSON is invalid, don't update editorLayoutElements, user might be in mid-edit.
+      // console.warn("[DEBUG] TemplateDesignerPage: Could not parse layoutDefinition for visual editor prop update", e);
+      // Consider setting a JSON error state here if not already handled by onBlur
     }
-  }, [layoutDefinition]); // Corrected: editorLayoutElements was removed from here to stop loops
+  }, [layoutDefinition]); // Only depends on layoutDefinition string
 
 
   if (templatesLoading) {
@@ -539,10 +549,10 @@ export default function TemplateDesignerPage() {
           <div>
             <h3 className="text-lg font-semibold mb-1">Data Fields</h3>
             <ScrollArea className="h-auto pr-0">
-              <div className="space-y-3 border rounded-md p-3">
+              <div className="space-y-3"> {/* Removed border p-3 from here */}
                 {fields.map((field, index) => (
                   <FieldRow
-                    key={index}
+                    key={index} // Consider a more stable key if fields reorder, but index is fine for add/remove at end
                     field={field}
                     onChange={(updatedField) => handleFieldChange(index, updatedField)}
                     onRemove={() => handleRemoveField(index)}
@@ -550,7 +560,7 @@ export default function TemplateDesignerPage() {
                   />
                 ))}
                 {fields.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
+                  <p className="text-sm text-muted-foreground text-center py-4 border rounded-md">
                     No fields added yet. Click "Add Field" to begin.
                   </p>
                 )}
@@ -560,7 +570,7 @@ export default function TemplateDesignerPage() {
               onClick={handleAddField}
               variant="outline"
               size="sm"
-              disabled={isSaving || showVisualEditor}
+              disabled={isSaving || showVisualEditor} // Disable if visual editor is active
               className="mt-3"
               title={showVisualEditor ? "Disable visual editor to add/remove fields" : "Add a new data field"}
             >
@@ -585,16 +595,16 @@ export default function TemplateDesignerPage() {
 
       <div className="flex flex-col md:flex-row gap-6">
         {showVisualEditor ? (
-          <Card className="shadow-md flex-grow md:w-full"> {/* Full width when visual editor is active */}
+          <Card className="shadow-md flex-grow md:w-full"> {/* Visual Editor Card Takes Full Width */}
              <CardHeader>
                  <CardTitle className="text-xl font-bold">Visual Layout Editor</CardTitle>
-                 <CardDescription>Drag fields from the "Available Fields" bank onto the canvas. The "Layout Elements (JSON)" on the right will update.</CardDescription>
+                 <CardDescription>Toggle elements on/off using the left panel. Drag and resize them on the canvas. The "Layout Elements (JSON)" on the right will update.</CardDescription>
              </CardHeader>
              <CardContent>
                <CardLayoutEditor
                   fieldKeys={currentTemplateFieldKeys}
-                  initialElements={editorLayoutElements}
-                  onChange={handleVisualLayoutChange}
+                  initialElements={editorLayoutElements} // Pass the parsed elements
+                  onChange={handleVisualLayoutChange} // This updates layoutDefinition string
                   canvasWidth={DEFAULT_CANVAS_WIDTH}
                   canvasHeight={DEFAULT_CANVAS_HEIGHT}
                 />
@@ -611,6 +621,7 @@ export default function TemplateDesignerPage() {
           </Card>
         ) : (
           <>
+            {/* Left Column: Layout Definition JSON */}
             <Card className="md:w-[65%] flex flex-col shadow-md">
               <CardHeader>
                 <CardTitle className="text-xl font-bold">Layout Definition (JSON)</CardTitle>
@@ -753,6 +764,7 @@ export default function TemplateDesignerPage() {
                 </Button>
               </CardFooter>
             </Card>
+            {/* Right Column: Live Preview */}
             <Card className="md:w-[35%] sticky top-20 self-start shadow-md">
               <CardHeader>
                 <div className="flex items-center justify-between">

@@ -1,4 +1,3 @@
-
 // src/components/CardLayoutEditor.tsx
 "use client";
 
@@ -7,10 +6,12 @@ import {
   Tldraw,
   Editor,
   createShapeId,
-  TLGeoShape, 
+  TLGeoShape,
   TLShape,    
 } from '@tldraw/tldraw';
 import '@tldraw/tldraw/tldraw.css';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT } from '@/lib/card-templates';
 
 
@@ -44,11 +45,14 @@ export interface CardLayoutEditorProps {
   canvasHeight?: number;
 }
 
-// Constants 
+// Constants
 // DEFAULT_CANVAS_WIDTH and DEFAULT_CANVAS_HEIGHT are now imported from @/lib/card-templates
-const DEFAULT_SHAPE_WIDTH = 100;
-const DEFAULT_SHAPE_HEIGHT = 30;
+const DEFAULT_SHAPE_WIDTH = 120;
+const DEFAULT_SHAPE_HEIGHT = 32;
 const DEFAULT_FONT_SIZE = '12px'; 
+const SHAPE_CASCADE_OFFSET_X = 15;
+const SHAPE_CASCADE_OFFSET_Y = 15;
+
 
 // --- Custom Shape for representing layout fields ---
 type CardFieldTldrawShape = TLGeoShape & {
@@ -67,23 +71,27 @@ function isCardFieldTldrawShape(shape: TLShape): shape is CardFieldTldrawShape {
 
 // Helper to convert our LayoutElement to something tldraw can create
 function layoutElementToShapeProps(element: LayoutElement, editor: Editor | null, index: number): Omit<CardFieldTldrawShape, 'parentId' | 'index' | 'rotation' | 'isLocked'> {
-  console.log('[DEBUG] CardLayoutEditor/layoutElementToInitialShape: Converting element', element);
+  console.log('[DEBUG] CardLayoutEditor/layoutElementToShapeProps: Converting element', element, 'at index', index);
+  // Determine a cascading default position if not provided
+  const defaultX = 10 + (index % 3) * (DEFAULT_SHAPE_WIDTH + SHAPE_CASCADE_OFFSET_X);
+  const defaultY = 10 + Math.floor(index / 3) * (DEFAULT_SHAPE_HEIGHT + SHAPE_CASCADE_OFFSET_Y);
+  
   return {
     id: createShapeId(`${element.fieldKey}-${index}-${Date.now()}`), 
     type: 'geo',
-    x: parseFloat(element.style.left || '10'),
-    y: parseFloat(element.style.top || '10'),
+    x: parseFloat(element.style.left || `${defaultX}`),
+    y: parseFloat(element.style.top || `${defaultY}`),
     props: {
       geo: 'rectangle',
       w: parseFloat(element.style.width || `${DEFAULT_SHAPE_WIDTH}`),
       h: parseFloat(element.style.height || `${DEFAULT_SHAPE_HEIGHT}`),
       text: element.fieldKey,
       font: 'sans', 
-      size: 's',     
-      color: 'black', 
-      fill: 'solid',  
-      fillOpacity: 0.05,
-      dash: 'draw',   
+      size: 's',     // tldraw small size
+      color: 'black', // Default shape outline/text color from tldraw theme
+      fill: 'solid',  // Enable fill
+      fillOpacity: 0.05, // Make fill very light
+      dash: 'draw',   // Dashed outline
       verticalAlign: 'middle',
       align: 'middle',
     },
@@ -101,7 +109,7 @@ function tldrawShapeToLayoutElement(shape: CardFieldTldrawShape): LayoutElement 
   // console.log('[DEBUG] CardLayoutEditor/tldrawShapeToLayoutElement: Converting shape', shape);
   return {
     fieldKey: shape.meta.fieldKey,
-    type: 'text', 
+    type: 'text', // Defaulting to 'text' as type is not stored on tldraw shape for minimal version
     style: {
       position: 'absolute',
       top: `${round(shape.y)}px`,
@@ -114,41 +122,41 @@ function tldrawShapeToLayoutElement(shape: CardFieldTldrawShape): LayoutElement 
 }
 
 
-// --- FieldBankItem Component ---
-interface FieldBankItemProps {
+// --- FieldToggleItem Component ---
+interface FieldToggleItemProps {
   fieldKey: string;
+  isChecked: boolean;
+  onToggle: (fieldKey: string, isChecked: boolean) => void;
 }
 
-const FieldBankItem: React.FC<FieldBankItemProps> = ({ fieldKey }) => {
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    // console.log('[DEBUG] FieldBankItem/handleDragStart: Dragging fieldKey', fieldKey);
-    e.dataTransfer.setData('application/x-cardforge-fieldkey', fieldKey); 
-    e.dataTransfer.effectAllowed = 'copy';
-  };
-
+const FieldToggleItem: React.FC<FieldToggleItemProps> = ({ fieldKey, isChecked, onToggle }) => {
+  const uniqueId = `toggle-${fieldKey}`;
   return (
-    <div
-      draggable
-      onDragStart={handleDragStart}
-      className="p-2 mb-2 border border-border rounded-md bg-card hover:bg-muted cursor-grab active:cursor-grabbing text-sm"
-      title={`Drag to add "${fieldKey}"`}
-    >
-      {fieldKey}
+    <div className="flex items-center p-1.5 mb-1 border-b border-border last:border-b-0 hover:bg-muted/50 rounded-sm transition-colors">
+      <Checkbox
+        id={uniqueId}
+        checked={isChecked}
+        onCheckedChange={(checked) => {
+          console.log(`[DEBUG] FieldToggleItem: ${fieldKey} toggled to ${Boolean(checked)}`);
+          onToggle(fieldKey, Boolean(checked));
+        }}
+        className="mr-2 h-4 w-4"
+      />
+      <Label htmlFor={uniqueId} className="text-xs font-medium cursor-pointer flex-grow">
+        {fieldKey}
+      </Label>
     </div>
   );
 };
 
+
 // --- Main CardLayoutEditor Component ---
-// IMPORTANT ASSET REMINDER:
-// For tldraw to work correctly, you MUST copy the `tldraw-assets` folder
-// from `node_modules/@tldraw/tldraw/public/` to your project's `public/` directory.
-// The `assetUrls.baseUrl` below is configured for this setup.
 export function CardLayoutEditor({
   fieldKeys,
   initialElements = [],
   onChange,
-  canvasWidth = DEFAULT_CANVAS_WIDTH, 
-  canvasHeight = DEFAULT_CANVAS_HEIGHT, 
+  canvasWidth = DEFAULT_CANVAS_WIDTH,
+  canvasHeight = DEFAULT_CANVAS_HEIGHT,
 }: CardLayoutEditorProps) {
   const [editor, setEditor] = useState<Editor | null>(null);
   const [currentLayoutJsonElements, setCurrentLayoutJsonElements] = useState<LayoutElement[]>(initialElements);
@@ -162,10 +170,15 @@ export function CardLayoutEditor({
     console.log('[DEBUG] CardLayoutEditor/onEditorMount: Editor mounted.');
     setEditor(editorInstance);
     editorInstance.updateInstanceState({ isGridMode: true }); 
+    editorInstance.updateInstanceState({
+        isReadonly: false,
+        isDebugMode: false,
+    });
     // Initial population is now solely handled by the useEffect watching [editor, initialElements]
   }, [setEditor]); // Removed initialElements dependency
 
 
+  // Effect to synchronize initialElements prop with the tldraw canvas
   useEffect(() => {
     if (!editor) {
         console.log('[DEBUG] CardLayoutEditor: initialElements prop effect: editor not ready.');
@@ -180,10 +193,11 @@ export function CardLayoutEditor({
     const currentShapesOnCanvas = editor.currentPageShapesArray.filter(isCardFieldTldrawShape);
     const currentElementsOnCanvas = currentShapesOnCanvas.map(tldrawShapeToLayoutElement);
 
+    // Basic deep comparison for arrays of objects.
     if (JSON.stringify(initialElements) !== JSON.stringify(currentElementsOnCanvas)) {
       console.log('[DEBUG] CardLayoutEditor: initialElements differ from canvas. Re-syncing canvas. Initial:', initialElements.length, 'Canvas Elements:', currentElementsOnCanvas.length);
       editor.batch(() => {
-        const idsToDelete = editor.currentPageShapesArray.map(s => s.id); // Delete ALL shapes on canvas
+        const idsToDelete = editor.currentPageShapesArray.map(s => s.id); 
         if (idsToDelete.length > 0) {
             editor.deleteShapes(idsToDelete);
         }
@@ -203,16 +217,18 @@ export function CardLayoutEditor({
     } else {
       console.log('[DEBUG] CardLayoutEditor: initialElements are same as on canvas. No re-sync needed.');
     }
-  }, [editor, initialElements]); 
+     // After syncing canvas, update currentLayoutJsonElements from the source of truth (initialElements)
+    setCurrentLayoutJsonElements([...initialElements]);
+
+  }, [editor, initialElements]); // Rerun if editor instance or initialElements from prop change
 
 
+  // Effect to listen to tldraw store changes and update JSON output
   useEffect(() => {
     if (!editor) return;
 
-    const handleChange = () => {
-      // console.log('[DEBUG] CardLayoutEditor: tldraw store change detected.');
+    const handleChangeEventInDocument = () => {
       if (!editor.currentPageShapesArray) {
-        // console.log('[DEBUG] CardLayoutEditor: editor.currentPageShapesArray not ready in store listener.');
         return;
       }
       
@@ -226,7 +242,7 @@ export function CardLayoutEditor({
       }
     };
 
-    const cleanup = editor.store.listen(handleChange, {
+    const cleanup = editor.store.listen(handleChangeEventInDocument, {
       source: 'user', 
       scope: 'document', 
     });
@@ -234,93 +250,103 @@ export function CardLayoutEditor({
     return () => cleanup(); 
   }, [editor, currentLayoutJsonElements]); // Depend on internal representation to avoid unnecessary external calls
 
-  const handleDropOnCanvasContainer = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      if (!editor) return;
+  const handleToggleFieldOnCanvas = useCallback((fieldKeyToToggle: string, isChecked: boolean) => {
+    if (!editor) {
+      console.warn('[DEBUG] CardLayoutEditor/handleToggleFieldOnCanvas: Editor not available.');
+      return;
+    }
+    console.log(`[DEBUG] CardLayoutEditor/handleToggleFieldOnCanvas: fieldKey: ${fieldKeyToToggle}, isChecked: ${isChecked}`);
 
-      const fieldKey = e.dataTransfer.getData('application/x-cardforge-fieldkey');
-      console.log('[DEBUG] CardLayoutEditor/handleDropOnCanvasContainer: Dropped fieldKey', fieldKey);
-      if (!fieldKeys.includes(fieldKey)) {
-        console.warn('[DEBUG] CardLayoutEditor/handleDropOnCanvasContainer: Dropped unknown fieldKey', fieldKey);
-        return;
+    editor.batch(() => {
+      const existingShapesForFieldKey = editor.currentPageShapesArray
+        .filter(isCardFieldTldrawShape)
+        .filter(shape => shape.meta.fieldKey === fieldKeyToToggle);
+
+      if (isChecked) {
+        if (existingShapesForFieldKey.length === 0) {
+          const currentFieldShapesCount = editor.currentPageShapesArray.filter(isCardFieldTldrawShape).length;
+          
+          // Basic cascading placement for new shapes
+          const x = 10 + (currentFieldShapesCount % 2) * (DEFAULT_SHAPE_WIDTH + SHAPE_CASCADE_OFFSET_X);
+          const y = 10 + Math.floor(currentFieldShapesCount / 2) * (DEFAULT_SHAPE_HEIGHT + SHAPE_CASCADE_OFFSET_Y);
+
+          const newShapeProps = layoutElementToShapeProps({
+            fieldKey: fieldKeyToToggle,
+            type: 'text', 
+            style: {
+              left: `${x}px`,
+              top: `${y}px`,
+              width: `${DEFAULT_SHAPE_WIDTH}px`,
+              height: `${DEFAULT_SHAPE_HEIGHT}px`,
+              fontSize: DEFAULT_FONT_SIZE,
+            }
+          }, editor, currentFieldShapesCount) as CardFieldTldrawShape; // Pass index for potential use in ID generation
+          editor.createShape(newShapeProps);
+          console.log('[DEBUG] CardLayoutEditor: Created shape for', fieldKeyToToggle, 'at', x, y);
+        } else {
+          console.log('[DEBUG] CardLayoutEditor: Shape for', fieldKeyToToggle, 'already exists. Toggle ON, no action.');
+        }
+      } else {
+        if (existingShapesForFieldKey.length > 0) {
+          editor.deleteShapes(existingShapesForFieldKey.map(s => s.id));
+          console.log('[DEBUG] CardLayoutEditor: Deleted shapes for', fieldKeyToToggle);
+        } else {
+            console.log('[DEBUG] CardLayoutEditor: No shape found for', fieldKeyToToggle, 'to delete. Toggle OFF, no action.');
+        }
       }
+    });
 
-      const tldrawContainer = editor.getContainer(); 
-      if (!tldrawContainer) {
-        console.warn('[DEBUG] CardLayoutEditor/handleDropOnCanvasContainer: tldraw container not found.');
-        return;
-      }
-      
-      const rect = tldrawContainer.getBoundingClientRect();
-      const xOnCanvas = e.clientX - rect.left;
-      const yOnCanvas = e.clientY - rect.top;
+    // After tldraw's internal store updates (from create/delete), we need to trigger our JSON update.
+    // The store listener should pick this up, but to be safe if no other "user" event follows.
+    setTimeout(() => {
+        if (!editor || !editor.currentPageShapesArray) return;
+        const shapes = editor.currentPageShapesArray.filter(isCardFieldTldrawShape);
+        const newLayoutElements = shapes.map(tldrawShapeToLayoutElement);
+        // Check if this state update is redundant given the store listener
+        if (JSON.stringify(newLayoutElements) !== JSON.stringify(currentLayoutJsonElements)) {
+            console.log('[DEBUG] CardLayoutEditor/handleToggleFieldOnCanvas: Forcing JSON update after toggle.');
+            setCurrentLayoutJsonElements(newLayoutElements);
+            onChangeRef.current(newLayoutElements);
+        }
+    }, 50); // Small delay
 
-      const pointInPageSpace = editor.screenToPage({ x: xOnCanvas, y: yOnCanvas });
-      console.log('[DEBUG] CardLayoutEditor/handleDropOnCanvasContainer: Drop at page coords', pointInPageSpace);
+  }, [editor, canvasWidth, canvasHeight, currentLayoutJsonElements]); // Added currentLayoutJsonElements to deps for the comparison
 
-      editor.batch(() => {
-        editor.createShape<CardFieldTldrawShape>({
-          id: createShapeId(fieldKey + Date.now()),
-          type: 'geo',
-          x: pointInPageSpace.x - DEFAULT_SHAPE_WIDTH / 2,
-          y: pointInPageSpace.y - DEFAULT_SHAPE_HEIGHT / 2,
-          props: {
-            geo: 'rectangle',
-            w: DEFAULT_SHAPE_WIDTH,
-            h: DEFAULT_SHAPE_HEIGHT,
-            text: fieldKey,
-            font: 'sans',
-            size: 's', 
-            color: 'black',
-            fill: 'solid',
-            fillOpacity: 0.05,
-            dash: 'draw',
-            verticalAlign: 'middle',
-            align: 'middle',
-          },
-          meta: {
-            fieldKey: fieldKey,
-            isLayoutElement: true,
-            customFontSize: DEFAULT_FONT_SIZE,
-          },
-        });
-      });
-    },
-    [editor, fieldKeys]
-  );
-
-  const handleDragOverCanvasContainer = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-  };
+  const activeFieldKeysOnCanvas = new Set(currentLayoutJsonElements.map(el => el.fieldKey));
 
   return (
     <div className="flex h-[550px] w-full border border-border rounded-md bg-background text-foreground shadow-sm">
       {/* 1. Field Bank (left panel) */}
       <div className="w-[160px] p-3 border-r border-border overflow-y-auto flex flex-col shrink-0">
         <h3 className="text-sm font-semibold mb-3 sticky top-0 bg-background pt-1 pb-2 z-10 border-b border-border">
-          Available Fields
+          Canvas Elements
         </h3>
         <div className="flex-grow">
           {fieldKeys.length > 0 ? (
-            fieldKeys.map((key) => <FieldBankItem key={key} fieldKey={key} />)
+            fieldKeys.map((key) => (
+              <FieldToggleItem
+                key={key}
+                fieldKey={key}
+                isChecked={activeFieldKeysOnCanvas.has(key)}
+                onToggle={handleToggleFieldOnCanvas}
+              />
+            ))
           ) : (
-            <p className="text-xs text-muted-foreground">No fields provided.</p>
+            <p className="text-xs text-muted-foreground">No fields defined for template.</p>
           )}
         </div>
       </div>
+
       {/* 2. Canvas (center panel) */}
       <div
-        className="flex-grow relative flex items-center justify-center bg-muted/20 p-4" 
-        onDrop={handleDropOnCanvasContainer}
-        onDragOver={handleDragOverCanvasContainer}
+        className="flex-grow relative flex items-center justify-center bg-muted/20 p-4"
       >
         <div 
           style={{ width: canvasWidth, height: canvasHeight }}
           className="bg-card shadow-lg border border-input overflow-hidden" 
         >
           <Tldraw
-            key={`tldraw-editor-${canvasWidth}-${canvasHeight}`} // More stable key
+            key={`tldraw-editor-${canvasWidth}-${canvasHeight}`} 
             persistenceKey={`card_layout_editor_instance_${canvasWidth}x${canvasHeight}`} 
             onMount={onEditorMount}
             assetUrls={{
@@ -333,14 +359,15 @@ export function CardLayoutEditor({
                 ZoomMenu: null,
                 MainMenu: null,
                 Minimap: null,
-                StylePanel: null,
-                // DebugMenu: null, 
-                // NavigationPanel: null, 
-                // Toolbar: null, 
+                StylePanel: null, // Hides the style panel, good for minimal
+                // DebugMenu: null, // Can be useful during dev
+                // NavigationPanel: null, // Hides undo/redo. tldraw uses cmd/ctrl+z
+                // Toolbar: null, // Hides the main drawing tools
             }}
           />
         </div>
       </div>
+
       {/* 3. Live JSON Output (right panel) */}
       <div className="w-[220px] p-3 border-l border-border overflow-y-auto flex flex-col shrink-0">
         <h3 className="text-sm font-semibold mb-3 sticky top-0 bg-background pt-1 pb-2 z-10 border-b border-border">
@@ -354,3 +381,5 @@ export function CardLayoutEditor({
   );
 }
 
+// Ensure tldraw assets (fonts, cursors) are in `public/tldraw-assets/`.
+// You might need to copy them from `node_modules/@tldraw/tldraw/public/`.
