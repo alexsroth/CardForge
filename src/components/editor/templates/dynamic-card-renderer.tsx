@@ -9,25 +9,88 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIconsAll from 'lucide-react'; // For general lookup
 // Explicitly import commonly used icons and the fallback icon
 import {
-  Sword, Moon, Pencil, Coins,
+  Coins, Sword, Moon, Pencil, HelpCircle as FallbackIcon,
   Zap, Brain, Heart, Skull, Star, Gem, Settings, PlusCircle, MinusCircle, XCircle, CheckCircle2,
   AlertTriangle, Info, Wand2, Sparkles, Sun, Cloud, Flame, Leaf, Droplets, Feather, Eye, Swords, ShieldCheck,
   ShieldAlert, Aperture, Book, Camera, Castle, Crown, Diamond, Dice5, Flag, Flower, Gift, Globe, KeyRound, Lightbulb, Lock,
   MapPin, Medal, Mountain, Music, Package, Palette, PawPrint, Phone, Puzzle, Rocket, Save, Search, Ship, Sprout, Ticket, Trash2,
-  TreePine, Trophy, Umbrella, User, Video, Wallet, Watch, Wifi, Wrench, HelpCircle as FallbackIcon
+  TreePine, Trophy, Umbrella, User, Video, Wallet, Watch, Wifi, Wrench
 } from 'lucide-react';
-import { Shield as ShieldIcon } from 'lucide-react'; // Import Shield with an alias
+import { Shield as ShieldIcon } from 'lucide-react'; // Shield is imported as ShieldIcon
 import { cn } from '@/lib/utils';
 
 // Create a registry for explicitly imported icons
 const iconRegistry: { [key: string]: React.ElementType<LucideIconsAll.LucideProps> } = {
-  Sword, Shield, Moon, Pencil, Coins,
-  Zap, Brain, Heart, Skull, Star, Gem, Settings, PlusCircle, MinusCircle, XCircle, CheckCircle2, 
-  AlertTriangle, Info, Wand2, Sparkles, Sun, Cloud, Flame, Leaf, Droplets, Feather, Eye, Swords, 
-  ShieldCheck, ShieldAlert, Aperture, Book, Camera, Castle, Crown, Diamond, Dice5, Flag, ShieldIcon,
-  Flower, Gift, Globe, KeyRound, Lightbulb, Lock, MapPin, Medal, Mountain, Music, Package, 
-  Palette, PawPrint, Phone, Puzzle, Rocket, Save, Search, Ship, Sprout, Ticket, Trash2, TreePine, 
-  Trophy, Umbrella, User, Video, Wallet, Watch, Wifi, Wrench, HelpCircle: FallbackIcon
+  "Coins": Coins,
+  "Sword": Sword,
+  "Shield": ShieldIcon, // Use the alias
+  "Moon": Moon,
+  "Pencil": Pencil,
+  "Zap": Zap,
+  "Brain": Brain,
+  "Heart": Heart,
+  "Skull": Skull,
+  "Star": Star,
+  "Gem": Gem,
+  "Settings": Settings,
+  "PlusCircle": PlusCircle,
+  "MinusCircle": MinusCircle,
+  "XCircle": XCircle,
+  "CheckCircle2": CheckCircle2,
+  "AlertTriangle": AlertTriangle,
+  "Info": Info,
+  "Wand2": Wand2,
+  "Sparkles": Sparkles,
+  "Sun": Sun,
+  "Cloud": Cloud,
+  "Flame": Flame,
+  "Leaf": Leaf,
+  "Droplets": Droplets,
+  "Feather": Feather,
+  "Eye": Eye,
+  "Swords": Swords,
+  "ShieldCheck": ShieldCheck,
+  "ShieldAlert": ShieldAlert,
+  "Aperture": Aperture,
+  "Book": Book,
+  "Camera": Camera,
+  "Castle": Castle,
+  "Crown": Crown,
+  "Diamond": Diamond,
+  "Dice5": Dice5,
+  "Flag": Flag,
+  "Flower": Flower,
+  "Gift": Gift,
+  "Globe": Globe,
+  "KeyRound": KeyRound,
+  "Lightbulb": Lightbulb,
+  "Lock": Lock,
+  "MapPin": MapPin,
+  "Medal": Medal,
+  "Mountain": Mountain,
+  "Music": Music,
+  "Package": Package,
+  "Palette": Palette,
+  "PawPrint": PawPrint,
+  "Phone": Phone,
+  "Puzzle": Puzzle,
+  "Rocket": Rocket,
+  "Save": Save,
+  "Search": Search,
+  "Ship": Ship,
+  "Sprout": Sprout,
+  "Ticket": Ticket,
+  "Trash2": Trash2,
+  "TreePine": TreePine,
+  "Trophy": Trophy,
+  "Umbrella": Umbrella,
+  "User": User,
+  "Video": Video,
+  "Wallet": Wallet,
+  "Watch": Watch,
+  "Wifi": Wifi,
+  "Wrench": Wrench,
+  "HelpCircle": FallbackIcon,
 };
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIconsAll.LucideProps) => {
@@ -88,13 +151,12 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
   };
 
  return (
- <div style={cardStyle} className="select-none">
+ <div style={cardStyle} className="select-none" title={`Card ID: ${card.id} | Template: ${template.name} (${template.id})`}>
  {layout.elements.map((element, index) => {
  try {
  const rawValue = card[element.fieldKey as keyof CardData];
  let elementStyle = { ...(element.style || {}), zIndex: index + 1 };
  if (showElementOutlines) {
-
  elementStyle = {
  ...elementStyle,
  outline: '1px dashed rgba(255,0,0,0.7)',
@@ -105,8 +167,7 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
  const hoverTitle = `fieldKey: ${element.fieldKey}`;
  let valueForDisplay: any = rawValue;
  if (rawValue === undefined || rawValue === null) {
-
- if (element.type === 'number') valueForDisplay = '';
+ if (element.type === 'number') valueForDisplay = ''; 
  else if (element.type === 'boolean') valueForDisplay = false;
  else valueForDisplay = '';
  }
@@ -126,41 +187,41 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
  elementContent = <div className="whitespace-pre-wrap p-1">{content}</div>;
  break;
  case 'image':
- let imageUrl: string;
- if (typeof rawValue === 'string' && (rawValue.startsWith('http://') || rawValue.startsWith('https://') || rawValue.startsWith('/') || rawValue.startsWith('data:'))) {
- imageUrl = rawValue;
+                let imageUrl: string;
+                const isRawValueValidUrl = typeof rawValue === 'string' && (rawValue.startsWith('http://') || rawValue.startsWith('https://') || rawValue.startsWith('/') || rawValue.startsWith('data:'));
 
- } else {
- const imgStyle = element.style || {};
- const widthStr = String(imgStyle.width || '100').replace(/px|%|em|rem|vw|vh/gi, '');
- const heightStr = String(imgStyle.height || '100').replace(/px|%|em|rem|vw|vh/gi, '');
- const widthNum = parseInt(widthStr, 10);
- const heightNum = parseInt(heightStr, 10);
-
- const placeholderWidth = isNaN(widthNum) || widthNum <= 0 ? 100 : widthNum;
- const placeholderHeight = isNaN(heightNum) || heightNum <= 0 ? 100 : heightNum;
-
- if (typeof rawValue === 'string' && rawValue.trim() !== '' && !(rawValue.startsWith('http://') || rawValue.startsWith('https://') || rawValue.startsWith('/') || rawValue.startsWith('data:'))) {
- console.warn(`DynamicCardRenderer: fieldKey "${element.fieldKey}" (value: "${rawValue}") used as image type but is not a valid URL. Using placeholder.`);
- }
- imageUrl = `https://placehold.co/${placeholderWidth}x${placeholderHeight}.png/E8E8E8/AAAAAA?text=Invalid+Src`;
- }
- const altText = card.name || `Image for ${element.fieldKey}`;
- elementContent = (
-
- <div style={{position: 'relative', width: '100%', height: '100%'}}>
- <Image
- src={imageUrl}
- alt={altText}
- sizes="100vw"
- fill
- style={{ objectFit: (element.style?.objectFit as any) || 'contain' }}
- data-ai-hint={card.dataAiHint || `${element.fieldKey} illustration`}
- priority={index < 3}
- />
- </div>
- );
- break;
+                if (isRawValueValidUrl) {
+                  imageUrl = rawValue as string;
+                } else {
+                  const imgStyle = element.style || {};
+                  const widthStr = String(imgStyle.width || '100').replace(/px|%|em|rem|vw|vh/gi, '');
+                  const heightStr = String(imgStyle.height || '100').replace(/px|%|em|rem|vw|vh/gi, '');
+                  const widthNum = parseInt(widthStr, 10);
+                  const heightNum = parseInt(heightStr, 10);
+                  
+                  const placeholderWidth = isNaN(widthNum) || widthNum <= 0 ? 100 : widthNum;
+                  const placeholderHeight = isNaN(heightNum) || heightNum <= 0 ? 100 : heightNum;
+                  
+                  if (typeof rawValue === 'string' && rawValue.trim() !== '') {
+                    console.warn(`DynamicCardRenderer: fieldKey "${element.fieldKey}" (value: "${rawValue}") used as image type but is not a valid URL. Using placeholder.`);
+                  }
+                  imageUrl = `https://placehold.co/${placeholderWidth}x${placeholderHeight}.png/E8E8E8/AAAAAA?text=Invalid+Src`;
+                }
+                const altText = card.name || `Image for ${element.fieldKey}`;
+                elementContent = (
+                  <div style={{position: 'relative', width: '100%', height: '100%'}}>
+                    <Image
+                        src={imageUrl}
+                        alt={altText}
+                        sizes="100vw" // Suitable for fill
+                        fill
+                        style={{ objectFit: (element.style?.objectFit as any) || 'contain' }}
+                        data-ai-hint={card.dataAiHint || `${element.fieldKey} illustration`}
+                        priority={index < 3} // Prioritize loading for early images
+                    />
+                  </div>
+                );
+                break;
  case 'iconValue':
  elementContent = (
  <>
@@ -182,7 +243,7 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
  element.className,
  (element.type === 'iconValue' || element.type === 'iconFromData') && 'flex items-center',
  element.type === 'iconValue' && 'gap-1',
- element.type === 'iconFromData' && 'justify-center'
+ element.type === 'iconFromData' && 'justify-center' 
  );
 
  const finalElement = element.type === 'textarea' ? (
@@ -243,3 +304,4 @@ export default function DynamicCardRenderer({ card, template, showElementOutline
  </div>
   );
 }
+
