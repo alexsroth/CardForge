@@ -1,4 +1,3 @@
-
 // src/components/template-designer/field-row.tsx
 "use client";
 
@@ -13,6 +12,7 @@ import { Textarea } from '../ui/textarea';
 import { cn } from '@/lib/utils';
 
 export interface TemplateFieldDefinition {
+  _uiId?: string; // Stable unique ID for React key purposes
   key: string;
   label: string;
   type: 'text' | 'textarea' | 'number' | 'select' | 'boolean' | 'placeholderImage';
@@ -59,13 +59,14 @@ function generatePreviewPlaceholderUrl(config: {
       path += `/${cleanTextColor}`;
     }
   }
-  path += `.png`;
+  path += `.png`; // Always request PNG
 
   let fullUrl = `https://placehold.co/${path}`;
   const cleanText = text?.trim();
   if (cleanText) {
     fullUrl += `?text=${encodeURIComponent(cleanText)}`;
   }
+  // console.log('[DEBUG] FieldRow/generatePreviewPlaceholderUrl: Generated URL', fullUrl, 'from config', config);
   return fullUrl;
 }
 
@@ -74,7 +75,11 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
   const [isSecondaryVisible, setIsSecondaryVisible] = useState(false);
   const [generatedPlaceholderUrl, setGeneratedPlaceholderUrl] = useState('');
 
+  // console.log('[DEBUG] FieldRow rendering for field:', field.label, field.key, field._uiId);
+
+
   useEffect(() => {
+    // console.log('[DEBUG] FieldRow useEffect for placeholder URL, field type:', field.type);
     if (field.type === 'placeholderImage') {
       const url = generatePreviewPlaceholderUrl({
         width: field.placeholderConfigWidth,
@@ -106,12 +111,11 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
 
     if (type === 'checkbox') {
       processedValue = e.target.checked;
-    } else if (name === 'defaultValue' && field.type === 'number') { // Only parse defaultValue if field type is number
+    } else if (name === 'defaultValue' && field.type === 'number') {
       processedValue = value === '' ? '' : (isNaN(Number(value)) ? (field[name as keyof TemplateFieldDefinition] || '') : Number(value));
     } else if (name === 'placeholderConfigWidth' || name === 'placeholderConfigHeight') {
       processedValue = value === '' ? '' : (isNaN(Number(value)) ? (field[name as keyof TemplateFieldDefinition] || '') : Number(value));
     }
-    // For previewValue, it's always kept as a string from the input
     handleGenericChange(name as keyof TemplateFieldDefinition, processedValue);
   };
 
@@ -154,7 +158,7 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
          <div className={cn("flex-grow min-w-[180px] basis-full sm:basis-auto", !hasAnySecondaryContent && "sm:pl-12")}>
           <Label htmlFor={`field-label-${field.key}`} className="text-sm font-medium">Field Label</Label>
           <Input
-            id={`field-label-${field.key}`}
+            id={`field-label-${field.key}`} // This ID can still use field.key as it's for label association
             name="label"
             value={field.label}
             onChange={handleInputChange}
@@ -164,9 +168,9 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
           />
         </div>
         <div className="flex-grow min-w-[130px] basis-1/2 sm:basis-auto sm:flex-grow-0 sm:w-44">
-          <Label htmlFor={`field-key-${field.key}`} className="text-sm font-medium">Field Key</Label>
+          <Label htmlFor={`field-key-display-${field.key}`} className="text-sm font-medium">Field Key</Label>
           <Input
-            id={`field-key-${field.key}`}
+            id={`field-key-display-${field.key}`} // Display-only, so field.key is fine
             name="key"
             value={field.key}
             readOnly
@@ -209,8 +213,7 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
 
       {isSecondaryVisible && (
         <div className="pt-2 mt-1 border-t border-dashed space-y-3">
-          {/* Preview Value Input - Common to most types */}
-          {field.type !== 'placeholderImage' && ( // No separate preview for placeholderImage as it's derived
+          {field.type !== 'placeholderImage' && (
             <div>
               <Label htmlFor={`field-previewValue-${field.key}`} className="text-xs text-muted-foreground">
                 Preview Value (for live layout preview)
@@ -227,7 +230,6 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
             </div>
           )}
 
-          {/* Placeholder and Default Value Grid */}
           {(field.placeholder || field.defaultValue !== undefined || field.type === 'boolean' || field.type === 'number') && field.type !== 'placeholderImage' && (
              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2">
                 {(field.type !== 'boolean' || field.placeholder) && (
@@ -276,7 +278,6 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
              </div>
           )}
           
-          {/* Select Options */}
           {field.type === 'select' && (
             <div className="pt-2">
               <Label htmlFor={`field-options-${field.key}`} className="text-xs text-muted-foreground">Options (comma-separated value:label pairs)</Label>
@@ -294,7 +295,6 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
             </div>
           )}
 
-          {/* Placeholder Image Configuration */}
           {field.type === 'placeholderImage' && (
             <div className="space-y-3">
               <p className="text-xs text-muted-foreground font-medium">Placeholder Image Configuration:</p>
@@ -326,7 +326,7 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
                   />
                 </div>
                 <div>
-                  <Label htmlFor={`field-ph-bgcolor-${field.key}`} className="text-xs text-muted-foreground">Background Color (hex/name)</Label>
+                  <Label htmlFor={`field-ph-bgcolor-${field.key}`} className="text-xs text-muted-foreground">Background Color (hex, no #)</Label>
                   <Input
                     id={`field-ph-bgcolor-${field.key}`}
                     name="placeholderConfigBgColor"
@@ -339,7 +339,7 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
                   />
                 </div>
                 <div>
-                  <Label htmlFor={`field-ph-textcolor-${field.key}`} className="text-xs text-muted-foreground">Text Color (hex/name)</Label>
+                  <Label htmlFor={`field-ph-textcolor-${field.key}`} className="text-xs text-muted-foreground">Text Color (hex, no #)</Label>
                   <Input
                     id={`field-ph-textcolor-${field.key}`}
                     name="placeholderConfigTextColor"
