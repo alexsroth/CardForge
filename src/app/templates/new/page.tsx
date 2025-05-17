@@ -54,7 +54,7 @@ interface LayoutElementGuiConfig {
 
 
 function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
-    console.log('[DEBUG] TemplateDesignerPage/mapFieldDefinitionToTemplateField: Mapping def', def);
+    // console.log('[DEBUG] TemplateDesignerPage/mapFieldDefinitionToTemplateField: Mapping def', def);
     const field: TemplateField = {
         key: def.key,
         label: def.label,
@@ -135,7 +135,7 @@ function generateSamplePlaceholderUrl(config: {
     }
   }
   
-  path += `.png`;
+  path += `.png`; // Ensure PNG format for consistency
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
@@ -152,7 +152,7 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
   "AlertTriangle", "Info", "HelpCircle", "Wand2", "Sparkles", "Sun", "Moon",
   "Cloud", "Flame", "Leaf", "Droplets", "Feather", "Eye", "Swords", "ShieldCheck",
   "ShieldAlert", "Aperture", "Book", "Camera", "Castle", "Crown", "Diamond", "Dice5",
-  "Flag", // Removed "Flash" as it caused build errors
+  "Flag", // Removed "Flash"
   "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock",
   "MapPin", "Medal", "Mountain", "Music", "Package", "Palette", "PawPrint", "Pencil",
   "Phone", "Puzzle", "Rocket", "Save", "Search", "Ship", "Sprout", "Ticket", "Trash2",
@@ -186,6 +186,7 @@ export default function TemplateDesignerPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [sampleCardForPreview, setSampleCardForPreview] = useState<CardData | null>(null);
   const [showElementOutlines, setShowElementOutlines] = useState(false);
+  const [showPixelGrid, setShowPixelGrid] = useState(false); // New state for pixel grid
 
 
   const { toast } = useToast();
@@ -211,7 +212,7 @@ export default function TemplateDesignerPage() {
                 return { ...existingConfig, label: field.label, originalType: field.type }; // Preserve existing GUI settings, update label/type
             }
             // New field, create new GUI config with defaults
-            const yOffset = 10 + (index % 8) * 30; // Simple cascading for default position
+            const yOffset = 10 + (index % 8) * 25; // Simple cascading for default position
             const xOffset = 10;
             return {
                 fieldKey: field.key,
@@ -225,7 +226,7 @@ export default function TemplateDesignerPage() {
                 styleWidth: '120px',
                 styleHeight: field.type === 'textarea' ? '60px' : '20px',
                 styleFontSize: '12px',
-                iconName: field.originalType === 'number' ? 'Coins' : '', // Default icon for number types
+                iconName: field.type === 'number' ? 'Coins' : '', 
             };
         });
         // Filter out configs for fields that no longer exist
@@ -452,7 +453,6 @@ export default function TemplateDesignerPage() {
       if (config.elementType === 'iconValue' && config.iconName) {
         element.icon = config.iconName;
       }
-      // Add other type-specific properties like prefix, suffix if GUI controls are added
       return element;
     });
 
@@ -592,7 +592,7 @@ export default function TemplateDesignerPage() {
             </Button>
           </div>
           <CardDescription className="text-md">
-            Define the data structure for a new card template. The Template ID is auto-generated from the name. Field Keys are auto-generated from Field Labels.
+            Define the data structure for a new card template. Template ID is auto-generated from the name. Field Keys are auto-generated from Field Labels. Templates are saved to browser local storage.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -622,22 +622,24 @@ export default function TemplateDesignerPage() {
           </div>
           <div>
             <h3 className="text-xl font-semibold mb-3 text-foreground/90">Data Fields</h3>
-            <div className="space-y-3"> 
-                {fields.map((field, index) => (
-                  <FieldRow
-                    key={index} 
-                    field={field}
-                    onChange={(updatedField) => handleFieldChange(index, updatedField)}
-                    onRemove={() => handleRemoveField(index)}
-                    isSaving={isSaving}
-                  />
-                ))}
-                {fields.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4 border rounded-md">
-                    No fields added yet. Click "Add Field" to begin.
-                  </p>
-                )}
-              </div>
+            <ScrollArea className="pr-3"> {/* Allow this section to grow naturally */}
+                <div className="space-y-3"> 
+                    {fields.map((field, index) => (
+                    <FieldRow
+                        key={index} 
+                        field={field}
+                        onChange={(updatedField) => handleFieldChange(index, updatedField)}
+                        onRemove={() => handleRemoveField(index)}
+                        isSaving={isSaving}
+                    />
+                    ))}
+                    {fields.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4 border rounded-md">
+                        No fields added yet. Click "Add Field" to begin.
+                    </p>
+                    )}
+                </div>
+            </ScrollArea>
             <Button
               onClick={handleAddField}
               variant="outline"
@@ -659,7 +661,7 @@ export default function TemplateDesignerPage() {
           <CardHeader>
               <CardTitle className="text-2xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
               <CardDescription className="text-md">
-                Configure canvas size and included fields. Then generate basic JSON to preview and optionally refine in the textarea.
+                Configure canvas size and included fields. Then generate JSON to preview and optionally refine in the textarea.
               </CardDescription>
           </CardHeader>
           <CardContent className="flex-grow space-y-4 flex flex-col">
@@ -682,7 +684,7 @@ export default function TemplateDesignerPage() {
             <div className="space-y-3 p-4 border rounded-md bg-muted/30">
               <h4 className="text-lg font-semibold mb-2 text-foreground/90">Layout Elements Configuration</h4>
               {layoutElementGuiConfigs.length > 0 ? (
-                <ScrollArea className="pr-1"> {/* Removed max-h to fit all */}
+                <ScrollArea className="pr-2"> {/* Removed max-h to fit all */}
                   <div className="space-y-2">
                     {layoutElementGuiConfigs.map((config, index) => (
                       <div key={config.fieldKey} className="p-2.5 border rounded-md bg-card/80 hover:bg-card transition-colors">
@@ -779,18 +781,16 @@ export default function TemplateDesignerPage() {
             {/* JSON Output & Guides Section */}
             <div className="mt-4 flex-grow flex flex-col min-h-0">
               <div>
-                <Label htmlFor="layoutDefinition" className="text-sm font-medium">Layout Definition JSON (Read-Only after generating from builder)</Label>
+                <Label htmlFor="layoutDefinition" className="text-sm font-medium">Layout Definition JSON (Manually edit if needed)</Label>
                 <Textarea
                   id="layoutDefinition"
                   value={layoutDefinition}
-                  onChange={handleLayoutDefinitionChange} // Still allow manual edits if desired
+                  onChange={handleLayoutDefinitionChange} 
                   onBlur={validateAndFormatLayoutJson}
                   placeholder='Click "Generate/Update JSON from Builder" above, or paste your JSON here if making manual edits.'
                   rows={15}
                   className="font-mono text-xs flex-grow min-h-[200px] max-h-[300px] bg-muted/20 mt-1" 
                   disabled={isSaving}
-                  // Consider making this readOnly={true} to enforce builder usage, or keep it editable for power users.
-                  // For now, let's keep it editable.
                 />
               </div>
               {layoutJsonError && (
@@ -826,12 +826,12 @@ export default function TemplateDesignerPage() {
                     <p className="text-xs mt-1 mb-2">Use these keys in the <code>fieldKey</code> property of elements below if manually editing JSON.</p>
                     <p className="font-semibold mb-1 mt-3"><code>elements</code> array (each object defines one visual piece):</p>
                     <ul className="list-disc list-inside pl-2 space-y-1">
-                      <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above.</li>
+                      <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above (e.g., if you have "Card Title" with key "cardTitle", use "cardTitle").</li>
                       <li><strong><code>type</code></strong>: (String) One of: <code>"text"</code>, <code>"textarea"</code>, <code>"image"</code>, <code>"iconValue"</code>, <code>"iconFromData"</code>. The builder currently defaults to "text".</li>
                       <li><strong><code>style</code></strong>: (Object) CSS-in-JS. The builder generates basic positional styles.</li>
                       <li><strong><code>className</code></strong>: (String, Optional) Tailwind CSS classes.</li>
-                      <li><strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue".</li>
-                      <li><strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon. **Ensure the icon exists in `lucide-react`.**</li>
+                      <li><strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue". Text added before/after the field's value.</li>
+                      <li><strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon. **Ensure the icon exists in lucide-react.**</li>
                     </ul>
                     <p className="mt-3 italic">After generating JSON with the builder, you can manually refine it in the textarea if needed, then validate by blurring. Final save uses the textarea content.</p>
                     <p className="font-semibold mb-1 mt-4">Example Element Snippets (for manual JSON editing):</p>
@@ -921,10 +921,12 @@ export default function TemplateDesignerPage() {
                 <div className="flex items-center space-x-2">
                     <Switch id="show-outlines" checked={showElementOutlines} onCheckedChange={setShowElementOutlines} aria-label="Show element outlines" />
                     <Label htmlFor="show-outlines" className="text-xs text-muted-foreground">Outlines</Label>
+                    <Switch id="show-pixel-grid" checked={showPixelGrid} onCheckedChange={setShowPixelGrid} aria-label="Show pixel grid" />
+                    <Label htmlFor="show-pixel-grid" className="text-xs text-muted-foreground">Pixel Grid</Label>
                 </div>
             </div>
             <CardDescription className="text-sm">
-              This preview updates as you modify the Layout Definition or template fields.
+              This preview updates as you modify the Layout Definition JSON or template fields.
               Uses sample data based on your field definitions.
             </CardDescription>
           </CardHeader>
@@ -934,6 +936,7 @@ export default function TemplateDesignerPage() {
                 card={sampleCardForPreview}
                 template={templateForPreview}
                 showElementOutlines={showElementOutlines}
+                showPixelGrid={showPixelGrid}
               />
             ) : (
               <p className="text-muted-foreground">Define fields to see a preview.</p>
