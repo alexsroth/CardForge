@@ -83,4 +83,4 @@ export const lucideIconsMap: { [key: string]: React.ElementType<LucideIconsAll.L
   "Watch": Watch,
   "Wifi": Wifi,
   "Wrench": Wrench
-};
+}; // Ensure this closing brace and semicolon are present
