@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { CardData } from '@/lib/types';
@@ -5,13 +6,12 @@ import type { CardTemplate, LayoutDefinition } from '@/lib/card-templates';
 import Image from 'next/image';
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { HelpCircle as FallbackIcon } from 'lucide-react'; // Keep FallbackIcon if used elsewhere
-import { lucideIconsMap } from '@/lib/icons'; // Import the centralized map
+import { lucideIconsMap } from '@/lib/icons'; 
+import { HelpCircle as FallbackIcon } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 
-// IconComponent now uses the centralized map
 const IconComponent = ({ name, ...props }: { name: string } & React.SVGProps<SVGSVGElement>) => {
-  const IconToRender = lucideIconsMap[name as keyof typeof lucideIconsMap]; // Use the map for lookup
+  const IconToRender = lucideIconsMap[name as keyof typeof lucideIconsMap]; 
   if (!IconToRender || typeof IconToRender !== 'function') {
     console.warn(`[DynamicCardRenderer] Lucide icon "${name}" not found or not a function. Fallback 'HelpCircle' will be used.`);
     return <FallbackIcon {...props} />;
@@ -25,7 +25,7 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
   template: CardTemplate;
   showPixelGrid?: boolean;
 }) {
-  console.log('[DEBUG] DynamicCardRenderer: Rendering card', card?.id, 'with template', template?.id);
+  // console.log('[DEBUG] DynamicCardRenderer: Rendering card', card?.id, 'with template', template?.id);
   let layout: LayoutDefinition | null = null;
 
   if (template.layoutDefinition) {
@@ -58,8 +58,8 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
     backgroundColor: layout.backgroundColor || 'hsl(var(--card))',
     borderColor: layout.borderColor || 'hsl(var(--border))',
     borderRadius: layout.borderRadius || 'var(--radius)',
-    borderWidth: layout.borderColor ? '2px' : '1px',
-    borderStyle: 'solid',
+    borderWidth: layout.borderWidth || '1px', // Use layout or default
+    borderStyle: layout.borderStyle || 'solid', // Use layout or default
     position: 'relative',
     overflow: 'hidden',
     boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
@@ -89,16 +89,20 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
                 const rawValue = card[element.fieldKey as keyof CardData];
                 let valueForDisplay: any;
 
-                if ( (element.type === 'text' || element.type === 'textarea' || element.type === 'iconValue') && typeof rawValue === 'object' && rawValue !== null ) {
-                  console.warn(`[DynamicCardRenderer] fieldKey "${element.fieldKey}" (type: "${element.type}") received an object value. Stringifying. Value:`, rawValue );
+                if (
+                  (element.type === 'text' || element.type === 'textarea' || element.type === 'iconValue') &&
+                  typeof rawValue === 'object' &&
+                  rawValue !== null
+                ) {
                   try {
                     valueForDisplay = JSON.stringify(rawValue, null, 2);
+                     console.warn(`[DynamicCardRenderer] fieldKey "${element.fieldKey}" (type: "${element.type}") received an object value and was stringified. Value:`, rawValue);
                   } catch (stringifyError) {
                     console.error(`[DynamicCardRenderer] Error stringifying object for fieldKey "${element.fieldKey}":`, stringifyError);
                     valueForDisplay = "[Error: Unstringifiable Object]";
                   }
                 } else if (rawValue === undefined || rawValue === null) {
-                  if (element.type === 'number') valueForDisplay = '';
+                  if (element.type === 'number') valueForDisplay = ''; 
                   else if (element.type === 'boolean') valueForDisplay = false;
                   else valueForDisplay = '';
                 } else {
@@ -112,7 +116,8 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
                 if (element.suffix) processedText = textualContent + String(element.suffix || '');
                 if (element.prefix && element.suffix) processedText = String(element.prefix || '') + textualContent + String(element.suffix || '');
                 
-                const finalContentNode: string = processedText;
+                const finalContentNode: string = processedText; // finalContentNode should be a string here for text rendering
+
                 const elementStyle = { ...(element.style || {}), zIndex: index + 2 };
                 const hoverTitle = `fieldKey: ${element.fieldKey}`;
                 let elementContent: React.ReactNode;
@@ -199,13 +204,17 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
                     </React.Fragment>
                 );
             } catch (error) {
-                console.error(`[DynamicCardRenderer] Error rendering element for fieldKey "${element.fieldKey}":`, error, "\nElement definition:", element, "\nCard data for key:", card[element.fieldKey as keyof CardData]);
+                 console.error(
+                    `[DynamicCardRenderer] Error rendering element for fieldKey "${element.fieldKey}":`, error, 
+                    "\nElement definition:", element, 
+                    "\nCard data for key:", card[element.fieldKey as keyof CardData]
+                );
                 return (
                     <div key={`error-${index}`} style={{
-                        position: 'absolute', top: '0', left: '0', width: '100%', height: '100%',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        backgroundColor: 'rgba(255, 0, 0, 0.2)', color: 'red', fontSize: '10px',
-                        border: '1px solid red', padding: '2px', overflow: 'hidden', zIndex: 9999
+                        position: 'absolute', top: element.style?.top || '0px', left: element.style?.left || '0px',
+                        backgroundColor: 'rgba(255, 0, 0, 0.3)', color: 'white', fontSize: '9px',
+                        border: '1px dashed red', padding: '2px', overflow: 'hidden', zIndex: 9999,
+                        width: element.style?.width || 'auto', height: element.style?.height || 'auto'
                     }}>
                         Error: {element.fieldKey}
                     </div>

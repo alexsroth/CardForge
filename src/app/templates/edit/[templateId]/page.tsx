@@ -12,7 +12,7 @@ import { PlusCircle, Save, AlertTriangle, Loader2, ArrowLeft, Eye, Palette, Chev
 import FieldRow, { type TemplateFieldDefinition } from '@/components/template-designer/field-row';
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates, type CardTemplateId as ContextCardTemplateId } from '@/contexts/TemplateContext';
-import type { TemplateField, CardTemplate } from '@/lib/card-templates';
+import type { TemplateField, CardTemplate, LayoutDefinition } from '@/lib/card-templates';
 import { DEFAULT_CARD_LAYOUT_JSON_STRING, DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT } from '@/lib/card-templates';
 import type { CardData } from '@/lib/types';
 import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-renderer';
@@ -31,7 +31,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { LayoutElementGuiConfig } from '../new/page'; 
+import type { LayoutElementGuiConfig } from '../new/page'; // Import from new page
 
 
 type CardTemplateId = ContextCardTemplateId;
@@ -146,7 +146,7 @@ const TAILWIND_BORDER_COLORS = [
 
 
 function mapTemplateFieldToFieldDefinition(field: TemplateField, index: number): TemplateFieldDefinition {
-    console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Mapping field', field);
+    // console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Mapping field', field);
     const definition: TemplateFieldDefinition = {
         _uiId: `loaded-field-${field.key}-${index}-${Date.now()}-${Math.random().toString(36).substring(2,7)}`,
         key: field.key,
@@ -168,7 +168,7 @@ function mapTemplateFieldToFieldDefinition(field: TemplateField, index: number):
 }
 
 function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
-    console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Mapping def', def);
+    // console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Mapping def', def);
     const field: TemplateField = {
         key: def.key,
         label: def.label,
@@ -275,7 +275,7 @@ const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.Lucide
 };
 
 export default function EditTemplatePage() {
-  console.log('[DEBUG] EditTemplatePage: Component rendering/re-rendering.');
+  // console.log('[DEBUG] EditTemplatePage: Component rendering/re-rendering.');
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
@@ -291,8 +291,15 @@ export default function EditTemplatePage() {
   const [layoutJsonError, setLayoutJsonError] = useState<string | null>(null);
 
   const [selectedSizePreset, setSelectedSizePreset] = useState<string>("custom");
+  
   const [canvasWidthSetting, setCanvasWidthSetting] = useState<string>(`${DEFAULT_CANVAS_WIDTH}px`);
   const [canvasHeightSetting, setCanvasHeightSetting] = useState<string>(`${DEFAULT_CANVAS_HEIGHT}px`);
+  const [canvasBackgroundColor, setCanvasBackgroundColor] = useState<string>("hsl(var(--card))");
+  const [canvasBorderColor, setCanvasBorderColor] = useState<string>("hsl(var(--border))");
+  const [canvasBorderRadius, setCanvasBorderRadius] = useState<string>("calc(var(--radius) - 2px)");
+  const [canvasBorderWidth, setCanvasBorderWidth] = useState<string>("1px");
+  const [canvasBorderStyle, setCanvasBorderStyle] = useState<string>("solid");
+
   const [layoutElementGuiConfigs, setLayoutElementGuiConfigs] = useState<LayoutElementGuiConfig[]>([]);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -307,32 +314,37 @@ export default function EditTemplatePage() {
       setIsLoadingPage(templatesLoading);
       return;
     }
-    console.log('[DEBUG] EditTemplatePage: Loading template for editing. ID:', templateIdToEdit);
+    // console.log('[DEBUG] EditTemplatePage: Loading template for editing. ID:', templateIdToEdit);
     const templateToEdit = getTemplateById(templateIdToEdit);
     if (templateToEdit) {
-      console.log('[DEBUG] EditTemplatePage: Template found.', templateToEdit);
+      // console.log('[DEBUG] EditTemplatePage: Template found.', templateToEdit);
       setOriginalTemplateId(templateToEdit.id as CardTemplateId);
       setTemplateName(templateToEdit.name);
       const initialFields = templateToEdit.fields.map((field, index) => mapTemplateFieldToFieldDefinition(field, index));
       setFields(initialFields);
 
-      const initialLayoutDef = templateToEdit.layoutDefinition?.trim() ? templateToEdit.layoutDefinition : DEFAULT_CARD_LAYOUT_JSON_STRING;
-      setLayoutDefinition(initialLayoutDef);
+      const initialLayoutDefString = templateToEdit.layoutDefinition?.trim() ? templateToEdit.layoutDefinition : DEFAULT_CARD_LAYOUT_JSON_STRING;
+      setLayoutDefinition(initialLayoutDefString);
 
       try {
-        const parsedLayout = JSON.parse(initialLayoutDef || '{}');
+        const parsedLayout = JSON.parse(initialLayoutDefString || '{}') as LayoutDefinition;
         const layoutElements = Array.isArray(parsedLayout.elements) ? parsedLayout.elements : [];
 
-        const loadedWidth = parsedLayout.width || `${DEFAULT_CANVAS_WIDTH}px`;
-        const loadedHeight = parsedLayout.height || `${DEFAULT_CANVAS_HEIGHT}px`;
-        setCanvasWidthSetting(loadedWidth);
-        setCanvasHeightSetting(loadedHeight);
+        // Set canvas settings from parsed layout or defaults
+        setCanvasWidthSetting(parsedLayout.width || `${DEFAULT_CANVAS_WIDTH}px`);
+        setCanvasHeightSetting(parsedLayout.height || `${DEFAULT_CANVAS_HEIGHT}px`);
+        setCanvasBackgroundColor(parsedLayout.backgroundColor || "hsl(var(--card))");
+        setCanvasBorderColor(parsedLayout.borderColor || "hsl(var(--border))");
+        setCanvasBorderRadius(parsedLayout.borderRadius || "calc(var(--radius) - 2px)");
+        setCanvasBorderWidth(parsedLayout.borderWidth || "1px");
+        setCanvasBorderStyle(parsedLayout.borderStyle || "solid");
 
         const matchingPreset = COMMON_CARD_SIZES.find(
-          s => s.width === loadedWidth && s.height === loadedHeight
+          s => s.width === (parsedLayout.width || `${DEFAULT_CANVAS_WIDTH}px`) && s.height === (parsedLayout.height || `${DEFAULT_CANVAS_HEIGHT}px`)
         );
         setSelectedSizePreset(matchingPreset ? matchingPreset.value : "custom");
 
+        // Initialize GUI configs from parsed layout elements
         setLayoutElementGuiConfigs(initialFields.map((field, index) => {
           const existingLayoutElement = layoutElements.find((el: any) => el.fieldKey === field.key);
           const yOffset = 10 + (index % 8) * 35; 
@@ -350,7 +362,7 @@ export default function EditTemplatePage() {
             styleLeft: existingLayoutElement?.style?.left || `${xOffset}px`,
             styleRight: existingLayoutElement?.style?.right || '',
             styleBottom: existingLayoutElement?.style?.bottom || '',
-            styleMaxHeight: existingLayoutElement?.style?.maxHeight || '',
+            styleMaxHeight: existingLayoutElement?.style?.maxHeight || (field.type === 'textarea' ? '80px' : (field.type === 'placeholderImage' ? '140px' : '')),
             styleFontStyle: existingLayoutElement?.style?.fontStyle || 'normal',
             styleTextAlign: existingLayoutElement?.style?.textAlign || 'left',
             stylePadding: existingLayoutElement?.style?.padding || '',
@@ -377,11 +389,9 @@ export default function EditTemplatePage() {
             const twLeading = classes.find(c => TAILWIND_LINE_HEIGHTS.some(tl => tl.value === c && c !== '' && tl.value !== NONE_VALUE));
             const twOverflow = classes.find(c => TAILWIND_OVERFLOW.some(to => to.value === c && c !== '' && to.value !== NONE_VALUE));
             const twTextOverflow = classes.find(c => TAILWIND_TEXT_OVERFLOW.some(tto => tto.value === c && c !== '' && tto.value !== NONE_VALUE));
-            
             const twBorderRadius = classes.find(c => TAILWIND_BORDER_RADIUS.some(br => br.value === c && c !== '' && br.value !== NONE_VALUE));
             const twBorderWidth = classes.find(c => TAILWIND_BORDER_WIDTHS.some(bw => bw.value === c && c !== '' && bw.value !== NONE_VALUE));
             const twBorderColor = classes.find(c => TAILWIND_BORDER_COLORS.some(bc => bc.value === c && c !== '' && bc.value !== NONE_VALUE));
-
 
             if (twColor) config.tailwindTextColor = twColor;
             if (twSize) config.tailwindFontSize = twSize;
@@ -398,9 +408,18 @@ export default function EditTemplatePage() {
 
       } catch (e) {
         console.warn("[DEBUG] EditTemplatePage: Could not parse initial layout definition for GUI config:", e);
+         // Fallback: Initialize GUI configs with defaults if parsing fails
+        const defaultParsedLayout = JSON.parse(DEFAULT_CARD_LAYOUT_JSON_STRING) as LayoutDefinition;
+        setCanvasWidthSetting(defaultParsedLayout.width || `${DEFAULT_CANVAS_WIDTH}px`);
+        setCanvasHeightSetting(defaultParsedLayout.height || `${DEFAULT_CANVAS_HEIGHT}px`);
+        setCanvasBackgroundColor(defaultParsedLayout.backgroundColor || "hsl(var(--card))");
+        setCanvasBorderColor(defaultParsedLayout.borderColor || "hsl(var(--border))");
+        setCanvasBorderRadius(defaultParsedLayout.borderRadius || "calc(var(--radius) - 2px)");
+        setCanvasBorderWidth(defaultParsedLayout.borderWidth || "1px");
+        setCanvasBorderStyle(defaultParsedLayout.borderStyle || "solid");
+
         setSelectedSizePreset(`${DEFAULT_CANVAS_WIDTH}x${DEFAULT_CANVAS_HEIGHT}`);
-        setCanvasWidthSetting(`${DEFAULT_CANVAS_WIDTH}px`);
-        setCanvasHeightSetting(`${DEFAULT_CANVAS_HEIGHT}px`);
+        
         setLayoutElementGuiConfigs(initialFields.map((field, index) => {
             const yOffset = 10 + (index % 8) * 35;
             const xOffset = 10;
@@ -414,9 +433,8 @@ export default function EditTemplatePage() {
                 elementType: field.type === 'textarea' ? 'textarea' : (field.type === 'placeholderImage' ? 'image' : 'text'),
                 styleTop: `${yOffset}px`,
                 styleLeft: `${xOffset}px`,
-                styleRight: '',
-                styleBottom: '',
-                styleMaxHeight: '', 
+                styleRight: '', styleBottom: '',
+                styleMaxHeight: field.type === 'textarea' ? '80px' : (field.type === 'placeholderImage' ? '140px' : ''), 
                 styleFontStyle: 'normal', styleTextAlign: 'left', stylePadding: '', styleBorderTop: '', styleBorderBottom: '',
                 iconName: field.type === 'number' ? 'Coins' : '',
                 tailwindTextColor: NONE_VALUE, tailwindFontSize: NONE_VALUE, tailwindFontWeight: NONE_VALUE,
@@ -427,14 +445,14 @@ export default function EditTemplatePage() {
       }
       setErrorLoading(null);
     } else {
-      console.warn('[DEBUG] EditTemplatePage: Template not found for editing. ID:', templateIdToEdit);
+      // console.warn('[DEBUG] EditTemplatePage: Template not found for editing. ID:', templateIdToEdit);
       setErrorLoading(`Template with ID "${templateIdToEdit}" not found.`);
     }
     setIsLoadingPage(false);
-  }, [templateIdToEdit, getTemplateById, templatesLoading]);
+  }, [templateIdToEdit, getTemplateById, templatesLoading]); // Added templatesLoading
 
   useEffect(() => {
-    console.log('[DEBUG] EditTemplatePage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
+    // console.log('[DEBUG] EditTemplatePage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
     setLayoutElementGuiConfigs(prevConfigs => {
       const newConfigsMap = new Map(prevConfigs.map(c => [c._uiId, c]));
       const finalConfigs: LayoutElementGuiConfig[] = [];
@@ -449,21 +467,21 @@ export default function EditTemplatePage() {
                 fieldKey: field.key 
             });
         } else {
-          const yOffset = 10 + (index % 8) * 35;
+          // Field was added, create a new GUI config for it with defaults
+          const yOffset = 10 + (layoutElementGuiConfigs.length % 8) * 35; // Use current length for new item offset
           const xOffset = 10;
           finalConfigs.push({
             _uiId: field._uiId || `gui-cfg-edit-sync-${field.key}-${Date.now()}-${index}`,
             fieldKey: field.key,
             label: field.label,
             originalType: field.type,
-            isEnabledOnCanvas: true,
+            isEnabledOnCanvas: true, // Default new fields to be on canvas
             isExpandedInGui: false,
             elementType: field.type === 'textarea' ? 'textarea' : (field.type === 'placeholderImage' ? 'image' : 'text'),
             styleTop: `${yOffset}px`,
             styleLeft: `${xOffset}px`,
-            styleRight: '',
-            styleBottom: '',
-            styleMaxHeight: '', 
+            styleRight: '', styleBottom: '',
+            styleMaxHeight: field.type === 'textarea' ? '80px' : (field.type === 'placeholderImage' ? '140px' : ''), 
             iconName: field.type === 'number' ? 'Coins' : '',
             styleFontStyle: 'normal', styleTextAlign: 'left', stylePadding: '', styleBorderTop: '', styleBorderBottom: '',
             tailwindTextColor: NONE_VALUE, tailwindFontSize: NONE_VALUE, tailwindFontWeight: NONE_VALUE,
@@ -472,13 +490,14 @@ export default function EditTemplatePage() {
           });
         }
       });
+      // Filter out configs whose _uiId no longer exists in `fields` (if a field was removed)
       return finalConfigs.filter(nc => fields.some(f => f._uiId === nc._uiId));
     });
   }, [fields]);
 
 
   useEffect(() => {
-    console.log('[DEBUG] EditTemplatePage: Generating sampleCardForPreview. Fields count:', fields.length, 'Original ID:', originalTemplateId);
+    // console.log('[DEBUG] EditTemplatePage: Generating sampleCardForPreview. Fields count:', fields.length, 'Original ID:', originalTemplateId);
     const currentTemplateIdForPreview = originalTemplateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
@@ -534,6 +553,7 @@ export default function EditTemplatePage() {
       }
       (generatedSampleCard as any)[key] = valueForPreview;
     });
+    // Add some base common field data for preview if not defined by user's fields
     if (generatedSampleCard.name === undefined && !fields.some(f => f.key === 'name')) generatedSampleCard.name = 'Awesome Card Name';
     if (generatedSampleCard.cost === undefined && !fields.some(f => f.key === 'cost')) generatedSampleCard.cost = 3;
     if (generatedSampleCard.imageUrl === undefined && !fields.some(f => f.key === 'imageUrl')) {
@@ -559,7 +579,7 @@ export default function EditTemplatePage() {
   }), [originalTemplateId, templateName, fields, layoutDefinition]);
 
   const handleAddField = () => {
-    console.log('[DEBUG] EditTemplatePage/handleAddField: Adding new field.');
+    // console.log('[DEBUG] EditTemplatePage/handleAddField: Adding new field.');
     const newFieldBaseLabel = `New Field`;
     let newFieldLabel = `${newFieldBaseLabel} ${fields.length + 1}`;
     let counter = fields.length + 1;
@@ -594,7 +614,7 @@ export default function EditTemplatePage() {
   };
 
   const handleRemoveField = (uiIdToRemove: string) => {
-    console.log('[DEBUG] EditTemplatePage/handleRemoveField: Removing field with _uiId', uiIdToRemove);
+    // console.log('[DEBUG] EditTemplatePage/handleRemoveField: Removing field with _uiId', uiIdToRemove);
     const fieldToRemove = fields.find(f => f._uiId === uiIdToRemove);
     setFields(fields.filter(f => f._uiId !== uiIdToRemove));
     if (fieldToRemove) {
@@ -603,7 +623,7 @@ export default function EditTemplatePage() {
   };
   
   const handleFieldChange = (uiIdToUpdate: string, updatedFieldDefinition: Partial<TemplateFieldDefinition>) => {
-    console.log('[DEBUG] EditTemplatePage/handleFieldChange: Updating field _uiId:', uiIdToUpdate, updatedFieldDefinition);
+    // console.log('[DEBUG] EditTemplatePage/handleFieldChange: Updating field _uiId:', uiIdToUpdate, updatedFieldDefinition);
     setFields(prevFields =>
       prevFields.map(field => {
         if (field._uiId === uiIdToUpdate) {
@@ -650,7 +670,7 @@ export default function EditTemplatePage() {
 
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
-    console.log('[DEBUG] EditTemplatePage/handleLayoutDefinitionChange: Layout string changed.');
+    // console.log('[DEBUG] EditTemplatePage/handleLayoutDefinitionChange: Layout string changed.');
     setLayoutDefinition(newLayoutDef);
     if (layoutJsonError) setLayoutJsonError(null);
   };
@@ -660,17 +680,17 @@ export default function EditTemplatePage() {
       const parsed = JSON.parse(layoutDefinition);
       setLayoutDefinition(JSON.stringify(parsed, null, 2));
       setLayoutJsonError(null);
-      console.log('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: JSON is valid and formatted.');
+      // console.log('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: JSON is valid and formatted.');
       return true;
     } catch (e: any) {
       setLayoutJsonError(`Invalid JSON: ${e.message}`);
-      console.warn('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: Invalid JSON', e.message);
+      // console.warn('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: Invalid JSON', e.message);
       return false;
     }
   };
 
   const handleGuiConfigChange = (targetUiId: string, property: keyof LayoutElementGuiConfig, value: any) => {
-    console.log(`[DEBUG] EditTemplatePage/handleGuiConfigChange: fieldUiId: ${targetUiId}, prop: ${property}, value: ${value}`);
+    // console.log(`[DEBUG] EditTemplatePage/handleGuiConfigChange: fieldUiId: ${targetUiId}, prop: ${property}, value: ${value}`);
     setLayoutElementGuiConfigs(prev =>
       prev.map(config =>
         config._uiId === targetUiId ? { ...config, [property]: value } : config
@@ -687,15 +707,16 @@ export default function EditTemplatePage() {
   };
 
   const handleGenerateJsonFromBuilder = () => {
-    console.log('[DEBUG] EditTemplatePage/handleGenerateJsonFromBuilder: Generating JSON from GUI configs.');
+    // console.log('[DEBUG] EditTemplatePage/handleGenerateJsonFromBuilder: Generating JSON from GUI configs.');
     const elementsToInclude = layoutElementGuiConfigs.filter(config => config.isEnabledOnCanvas);
 
     const generatedElements = elementsToInclude.map(config => {
       const style: any = {
         position: "absolute",
-        top: config.styleTop.endsWith('px') || config.styleTop.endsWith('%') ? config.styleTop : `${config.styleTop}px`,
-        left: config.styleLeft.endsWith('px') || config.styleLeft.endsWith('%') ? config.styleLeft : `${config.styleLeft}px`,
       };
+      // Only add style properties if they have a value
+      if (config.styleTop && config.styleTop.trim() !== '') style.top = config.styleTop.trim().endsWith('px') || config.styleTop.trim().endsWith('%') ? config.styleTop.trim() : `${config.styleTop.trim()}px`;
+      if (config.styleLeft && config.styleLeft.trim() !== '') style.left = config.styleLeft.trim().endsWith('px') || config.styleLeft.trim().endsWith('%') ? config.styleLeft.trim() : `${config.styleLeft.trim()}px`;
       if (config.styleRight && config.styleRight.trim() !== '') style.right = config.styleRight.trim();
       if (config.styleBottom && config.styleBottom.trim() !== '') style.bottom = config.styleBottom.trim();
       
@@ -705,7 +726,7 @@ export default function EditTemplatePage() {
       if (config.stylePadding && config.stylePadding.trim() !== '') style.padding = config.stylePadding.trim();
       if (config.styleBorderTop && config.styleBorderTop.trim() !== '') style.borderTop = config.styleBorderTop.trim();
       if (config.styleBorderBottom && config.styleBorderBottom.trim() !== '') style.borderBottom = config.styleBorderBottom.trim();
-
+      
       const classNames = [];
       if (config.originalType === 'textarea' || config.elementType === 'textarea') {
         classNames.push('whitespace-pre-wrap');
@@ -768,12 +789,14 @@ export default function EditTemplatePage() {
       return element;
     });
 
-    const newLayout = {
+    const newLayout: LayoutDefinition = {
       width: canvasWidthSetting || `${DEFAULT_CANVAS_WIDTH}px`,
       height: canvasHeightSetting || `${DEFAULT_CANVAS_HEIGHT}px`,
-      backgroundColor: "hsl(var(--card))",
-      borderColor: "hsl(var(--border))",
-      borderRadius: "calc(var(--radius) - 2px)",
+      backgroundColor: canvasBackgroundColor || "hsl(var(--card))",
+      borderColor: canvasBorderColor || "hsl(var(--border))",
+      borderRadius: canvasBorderRadius || "calc(var(--radius) - 2px)",
+      borderWidth: canvasBorderWidth || "1px",
+      borderStyle: canvasBorderStyle || "solid",
       elements: generatedElements
     };
 
@@ -784,7 +807,7 @@ export default function EditTemplatePage() {
 
 
   const handleSaveTemplate = async () => {
-    console.log('[DEBUG] EditTemplatePage/handleSaveTemplate: Attempting to save.');
+    // console.log('[DEBUG] EditTemplatePage/handleSaveTemplate: Attempting to save.');
     if (!originalTemplateId) {
         toast({ title: "Error", description: "Original template ID is missing. Cannot update.", variant: "destructive" });
         return;
@@ -808,35 +831,34 @@ export default function EditTemplatePage() {
         return;
     }
 
-    let finalLayoutDefinition = layoutDefinition.trim();
-    if (finalLayoutDefinition) {
-        if (!validateAndFormatLayoutJson()) { 
-             toast({
-                title: "Invalid Layout JSON",
-                description: `The JSON in 'Layout Definition' is invalid. Error: ${layoutJsonError || 'Unknown JSON parsing error.'}. Please correct or regenerate.`,
-                variant: "destructive",
-                duration: 7000,
-            });
-            return;
-        }
-        finalLayoutDefinition = layoutDefinition; 
-    } else { 
-        if (layoutElementGuiConfigs.some(c => c.isEnabledOnCanvas)) {
-            handleGenerateJsonFromBuilder(); 
-            finalLayoutDefinition = layoutDefinition.trim(); 
-            if (!finalLayoutDefinition) finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING; 
-        } else {
-             finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING; 
-        }
+    let finalLayoutDefToSave = layoutDefinition.trim();
+    if (!finalLayoutDefToSave) { 
+        handleGenerateJsonFromBuilder();
+        finalLayoutDefToSave = layoutDefinition; 
+    } else {
+      try {
+        const parsed = JSON.parse(finalLayoutDefToSave);
+        finalLayoutDefToSave = JSON.stringify(parsed, null, 2); 
+      } catch (e: any) {
+        setLayoutJsonError(`Invalid JSON: ${e.message}`);
+        toast({
+          title: "Invalid Layout JSON",
+          description: `The JSON in 'Layout Definition' is invalid. Error: ${e.message}. Please correct it or regenerate.`,
+          variant: "destructive",
+          duration: 7000,
+        });
+        return;
+      }
     }
+
     setIsSaving(true);
     const updatedTemplateData: CardTemplate = {
       id: originalTemplateId,
       name: templateName.trim(),
       fields: fields.map(mapFieldDefinitionToTemplateField),
-      layoutDefinition: finalLayoutDefinition,
+      layoutDefinition: finalLayoutDefToSave,
     };
-    console.log('[DEBUG] EditTemplatePage/handleSaveTemplate: Calling updateTemplate with:', updatedTemplateData);
+    // console.log('[DEBUG] EditTemplatePage/handleSaveTemplate: Calling updateTemplate with:', updatedTemplateData);
     const result = await updateTemplate(updatedTemplateData);
     if (result.success) {
       toast({
@@ -877,6 +899,7 @@ export default function EditTemplatePage() {
   const handleSizePresetChange = (value: string) => {
     setSelectedSizePreset(value);
     if (value === "custom") {
+      // User will manually edit width/height
     } else {
       const preset = COMMON_CARD_SIZES.find(s => s.value === value);
       if (preset) {
@@ -897,6 +920,15 @@ export default function EditTemplatePage() {
     }
   };
 
+  const handleCanvasPropertyChange = (prop: 'backgroundColor' | 'borderColor' | 'borderRadius' | 'borderWidth' | 'borderStyle', value: string) => {
+    switch(prop) {
+      case 'backgroundColor': setCanvasBackgroundColor(value); break;
+      case 'borderColor': setCanvasBorderColor(value); break;
+      case 'borderRadius': setCanvasBorderRadius(value); break;
+      case 'borderWidth': setCanvasBorderWidth(value); break;
+      case 'borderStyle': setCanvasBorderStyle(value); break;
+    }
+  };
 
   if (isLoadingPage) {
     return (
@@ -921,7 +953,7 @@ export default function EditTemplatePage() {
 
   return (
     <div className="space-y-6 container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <Card className="shadow-lg">
+      <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className="text-2xl font-bold">Edit Template</CardTitle>
@@ -1000,10 +1032,11 @@ export default function EditTemplatePage() {
               </CardDescription>
           </CardHeader>
           <CardContent className="flex-grow space-y-4 flex flex-col">
+            {/* Card Canvas Setup Section */}
             <div className="space-y-3 p-3 border rounded-md bg-muted/30">
               <h4 className="text-base font-semibold mb-1">Card Canvas Setup</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-2 items-end">
-                <div className="sm:col-span-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 items-end">
+                <div>
                   <Label htmlFor="canvasSizePresetEdit" className="text-xs font-medium">Canvas Size Preset</Label>
                   <Select value={selectedSizePreset} onValueChange={handleSizePresetChange} disabled={isSaving}>
                     <SelectTrigger id="canvasSizePresetEdit" className="mt-1 h-8 text-xs">
@@ -1020,40 +1053,51 @@ export default function EditTemplatePage() {
                   <>
                     <div>
                       <Label htmlFor="canvasWidthEdit" className="text-xs font-medium">Custom Width (e.g., 280px)</Label>
-                      <Input
-                        id="canvasWidthEdit"
-                        value={canvasWidthSetting}
-                        onChange={(e) => handleCustomDimensionChange('width', e.target.value)}
-                        disabled={isSaving}
-                        className="mt-1 h-8 text-xs"
-                      />
+                      <Input id="canvasWidthEdit" value={canvasWidthSetting} onChange={(e) => handleCustomDimensionChange('width', e.target.value)} disabled={isSaving} className="mt-1 h-8 text-xs"/>
                     </div>
                     <div>
                       <Label htmlFor="canvasHeightEdit" className="text-xs font-medium">Custom Height (e.g., 400px)</Label>
-                      <Input
-                        id="canvasHeightEdit"
-                        value={canvasHeightSetting}
-                        onChange={(e) => handleCustomDimensionChange('height', e.target.value)}
-                        disabled={isSaving}
-                        className="mt-1 h-8 text-xs"
-                      />
+                      <Input id="canvasHeightEdit" value={canvasHeightSetting} onChange={(e) => handleCustomDimensionChange('height', e.target.value)} disabled={isSaving} className="mt-1 h-8 text-xs"/>
                     </div>
                   </>
                 ) : (COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)) && (
-                  <div className="sm:col-span-2 grid grid-cols-2 gap-4">
-                     <div>
-                        <Label className="text-xs font-medium text-muted-foreground">Width</Label>
-                        <p className="text-xs mt-1 h-8 flex items-center">{COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)?.width}</p>
-                    </div>
-                    <div>
-                        <Label className="text-xs font-medium text-muted-foreground">Height</Label>
-                        <p className="text-xs mt-1 h-8 flex items-center">{COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)?.height}</p>
-                    </div>
+                  <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+                     <div><Label className="text-xs font-medium text-muted-foreground">Width</Label><p className="text-xs mt-1 h-8 flex items-center">{COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)?.width}</p></div>
+                    <div><Label className="text-xs font-medium text-muted-foreground">Height</Label><p className="text-xs mt-1 h-8 flex items-center">{COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)?.height}</p></div>
                   </div>
                 )}
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 items-end mt-2">
+                <div>
+                  <Label htmlFor="canvasBgColorEdit" className="text-xs font-medium">Background Color (CSS)</Label>
+                  <Input id="canvasBgColorEdit" value={canvasBackgroundColor} onChange={(e) => handleCanvasPropertyChange('backgroundColor', e.target.value)} placeholder="e.g., hsl(var(--card))" disabled={isSaving} className="mt-1 h-8 text-xs"/>
+                </div>
+                <div>
+                  <Label htmlFor="canvasBorderRadiusEdit" className="text-xs font-medium">Border Radius (CSS)</Label>
+                  <Input id="canvasBorderRadiusEdit" value={canvasBorderRadius} onChange={(e) => handleCanvasPropertyChange('borderRadius', e.target.value)} placeholder="e.g., 8px" disabled={isSaving} className="mt-1 h-8 text-xs"/>
+                </div>
+                <div>
+                  <Label htmlFor="canvasBorderColorEdit" className="text-xs font-medium">Border Color (CSS)</Label>
+                  <Input id="canvasBorderColorEdit" value={canvasBorderColor} onChange={(e) => handleCanvasPropertyChange('borderColor', e.target.value)} placeholder="e.g., hsl(var(--border))" disabled={isSaving} className="mt-1 h-8 text-xs"/>
+                </div>
+                <div>
+                  <Label htmlFor="canvasBorderWidthEdit" className="text-xs font-medium">Border Width (CSS)</Label>
+                  <Input id="canvasBorderWidthEdit" value={canvasBorderWidth} onChange={(e) => handleCanvasPropertyChange('borderWidth', e.target.value)} placeholder="e.g., 1px" disabled={isSaving} className="mt-1 h-8 text-xs"/>
+                </div>
+                 <div>
+                  <Label htmlFor="canvasBorderStyleEdit" className="text-xs font-medium">Border Style (CSS)</Label>
+                   <Select value={canvasBorderStyle} onValueChange={(value) => handleCanvasPropertyChange('borderStyle', value)} disabled={isSaving}>
+                    <SelectTrigger id="canvasBorderStyleEdit" className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="solid">Solid</SelectItem><SelectItem value="dashed">Dashed</SelectItem>
+                      <SelectItem value="dotted">Dotted</SelectItem><SelectItem value="none">None</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
 
+            {/* Layout Elements (Toggle to Include & Configure) Section */}
             <div className="space-y-3 p-3 border rounded-md bg-muted/30">
               <h4 className="text-base font-semibold mb-1">Layout Elements (Toggle to Include & Configure)</h4>
                <ScrollArea className="pr-2"> 
@@ -1078,10 +1122,11 @@ export default function EditTemplatePage() {
                         </div>
                         {config.isExpandedInGui && config.isEnabledOnCanvas && (
                           <div className="mt-3 pt-3 border-t border-dashed space-y-4">
+                           {/* Element Type & Icon Section */}
                            <details className="space-y-2 group" open>
                             <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
-                                Element Type & Icon
-                                <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
+                                <Settings className="h-3 w-3 mr-1"/> Element Type & Icon
+                                <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform ml-auto" />
                             </summary>
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-1">
                             <div>
@@ -1104,10 +1149,11 @@ export default function EditTemplatePage() {
                           </div>
                           </details>
 
+                            {/* Position & Sizing Section */}
                             <details className="space-y-2 group" open>
                             <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
-                                Position & Sizing (CSS)
-                                <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
+                                <Settings className="h-3 w-3 mr-1"/> Position & Sizing (CSS)
+                                <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform ml-auto" />
                             </summary>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pl-1">
                                 {['styleTop', 'styleLeft', 'styleRight', 'styleBottom', 'styleMaxHeight', 'stylePadding'].map(prop => (
@@ -1119,12 +1165,13 @@ export default function EditTemplatePage() {
                             </div>
                             </details>
                             
+                            {/* Typography Section (Conditional) */}
                             {(config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') && (
                               <>
                                <details className="space-y-2 group" open>
                                 <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
-                                    Typography
-                                    <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
+                                    <Settings className="h-3 w-3 mr-1"/> Typography
+                                    <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform ml-auto" />
                                 </summary>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pl-1">
                                   <div>
@@ -1174,10 +1221,11 @@ export default function EditTemplatePage() {
                                   </div>
                                 </div>
                                 </details>
+                                {/* Overflow & Display Section (Conditional) */}
                                 <details className="space-y-2 group" open>
                                 <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
-                                    Overflow & Display (Text - Tailwind)
-                                    <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
+                                    <Settings className="h-3 w-3 mr-1"/> Overflow & Display (Text - Tailwind)
+                                    <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform ml-auto" />
                                 </summary>
                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pl-1">
                                   <div>
@@ -1198,10 +1246,11 @@ export default function EditTemplatePage() {
                                 </details>
                               </>
                             )}
+                            {/* Borders Section */}
                             <details className="space-y-2 group" open>
                             <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
-                                Borders
-                                <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
+                                <Settings className="h-3 w-3 mr-1"/> Borders
+                                <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform ml-auto" />
                             </summary>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pl-1">
                               <div>
@@ -1253,6 +1302,7 @@ export default function EditTemplatePage() {
               <Palette className="mr-2 h-4 w-4" /> Generate/Update JSON from Builder
             </Button>
 
+            {/* JSON Textarea and Helper Accordions */}
             <div className="mt-4 flex-grow flex flex-col min-h-0">
               <div>
                 <Label htmlFor="layoutDefinitionEdit" className="text-sm font-medium">Layout Definition JSON (Builder output updates here)</Label>

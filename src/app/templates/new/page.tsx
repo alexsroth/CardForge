@@ -12,7 +12,7 @@ import { PlusCircle, Save, Loader2, Eye, Palette, ChevronDown, ChevronRight, Set
 import FieldRow, { type TemplateFieldDefinition } from '@/components/template-designer/field-row';
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates } from '@/contexts/TemplateContext';
-import type { TemplateField, CardTemplate, CardTemplateId as ContextCardTemplateId } from '@/lib/card-templates';
+import type { TemplateField, CardTemplate, CardTemplateId as ContextCardTemplateId, LayoutDefinition } from '@/lib/card-templates';
 import { DEFAULT_CARD_LAYOUT_JSON_STRING, DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT } from '@/lib/card-templates';
 import type { CardData } from '@/lib/types';
 import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-renderer';
@@ -48,8 +48,9 @@ export interface LayoutElementGuiConfig {
   styleLeft: string;
   styleRight?: string;
   styleBottom?: string;
+  // styleWidth?: string; // Removed
+  // styleHeight?: string; // Removed
   styleMaxHeight?: string;
-  // styleFontSize removed, styleFontWeight removed
   styleFontStyle?: string;
   styleTextAlign?: string;
   stylePadding?: string;
@@ -63,10 +64,8 @@ export interface LayoutElementGuiConfig {
   tailwindLineHeight?: string;
   tailwindOverflow?: string;
   tailwindTextOverflow?: string;
-
-  // New Tailwind border properties
   tailwindBorderRadius?: string;
-  tailwindBorderWidth?: string; // For overall border width
+  tailwindBorderWidth?: string;
   tailwindBorderColor?: string;
 }
 
@@ -82,7 +81,7 @@ const COMMON_CARD_SIZES = [
   { label: "Custom", value: "custom" }
 ];
 
-const NONE_VALUE = "_none_";
+const NONE_VALUE = "_none_"; // Used for "None" or "Default" options in Tailwind selects
 
 const TAILWIND_TEXT_COLORS = [
     { value: NONE_VALUE, label: "None (Theme Default)" },
@@ -180,7 +179,7 @@ const TAILWIND_BORDER_COLORS = [
 
 
 function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
-  console.log('[DEBUG] TemplateDesignerPage/mapFieldDefinitionToTemplateField: Mapping def', def);
+  // console.log('[DEBUG] TemplateDesignerPage/mapFieldDefinitionToTemplateField: Mapping def', def);
   const field: TemplateField = {
     key: def.key,
     label: def.label,
@@ -260,7 +259,9 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  path += `.png`; 
+  // .png is appended only if colors were specified, to ensure it's part of that segment
+  // or if no colors, it's widthxheight.png
+  path += '.png'; 
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
@@ -293,7 +294,7 @@ const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.Lucide
 
 
 export default function TemplateDesignerPage() {
-  console.log('[DEBUG] TemplateDesignerPage: Component rendering/re-rendering.');
+  // console.log('[DEBUG] TemplateDesignerPage: Component rendering/re-rendering.');
   const [templateId, setTemplateId] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<TemplateFieldDefinition[]>([]);
@@ -302,8 +303,15 @@ export default function TemplateDesignerPage() {
   const [layoutJsonError, setLayoutJsonError] = useState<string | null>(null);
 
   const [selectedSizePreset, setSelectedSizePreset] = useState<string>(`${DEFAULT_CANVAS_WIDTH}x${DEFAULT_CANVAS_HEIGHT}`);
+  
   const [canvasWidthSetting, setCanvasWidthSetting] = useState<string>(`${DEFAULT_CANVAS_WIDTH}px`);
   const [canvasHeightSetting, setCanvasHeightSetting] = useState<string>(`${DEFAULT_CANVAS_HEIGHT}px`);
+  const [canvasBackgroundColor, setCanvasBackgroundColor] = useState<string>("hsl(var(--card))");
+  const [canvasBorderColor, setCanvasBorderColor] = useState<string>("hsl(var(--border))");
+  const [canvasBorderRadius, setCanvasBorderRadius] = useState<string>("calc(var(--radius) - 2px)");
+  const [canvasBorderWidth, setCanvasBorderWidth] = useState<string>("1px");
+  const [canvasBorderStyle, setCanvasBorderStyle] = useState<string>("solid");
+
 
   const [layoutElementGuiConfigs, setLayoutElementGuiConfigs] = useState<LayoutElementGuiConfig[]>([]);
 
@@ -317,7 +325,7 @@ export default function TemplateDesignerPage() {
   const router = useRouter();
 
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesignerPage: templateName changed:', templateName);
+    // console.log('[DEBUG] TemplateDesignerPage: templateName changed:', templateName);
     if (templateName) {
       setTemplateId(toCamelCase(templateName));
     } else {
@@ -325,8 +333,32 @@ export default function TemplateDesignerPage() {
     }
   }, [templateName]);
 
+
+  // Initialize canvas settings from DEFAULT_CARD_LAYOUT_JSON_STRING
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesignerPage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
+    try {
+      const defaultLayout = JSON.parse(DEFAULT_CARD_LAYOUT_JSON_STRING) as LayoutDefinition;
+      setCanvasWidthSetting(defaultLayout.width || `${DEFAULT_CANVAS_WIDTH}px`);
+      setCanvasHeightSetting(defaultLayout.height || `${DEFAULT_CANVAS_HEIGHT}px`);
+      setCanvasBackgroundColor(defaultLayout.backgroundColor || "hsl(var(--card))");
+      setCanvasBorderColor(defaultLayout.borderColor || "hsl(var(--border))");
+      setCanvasBorderRadius(defaultLayout.borderRadius || "calc(var(--radius) - 2px)");
+      setCanvasBorderWidth(defaultLayout.borderWidth || "1px");
+      setCanvasBorderStyle(defaultLayout.borderStyle || "solid");
+
+      const matchingPreset = COMMON_CARD_SIZES.find(
+        s => s.width === (defaultLayout.width || `${DEFAULT_CANVAS_WIDTH}px`) && s.height === (defaultLayout.height || `${DEFAULT_CANVAS_HEIGHT}px`)
+      );
+      setSelectedSizePreset(matchingPreset ? matchingPreset.value : "custom");
+
+    } catch (e) {
+      console.error("Failed to parse default layout for canvas settings:", e);
+    }
+  }, []);
+
+
+  useEffect(() => {
+    // console.log('[DEBUG] TemplateDesignerPage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
     setLayoutElementGuiConfigs(prevConfigs => {
       const newConfigsMap = new Map(prevConfigs.map(c => [c._uiId, c]));
       const finalConfigs: LayoutElementGuiConfig[] = [];
@@ -354,7 +386,7 @@ export default function TemplateDesignerPage() {
             styleTop: `${yOffset}px`,
             styleLeft: `${xOffset}px`,
             styleRight: '', 
-            styleBottom: '', 
+            styleBottom: '',
             styleMaxHeight: field.type === 'textarea' ? '80px' : (field.type === 'placeholderImage' ? '140px' : ''), 
             iconName: field.type === 'number' ? 'Coins' : '', 
             styleFontStyle: 'normal',
@@ -374,13 +406,14 @@ export default function TemplateDesignerPage() {
           });
         }
       });
+      // Filter out configs whose _uiId no longer exists in `fields` (if a field was removed)
       return finalConfigs.filter(nc => fields.some(f => f._uiId === nc._uiId));
     });
   }, [fields]);
 
 
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesignerPage: Generating sampleCardForPreview. Fields count:', fields.length, 'Template ID:', templateId);
+    // console.log('[DEBUG] TemplateDesignerPage: Generating sampleCardForPreview. Fields count:', fields.length, 'Template ID:', templateId);
     const currentTemplateIdForPreview = templateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
@@ -437,6 +470,7 @@ export default function TemplateDesignerPage() {
       (generatedSampleCard as any)[key] = valueForPreview;
     });
 
+    // Add some base common field data for preview if not defined by user's fields
     if (generatedSampleCard.name === undefined && !fields.some(f => f.key === 'name')) generatedSampleCard.name = 'Awesome Card Name';
     if (generatedSampleCard.cost === undefined && !fields.some(f => f.key === 'cost')) generatedSampleCard.cost = 3;
     if (generatedSampleCard.imageUrl === undefined && !fields.some(f => f.key === 'imageUrl')) {
@@ -454,7 +488,7 @@ export default function TemplateDesignerPage() {
 
 
     setSampleCardForPreview(generatedSampleCard as CardData);
-    console.log('[DEBUG] TemplateDesignerPage: Generated sampleCardForPreview', generatedSampleCard);
+    // console.log('[DEBUG] TemplateDesignerPage: Generated sampleCardForPreview', generatedSampleCard);
   }, [fields, templateId, templateName, canvasWidthSetting, canvasHeightSetting]);
 
   const templateForPreview = useMemo((): CardTemplate => ({
@@ -465,7 +499,7 @@ export default function TemplateDesignerPage() {
   }), [templateId, templateName, fields, layoutDefinition]);
 
   const handleAddField = () => {
-    console.log('[DEBUG] TemplateDesignerPage/handleAddField: Adding new field.');
+    // console.log('[DEBUG] TemplateDesignerPage/handleAddField: Adding new field.');
     const newFieldBaseLabel = `New Field`;
     let newFieldLabel = `${newFieldBaseLabel} ${fields.length + 1}`;
     let counter = fields.length + 1;
@@ -500,16 +534,17 @@ export default function TemplateDesignerPage() {
   };
 
   const handleRemoveField = (uiIdToRemove: string) => {
-    console.log('[DEBUG] TemplateDesignerPage/handleRemoveField: Removing field with _uiId', uiIdToRemove);
+    // console.log('[DEBUG] TemplateDesignerPage/handleRemoveField: Removing field with _uiId', uiIdToRemove);
     const fieldToRemove = fields.find(f => f._uiId === uiIdToRemove);
     setFields(fields.filter(f => f._uiId !== uiIdToRemove));
+    // If LayoutElementGuiConfigs are directly tied to fields by _uiId, this will also remove from GUI builder
     if (fieldToRemove) {
       setLayoutElementGuiConfigs(prev => prev.filter(c => c._uiId !== fieldToRemove._uiId));
     }
   };
 
   const handleFieldChange = (uiIdToUpdate: string, updatedFieldDefinition: Partial<TemplateFieldDefinition>) => {
-    console.log('[DEBUG] TemplateDesignerPage/handleFieldChange: Updating field _uiId:', uiIdToUpdate, updatedFieldDefinition);
+    // console.log('[DEBUG] TemplateDesignerPage/handleFieldChange: Updating field _uiId:', uiIdToUpdate, updatedFieldDefinition);
     setFields(prevFields =>
       prevFields.map(field => {
         if (field._uiId === uiIdToUpdate) {
@@ -537,10 +572,12 @@ export default function TemplateDesignerPage() {
             modifiedField.key = newKey;
           }
 
+          // Handle type change for placeholderImage defaults
           if (updatedFieldDefinition.type === 'placeholderImage' && oldField.type !== 'placeholderImage') {
             modifiedField.placeholderConfigWidth = modifiedField.placeholderConfigWidth || parseInt(canvasWidthSetting) || DEFAULT_CANVAS_WIDTH;
             modifiedField.placeholderConfigHeight = modifiedField.placeholderConfigHeight || 140;
           } else if (updatedFieldDefinition.type !== 'placeholderImage' && oldField.type === 'placeholderImage') {
+            // Clear placeholder configs if type changes away from placeholderImage
             modifiedField.placeholderConfigWidth = undefined;
             modifiedField.placeholderConfigHeight = undefined;
             modifiedField.placeholderConfigBgColor = undefined;
@@ -556,7 +593,7 @@ export default function TemplateDesignerPage() {
 
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
-    console.log('[DEBUG] TemplateDesignerPage/handleLayoutDefinitionChange: Layout string changed.');
+    // console.log('[DEBUG] TemplateDesignerPage/handleLayoutDefinitionChange: Layout string changed.');
     setLayoutDefinition(newLayoutDef);
     if (layoutJsonError) setLayoutJsonError(null); 
   };
@@ -566,17 +603,17 @@ export default function TemplateDesignerPage() {
       const parsed = JSON.parse(layoutDefinition);
       setLayoutDefinition(JSON.stringify(parsed, null, 2)); 
       setLayoutJsonError(null);
-      console.log('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: JSON is valid and formatted.');
+      // console.log('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: JSON is valid and formatted.');
       return true;
     } catch (e: any) {
       setLayoutJsonError(`Invalid JSON: ${e.message}`);
-      console.warn('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: Invalid JSON', e.message);
+      // console.warn('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: Invalid JSON', e.message);
       return false;
     }
   };
 
   const handleGuiConfigChange = (targetUiId: string, property: keyof LayoutElementGuiConfig, value: any) => {
-    console.log(`[DEBUG] TemplateDesignerPage/handleGuiConfigChange: fieldUiId: ${targetUiId}, prop: ${property}, value: ${value}`);
+    // console.log(`[DEBUG] TemplateDesignerPage/handleGuiConfigChange: fieldUiId: ${targetUiId}, prop: ${property}, value: ${value}`);
     setLayoutElementGuiConfigs(prev =>
       prev.map(config =>
         config._uiId === targetUiId ? { ...config, [property]: value } : config
@@ -599,19 +636,25 @@ export default function TemplateDesignerPage() {
     const generatedElements = elementsToInclude.map(config => {
       const style: any = {
         position: "absolute",
-        top: config.styleTop.endsWith('px') || config.styleTop.endsWith('%') ? config.styleTop : `${config.styleTop}px`,
-        left: config.styleLeft.endsWith('px') || config.styleLeft.endsWith('%') ? config.styleLeft : `${config.styleLeft}px`,
       };
+      // Only add style properties if they have a value
+      if (config.styleTop && config.styleTop.trim() !== '') style.top = config.styleTop.trim().endsWith('px') || config.styleTop.trim().endsWith('%') ? config.styleTop.trim() : `${config.styleTop.trim()}px`;
+      if (config.styleLeft && config.styleLeft.trim() !== '') style.left = config.styleLeft.trim().endsWith('px') || config.styleLeft.trim().endsWith('%') ? config.styleLeft.trim() : `${config.styleLeft.trim()}px`;
       if (config.styleRight && config.styleRight.trim() !== '') style.right = config.styleRight.trim();
       if (config.styleBottom && config.styleBottom.trim() !== '') style.bottom = config.styleBottom.trim();
       
+      // Removed width and height as they are now implicit from top/bottom/left/right
+      // if (config.styleWidth && config.styleWidth.trim() !== '') style.width = config.styleWidth.trim();
+      // if (config.styleHeight && config.styleHeight.trim() !== '') style.height = config.styleHeight.trim();
+
       if (config.styleMaxHeight && config.styleMaxHeight.trim() !== '') style.maxHeight = config.styleMaxHeight.trim();
       if (config.styleFontStyle && config.styleFontStyle.trim() !== '' && config.styleFontStyle !== 'normal') style.fontStyle = config.styleFontStyle.trim();
       if (config.styleTextAlign && config.styleTextAlign.trim() !== '' && config.styleTextAlign !== 'left') style.textAlign = config.styleTextAlign.trim();
       if (config.stylePadding && config.stylePadding.trim() !== '') style.padding = config.stylePadding.trim();
       if (config.styleBorderTop && config.styleBorderTop.trim() !== '') style.borderTop = config.styleBorderTop.trim();
       if (config.styleBorderBottom && config.styleBorderBottom.trim() !== '') style.borderBottom = config.styleBorderBottom.trim();
-
+      
+      // Note: config.styleFontSize and config.styleFontWeight are removed as per previous decision
 
       const classNames = [];
       if (config.originalType === 'textarea' || config.elementType === 'textarea') {
@@ -639,19 +682,19 @@ export default function TemplateDesignerPage() {
       if (config.tailwindLineHeight && config.tailwindLineHeight.trim() !== '' && config.tailwindLineHeight !== NONE_VALUE) {
         classNames.push(config.tailwindLineHeight);
       } else if (config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') {
-        classNames.push('leading-normal');
+         classNames.push('leading-normal');
       }
 
       if (config.tailwindOverflow && config.tailwindOverflow.trim() !== '' && config.tailwindOverflow !== NONE_VALUE) {
         classNames.push(config.tailwindOverflow);
       } else if (config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') {
-        classNames.push('overflow-visible');
+         classNames.push('overflow-visible');
       }
-
+      
       if (config.tailwindTextOverflow && config.tailwindTextOverflow.trim() !== '' && config.tailwindTextOverflow !== NONE_VALUE) {
         classNames.push(config.tailwindTextOverflow);
       }
-      
+
       if (config.tailwindBorderRadius && config.tailwindBorderRadius.trim() !== '' && config.tailwindBorderRadius !== NONE_VALUE) {
         classNames.push(config.tailwindBorderRadius);
       }
@@ -675,12 +718,14 @@ export default function TemplateDesignerPage() {
       return element;
     });
 
-    const newLayout = {
+    const newLayout: LayoutDefinition = {
       width: canvasWidthSetting || `${DEFAULT_CANVAS_WIDTH}px`,
       height: canvasHeightSetting || `${DEFAULT_CANVAS_HEIGHT}px`,
-      backgroundColor: "hsl(var(--card))", 
-      borderColor: "hsl(var(--border))",   
-      borderRadius: "calc(var(--radius) - 2px)", 
+      backgroundColor: canvasBackgroundColor || "hsl(var(--card))",
+      borderColor: canvasBorderColor || "hsl(var(--border))",
+      borderRadius: canvasBorderRadius || "calc(var(--radius) - 2px)",
+      borderWidth: canvasBorderWidth || "1px",
+      borderStyle: canvasBorderStyle || "solid",
       elements: generatedElements
     };
 
@@ -692,7 +737,7 @@ export default function TemplateDesignerPage() {
 
 
   const handleSaveTemplate = async () => {
-    console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Attempting to save.');
+    // console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Attempting to save.');
     if (!templateName.trim()) {
       toast({ title: "Missing Name", description: "Template Name cannot be empty.", variant: "destructive" });
       return;
@@ -725,24 +770,36 @@ export default function TemplateDesignerPage() {
         return;
     }
 
-    if (!validateAndFormatLayoutJson()) { 
-       toast({
-        title: "Invalid Layout JSON",
-        description: `The JSON in 'Layout Definition' is invalid. Error: ${layoutJsonError || 'Unknown JSON parsing error.'}. Please correct it.`,
-        variant: "destructive",
-        duration: 7000,
-      });
-      return;
+    // Final validation of JSON before saving
+    let finalLayoutDefToSave = layoutDefinition.trim();
+    if (!finalLayoutDefToSave) { // If user cleared textarea, force generate from GUI
+        handleGenerateJsonFromBuilder(); // This updates layoutDefinition state
+        finalLayoutDefToSave = layoutDefinition; // Re-read updated state
+    } else {
+      try {
+        const parsed = JSON.parse(finalLayoutDefToSave);
+        finalLayoutDefToSave = JSON.stringify(parsed, null, 2); // Ensure it's well-formed
+      } catch (e: any) {
+        setLayoutJsonError(`Invalid JSON: ${e.message}`);
+        toast({
+          title: "Invalid Layout JSON",
+          description: `The JSON in 'Layout Definition' is invalid. Error: ${e.message}. Please correct it or regenerate from builder.`,
+          variant: "destructive",
+          duration: 7000,
+        });
+        return;
+      }
     }
+
 
     setIsSaving(true);
     const newTemplate: CardTemplate = {
       id: finalTemplateId as CardTemplateId, 
       name: templateName.trim(),
       fields: fields.map(mapFieldDefinitionToTemplateField),
-      layoutDefinition: layoutDefinition, 
+      layoutDefinition: finalLayoutDefToSave, 
     };
-    console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Calling context.addTemplate with:', newTemplate);
+    // console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Calling context.addTemplate with:', newTemplate);
     const result = await saveTemplateToContext(newTemplate);
     if (result.success) {
       toast({
@@ -785,6 +842,7 @@ export default function TemplateDesignerPage() {
   const handleSizePresetChange = (value: string) => {
     setSelectedSizePreset(value);
     if (value === "custom") {
+      // Do nothing, user will edit manually
     } else {
       const preset = COMMON_CARD_SIZES.find(s => s.value === value);
       if (preset) {
@@ -800,10 +858,23 @@ export default function TemplateDesignerPage() {
     } else {
       setCanvasHeightSetting(value);
     }
+    // If user types in custom dimensions, switch preset to "custom"
     if (selectedSizePreset !== "custom") {
       setSelectedSizePreset("custom");
     }
   };
+
+  // Handle canvas property changes
+  const handleCanvasPropertyChange = (prop: 'backgroundColor' | 'borderColor' | 'borderRadius' | 'borderWidth' | 'borderStyle', value: string) => {
+    switch(prop) {
+      case 'backgroundColor': setCanvasBackgroundColor(value); break;
+      case 'borderColor': setCanvasBorderColor(value); break;
+      case 'borderRadius': setCanvasBorderRadius(value); break;
+      case 'borderWidth': setCanvasBorderWidth(value); break;
+      case 'borderStyle': setCanvasBorderStyle(value); break;
+    }
+  };
+
 
   if (templatesLoading) {
     return (
@@ -816,7 +887,7 @@ export default function TemplateDesignerPage() {
 
   return (
     <div className="space-y-6 container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <Card className="shadow-lg">
+      <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className="text-2xl font-bold">Template Designer</CardTitle>
@@ -825,7 +896,7 @@ export default function TemplateDesignerPage() {
             </Button>
           </div>
           <CardDescription className="text-md">
-            Define the structure for a new card template. Template ID is auto-generated from the name. Field Keys are auto-generated from Field Labels. Templates are saved to browser local storage.
+            Define the data structure and visual layout for a new card template. Templates are saved to browser local storage.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -848,7 +919,7 @@ export default function TemplateDesignerPage() {
                 value={templateId}
                 readOnly
                 className="mt-1 bg-muted/50"
-                disabled={isSaving}
+                disabled={isSaving || true} // Always disabled for new templates
               />
             </div>
           </div>
@@ -895,10 +966,11 @@ export default function TemplateDesignerPage() {
               </CardDescription>
           </CardHeader>
           <CardContent className="flex-grow space-y-4 flex flex-col">
+            {/* Card Canvas Setup Section */}
             <div className="space-y-3 p-3 border rounded-md bg-muted/30">
               <h4 className="text-base font-semibold mb-1">Card Canvas Setup</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-2 items-end">
-                <div className="sm:col-span-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 items-end">
+                <div>
                   <Label htmlFor="canvasSizePreset" className="text-xs font-medium">Canvas Size Preset</Label>
                   <Select value={selectedSizePreset} onValueChange={handleSizePresetChange} disabled={isSaving}>
                     <SelectTrigger id="canvasSizePreset" className="mt-1 h-8 text-xs">
@@ -915,94 +987,107 @@ export default function TemplateDesignerPage() {
                   <>
                     <div>
                       <Label htmlFor="canvasWidth" className="text-xs font-medium">Custom Width (e.g., 280px)</Label>
-                      <Input
-                        id="canvasWidth"
-                        value={canvasWidthSetting}
-                        onChange={(e) => handleCustomDimensionChange('width', e.target.value)}
-                        disabled={isSaving}
-                        className="mt-1 h-8 text-xs"
-                      />
+                      <Input id="canvasWidth" value={canvasWidthSetting} onChange={(e) => handleCustomDimensionChange('width', e.target.value)} disabled={isSaving} className="mt-1 h-8 text-xs"/>
                     </div>
                     <div>
                       <Label htmlFor="canvasHeight" className="text-xs font-medium">Custom Height (e.g., 400px)</Label>
-                      <Input
-                        id="canvasHeight"
-                        value={canvasHeightSetting}
-                        onChange={(e) => handleCustomDimensionChange('height', e.target.value)}
-                        disabled={isSaving}
-                        className="mt-1 h-8 text-xs"
-                      />
+                      <Input id="canvasHeight" value={canvasHeightSetting} onChange={(e) => handleCustomDimensionChange('height', e.target.value)} disabled={isSaving} className="mt-1 h-8 text-xs"/>
                     </div>
                   </>
                 ) : (COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)) && (
-                  <div className="sm:col-span-2 grid grid-cols-2 gap-4">
-                     <div>
-                        <Label className="text-xs font-medium text-muted-foreground">Width</Label>
-                        <p className="text-xs mt-1 h-8 flex items-center">{COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)?.width}</p>
-                    </div>
-                    <div>
-                        <Label className="text-xs font-medium text-muted-foreground">Height</Label>
-                        <p className="text-xs mt-1 h-8 flex items-center">{COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)?.height}</p>
-                    </div>
+                  <div className="lg:col-span-2 grid grid-cols-2 gap-4">
+                     <div><Label className="text-xs font-medium text-muted-foreground">Width</Label><p className="text-xs mt-1 h-8 flex items-center">{COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)?.width}</p></div>
+                    <div><Label className="text-xs font-medium text-muted-foreground">Height</Label><p className="text-xs mt-1 h-8 flex items-center">{COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)?.height}</p></div>
                   </div>
                 )}
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 items-end mt-2">
+                <div>
+                  <Label htmlFor="canvasBgColor" className="text-xs font-medium">Background Color (CSS)</Label>
+                  <Input id="canvasBgColor" value={canvasBackgroundColor} onChange={(e) => handleCanvasPropertyChange('backgroundColor', e.target.value)} placeholder="e.g., hsl(var(--card))" disabled={isSaving} className="mt-1 h-8 text-xs"/>
+                </div>
+                <div>
+                  <Label htmlFor="canvasBorderRadius" className="text-xs font-medium">Border Radius (CSS)</Label>
+                  <Input id="canvasBorderRadius" value={canvasBorderRadius} onChange={(e) => handleCanvasPropertyChange('borderRadius', e.target.value)} placeholder="e.g., 8px" disabled={isSaving} className="mt-1 h-8 text-xs"/>
+                </div>
+                <div>
+                  <Label htmlFor="canvasBorderColor" className="text-xs font-medium">Border Color (CSS)</Label>
+                  <Input id="canvasBorderColor" value={canvasBorderColor} onChange={(e) => handleCanvasPropertyChange('borderColor', e.target.value)} placeholder="e.g., hsl(var(--border))" disabled={isSaving} className="mt-1 h-8 text-xs"/>
+                </div>
+                <div>
+                  <Label htmlFor="canvasBorderWidth" className="text-xs font-medium">Border Width (CSS)</Label>
+                  <Input id="canvasBorderWidth" value={canvasBorderWidth} onChange={(e) => handleCanvasPropertyChange('borderWidth', e.target.value)} placeholder="e.g., 1px" disabled={isSaving} className="mt-1 h-8 text-xs"/>
+                </div>
+                 <div>
+                  <Label htmlFor="canvasBorderStyle" className="text-xs font-medium">Border Style (CSS)</Label>
+                   <Select value={canvasBorderStyle} onValueChange={(value) => handleCanvasPropertyChange('borderStyle', value)} disabled={isSaving}>
+                    <SelectTrigger id="canvasBorderStyle" className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="solid">Solid</SelectItem><SelectItem value="dashed">Dashed</SelectItem>
+                      <SelectItem value="dotted">Dotted</SelectItem><SelectItem value="none">None</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
 
+            {/* Layout Elements (Toggle to Include & Configure) Section */}
             <div className="space-y-3 p-3 border rounded-md bg-muted/30">
               <h4 className="text-base font-semibold mb-1">Layout Elements (Toggle to Include & Configure)</h4>
-              <ScrollArea className="pr-2">
-                <div className="space-y-2">
-                  {layoutElementGuiConfigs.map((config) => (
-                    <div key={config._uiId} className="p-2.5 border rounded-md bg-card/80 hover:bg-card transition-colors">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            id={`enable-${config._uiId}`}
-                            checked={config.isEnabledOnCanvas}
-                            onCheckedChange={(checked) => handleGuiConfigChange(config._uiId, 'isEnabledOnCanvas', checked)}
-                            disabled={isSaving}
-                          />
-                          <Label htmlFor={`enable-${config._uiId}`} className="text-sm font-medium cursor-pointer">
-                            {config.label} <span className="text-xs text-muted-foreground">({config.fieldKey})</span>
-                          </Label>
+               <ScrollArea className="pr-2"> 
+                  <div className="space-y-2">
+                    {layoutElementGuiConfigs.map((config) => (
+                      <div key={config._uiId} className="p-2.5 border rounded-md bg-card/80 hover:bg-card transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id={`enable-${config._uiId}`}
+                              checked={config.isEnabledOnCanvas}
+                              onCheckedChange={(checked) => handleGuiConfigChange(config._uiId, 'isEnabledOnCanvas', checked)}
+                              disabled={isSaving}
+                            />
+                            <Label htmlFor={`enable-${config._uiId}`} className="text-sm font-medium cursor-pointer">
+                              {config.label} <span className="text-xs text-muted-foreground">({config.fieldKey})</span>
+                            </Label>
+                          </div>
+                          <Button variant="ghost" size="icon" onClick={() => handleToggleGuiExpand(config._uiId)} className="h-7 w-7 text-muted-foreground">
+                            {config.isExpandedInGui ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </Button>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => handleToggleGuiExpand(config._uiId)} className="h-7 w-7 text-muted-foreground">
-                          {config.isExpandedInGui ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                      {config.isExpandedInGui && config.isEnabledOnCanvas && (
-                        <div className="mt-3 pt-3 border-t border-dashed space-y-4">
-                          <details className="space-y-2 group" open>
+                        {config.isExpandedInGui && config.isEnabledOnCanvas && (
+                          <div className="mt-3 pt-3 border-t border-dashed space-y-4">
+                           {/* Element Type & Icon Section */}
+                           <details className="space-y-2 group" open>
                             <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
-                                Element Type & Icon
-                                <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
+                                <Settings className="h-3 w-3 mr-1"/> Element Type & Icon
+                                <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform ml-auto" />
                             </summary>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-1">
-                              <div>
-                                <Label htmlFor={`el-type-${config._uiId}`} className="text-xs">Element Type</Label>
-                                <Select value={config.elementType} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'elementType', value)} disabled={isSaving}>
-                                  <SelectTrigger id={`el-type-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="text">Text</SelectItem><SelectItem value="textarea">Textarea</SelectItem>
-                                    <SelectItem value="image">Image</SelectItem><SelectItem value="iconValue">Icon & Value</SelectItem>
-                                    <SelectItem value="iconFromData">Icon from Data</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              {config.elementType === 'iconValue' && (
-                                <div>
-                                  <Label htmlFor={`el-icon-${config._uiId}`} className="text-xs">Icon Name (Lucide)</Label>
-                                  <Input id={`el-icon-${config._uiId}`} value={config.iconName || ''} onChange={(e) => handleGuiConfigChange(config._uiId, 'iconName', e.target.value)} placeholder="e.g., Coins" className="h-8 text-xs mt-0.5" disabled={isSaving}/>
-                                </div>
-                              )}
+                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-1">
+                            <div>
+                              <Label htmlFor={`el-type-${config._uiId}`} className="text-xs">Element Type</Label>
+                              <Select value={config.elementType} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'elementType', value)} disabled={isSaving}>
+                                <SelectTrigger id={`el-type-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="text">Text</SelectItem><SelectItem value="textarea">Textarea</SelectItem>
+                                  <SelectItem value="image">Image</SelectItem><SelectItem value="iconValue">Icon & Value</SelectItem>
+                                  <SelectItem value="iconFromData">Icon from Data</SelectItem>
+                                </SelectContent>
+                              </Select>
                             </div>
+                            {config.elementType === 'iconValue' && (
+                              <div>
+                                <Label htmlFor={`el-icon-${config._uiId}`} className="text-xs">Icon Name (Lucide)</Label>
+                                <Input id={`el-icon-${config._uiId}`} value={config.iconName || ''} onChange={(e) => handleGuiConfigChange(config._uiId, 'iconName', e.target.value)} placeholder="e.g., Coins" className="h-8 text-xs mt-0.5" disabled={isSaving}/>
+                              </div>
+                            )}
+                          </div>
                           </details>
 
-                           <details className="space-y-2 group" open>
-                             <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
-                                Position & Sizing (CSS)
-                                <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
+                            {/* Position & Sizing Section */}
+                            <details className="space-y-2 group" open>
+                            <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
+                                <Settings className="h-3 w-3 mr-1"/> Position & Sizing (CSS)
+                                <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform ml-auto" />
                             </summary>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pl-1">
                                 {['styleTop', 'styleLeft', 'styleRight', 'styleBottom', 'styleMaxHeight', 'stylePadding'].map(prop => (
@@ -1012,14 +1097,15 @@ export default function TemplateDesignerPage() {
                                     </div>
                                 ))}
                             </div>
-                           </details>
+                            </details>
                             
-                          {(config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') && (
-                            <>
-                            <details className="space-y-2 group" open>
-                               <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
-                                    Typography
-                                    <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
+                            {/* Typography Section (Conditional) */}
+                            {(config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') && (
+                              <>
+                               <details className="space-y-2 group" open>
+                                <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
+                                    <Settings className="h-3 w-3 mr-1"/> Typography
+                                    <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform ml-auto" />
                                 </summary>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pl-1">
                                   <div>
@@ -1068,11 +1154,12 @@ export default function TemplateDesignerPage() {
                                     </Select>
                                   </div>
                                 </div>
-                             </details>
-                             <details className="space-y-2 group" open>
+                                </details>
+                                {/* Overflow & Display Section (Conditional) */}
+                                <details className="space-y-2 group" open>
                                 <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
-                                    Overflow & Display (Text - Tailwind)
-                                    <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
+                                    <Settings className="h-3 w-3 mr-1"/> Overflow & Display (Text - Tailwind)
+                                    <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform ml-auto" />
                                 </summary>
                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pl-1">
                                   <div>
@@ -1090,13 +1177,14 @@ export default function TemplateDesignerPage() {
                                     </Select>
                                   </div>
                                 </div>
-                             </details>
-                            </>
-                          )}
-                          <details className="space-y-2 group" open>
-                             <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
-                                Borders
-                                <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
+                                </details>
+                              </>
+                            )}
+                            {/* Borders Section */}
+                            <details className="space-y-2 group" open>
+                            <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
+                                <Settings className="h-3 w-3 mr-1"/> Borders
+                                <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform ml-auto" />
                             </summary>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pl-1">
                               <div>
@@ -1129,25 +1217,26 @@ export default function TemplateDesignerPage() {
                                   <Input id={`el-styleBorderBottom-${config._uiId}`} value={config.styleBorderBottom || ''} onChange={(e) => handleGuiConfigChange(config._uiId, 'styleBorderBottom', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 1px solid #ccc" disabled={isSaving}/>
                               </div>
                             </div>
-                          </details>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                   {layoutElementGuiConfigs.length === 0 && fields.length > 0 && (
+                            </details>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                     {layoutElementGuiConfigs.length === 0 && fields.length > 0 && (
                      <p className="text-xs text-muted-foreground text-center py-2">No data fields are currently enabled for the layout. Toggle a field above to configure it.</p>
                    )}
                    {fields.length === 0 && (
                      <p className="text-xs text-muted-foreground text-center py-2">Add data fields to the template first to configure their layout.</p>
                    )}
-                </div>
-              </ScrollArea>
+                  </div>
+                </ScrollArea>
             </div>
 
             <Button onClick={handleGenerateJsonFromBuilder} variant="secondary" size="sm" disabled={isSaving || layoutElementGuiConfigs.filter(c => c.isEnabledOnCanvas).length === 0} className="self-start mt-2">
               <Palette className="mr-2 h-4 w-4" /> Generate/Update JSON from Builder
             </Button>
 
+            {/* JSON Textarea and Helper Accordions */}
             <div className="mt-4 flex-grow flex flex-col min-h-0">
               <div>
                 <Label htmlFor="layoutDefinition" className="text-sm font-medium">Layout Definition JSON (Builder output updates here)</Label>
@@ -1169,6 +1258,7 @@ export default function TemplateDesignerPage() {
                   <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
                 </Alert>
               )}
+              {/* Helper Accordions moved here */}
                <Accordion type="single" collapsible className="w-full mt-3" defaultValue="lucide-icon-explorer">
                 <AccordionItem value="lucide-icon-explorer">
                    <AccordionTrigger className="text-sm py-2 hover:no-underline">

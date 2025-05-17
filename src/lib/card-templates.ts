@@ -35,6 +35,8 @@ export interface LayoutDefinition {
   backgroundColor?: string;
   borderColor?: string;
   borderRadius?: string;
+  borderWidth?: string; // New
+  borderStyle?: string; // New
   elements: LayoutElement[];
 }
 
@@ -52,17 +54,14 @@ export type CardTemplateId = string;
 export const DEFAULT_CANVAS_WIDTH = 280;
 export const DEFAULT_CANVAS_HEIGHT = 400;
 
-// DEFAULT_CARD_LAYOUT_JSON_STRING
-// This is a comprehensive default layout.
-// Remember:
-// - `fieldKey` values MUST match the "Field Key" you define in your "Data Fields" section.
-// - For `style` objects, use camelCase for CSS properties (e.g., `fontSize`, not `font-size`).
 export const DEFAULT_CARD_LAYOUT_JSON_STRING = `{
   "width": "${DEFAULT_CANVAS_WIDTH}px",
   "height": "${DEFAULT_CANVAS_HEIGHT}px",
   "backgroundColor": "hsl(var(--card))",
   "borderColor": "hsl(var(--border))",
   "borderRadius": "calc(var(--radius) - 2px)",
+  "borderWidth": "1px",
+  "borderStyle": "solid",
   "elements": [
     {
       "fieldKey": "name",
