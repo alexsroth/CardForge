@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Save, AlertTriangle, Loader2, ArrowLeft, Eye, Palette, ChevronDown, ChevronRight, Settings, Copy } from 'lucide-react';
+import { PlusCircle, Save, AlertTriangle, Loader2, ArrowLeft, Eye, Palette, ChevronDown, ChevronRight, Settings, Copy, HelpCircle } from 'lucide-react';
 import FieldRow, { type TemplateFieldDefinition } from '@/components/template-designer/field-row';
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates, type CardTemplateId as ContextCardTemplateId } from '@/contexts/TemplateContext';
@@ -31,7 +31,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { LayoutElementGuiConfig } from '../new/page'; // Import from new page for consistency
+import type { LayoutElementGuiConfig } from '../new/page'; 
 
 
 type CardTemplateId = ContextCardTemplateId;
@@ -51,6 +51,7 @@ const COMMON_CARD_SIZES = [
 const NONE_VALUE = "_none_";
 
 const TAILWIND_TEXT_COLORS = [
+    { value: NONE_VALUE, label: "None (Theme Default)" },
     { value: "text-card-foreground", label: "Default (Card FG)" }, { value: "text-primary", label: "Primary" },
     { value: "text-secondary", label: "Secondary" }, { value: "text-muted-foreground", label: "Muted" },
     { value: "text-destructive", label: "Destructive" }, { value: "text-white", label: "White" }, { value: "text-black", label: "Black" },
@@ -63,21 +64,23 @@ const TAILWIND_TEXT_COLORS = [
     { value: "text-indigo-500", label: "Indigo 500" }, { value: "text-violet-500", label: "Violet 500" },
     { value: "text-purple-500", label: "Purple 500" }, { value: "text-fuchsia-500", label: "Fuchsia 500" },
     { value: "text-pink-500", label: "Pink 500" }, { value: "text-rose-500", label: "Rose 500" },
-    { value: NONE_VALUE, label: "None (Inherit)" },
 ];
 const TAILWIND_FONT_SIZES = [
+    { value: NONE_VALUE, label: "None (Default)" },
     { value: "text-xs", label: "XS" }, { value: "text-sm", label: "Small" }, { value: "text-base", label: "Base" },
     { value: "text-lg", label: "Large" }, { value: "text-xl", label: "XL" }, { value: "text-2xl", label: "2XL" },
-    { value: "text-3xl", label: "3XL" }, { value: "text-4xl", label: "4XL" }, { value: NONE_VALUE, label: "None (Default)" },
+    { value: "text-3xl", label: "3XL" }, { value: "text-4xl", label: "4XL" },
 ];
 const TAILWIND_FONT_WEIGHTS = [
+    { value: NONE_VALUE, label: "None (Default)" },
     { value: "font-thin", label: "Thin (100)" }, { value: "font-extralight", label: "Extra Light (200)" },
     { value: "font-light", label: "Light (300)" }, { value: "font-normal", label: "Normal (400)" },
     { value: "font-medium", label: "Medium (500)" }, { value: "font-semibold", label: "Semi-Bold (600)" },
     { value: "font-bold", label: "Bold (700)" }, { value: "font-extrabold", label: "Extra Bold (800)" },
-    { value: "font-black", label: "Black (900)" }, { value: NONE_VALUE, label: "None (Default)" },
+    { value: "font-black", label: "Black (900)" },
 ];
 const TAILWIND_LINE_HEIGHTS = [
+    { value: NONE_VALUE, label: "None (Default)" },
     { value: "leading-3", label: "0.75rem (12px)" }, { value: "leading-4", label: "1rem (16px)" },
     { value: "leading-5", label: "1.25rem (20px)" }, { value: "leading-6", label: "1.5rem (24px)" },
     { value: "leading-7", label: "1.75rem (28px)" }, { value: "leading-8", label: "2rem (32px)" },
@@ -85,16 +88,60 @@ const TAILWIND_LINE_HEIGHTS = [
     { value: "leading-none", label: "None (1)" }, { value: "leading-tight", label: "Tight (1.25)" },
     { value: "leading-snug", label: "Snug (1.375)" }, { value: "leading-normal", label: "Normal (1.5)" },
     { value: "leading-relaxed", label: "Relaxed (1.625)" }, { value: "leading-loose", label: "Loose (2)" },
-    { value: NONE_VALUE, label: "None (Default)" },
 ];
 const TAILWIND_OVERFLOW = [
+    { value: NONE_VALUE, label: "None (Default)" },
     { value: "overflow-auto", label: "Auto" }, { value: "overflow-hidden", label: "Hidden" },
     { value: "overflow-clip", label: "Clip" }, { value: "overflow-visible", label: "Visible" },
-    { value: "overflow-scroll", label: "Scroll" }, { value: NONE_VALUE, label: "None (Default)" },
+    { value: "overflow-scroll", label: "Scroll" },
 ];
 const TAILWIND_TEXT_OVERFLOW = [
+    { value: NONE_VALUE, label: "None (Default)" },
     { value: "truncate", label: "Truncate (Ellipsis + Hidden)" }, { value: "text-ellipsis", label: "Ellipsis" },
-    { value: "text-clip", label: "Clip" }, { value: NONE_VALUE, label: "None (Default)" },
+    { value: "text-clip", label: "Clip" },
+];
+
+const TAILWIND_BORDER_RADIUS = [
+  { value: NONE_VALUE, label: "None (Default)" },
+  { value: "rounded-none", label: "None (Explicit)"},
+  { value: "rounded-sm", label: "Small"},
+  { value: "rounded", label: "Default"},
+  { value: "rounded-md", label: "Medium"},
+  { value: "rounded-lg", label: "Large"},
+  { value: "rounded-xl", label: "XL"},
+  { value: "rounded-2xl", label: "2XL"},
+  { value: "rounded-3xl", label: "3XL"},
+  { value: "rounded-full", label: "Full"},
+];
+
+const TAILWIND_BORDER_WIDTHS = [
+  { value: NONE_VALUE, label: "None (Default)" },
+  { value: "border-0", label: "0px (No Border)"},
+  { value: "border", label: "1px"},
+  { value: "border-2", label: "2px"},
+  { value: "border-4", label: "4px"},
+  { value: "border-8", label: "8px"},
+];
+
+const TAILWIND_BORDER_COLORS = [
+  { value: NONE_VALUE, label: "None (Theme Default)" },
+  { value: "border-transparent", label: "Transparent" },
+  { value: "border-current", label: "Current Text Color" },
+  { value: "border-primary", label: "Primary" },
+  { value: "border-secondary", label: "Secondary" },
+  { value: "border-muted", label: "Muted" },
+  { value: "border-destructive", label: "Destructive" },
+  { value: "border-white", label: "White" },
+  { value: "border-black", label: "Black" },
+  { value: "border-slate-500", label: "Slate 500" }, { value: "border-red-500", label: "Red 500" },
+  { value: "border-orange-500", label: "Orange 500" }, { value: "border-amber-500", label: "Amber 500" },
+  { value: "border-yellow-500", label: "Yellow 500" }, { value: "border-lime-500", label: "Lime 500" },
+  { value: "border-green-500", label: "Green 500" }, { value: "border-emerald-500", label: "Emerald 500" },
+  { value: "border-teal-500", label: "Teal 500" }, { value: "border-cyan-500", label: "Cyan 500" },
+  { value: "border-sky-500", label: "Sky 500" }, { value: "border-blue-500", label: "Blue 500" },
+  { value: "border-indigo-500", label: "Indigo 500" }, { value: "border-violet-500", label: "Violet 500" },
+  { value: "border-purple-500", label: "Purple 500" }, { value: "border-fuchsia-500", label: "Fuchsia 500" },
+  { value: "border-pink-500", label: "Pink 500" }, { value: "border-rose-500", label: "Rose 500" },
 ];
 
 
@@ -212,7 +259,7 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
   "AlertTriangle", "Info", "HelpCircle", "Wand2", "Sparkles", "Sun", "Moon",
   "Cloud", "Flame", "Leaf", "Droplets", "Feather", "Eye", "Swords", "ShieldCheck",
   "ShieldAlert", "Aperture", "Book", "Camera", "Castle", "Crown", "Diamond", "Dice5",
-  "Flag", /* "Flash" removed */ "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock",
+  "Flag", "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock",
   "MapPin", "Medal", "Mountain", "Music", "Package", "Palette", "PawPrint", "Pencil",
   "Phone", "Puzzle", "Rocket", "Save", "Search", "Ship", "Sprout", "Ticket", "Trash2",
   "TreePine", "Trophy", "Umbrella", "User", "Video", "Wallet", "Watch", "Wifi", "Wrench"
@@ -286,7 +333,6 @@ export default function EditTemplatePage() {
         );
         setSelectedSizePreset(matchingPreset ? matchingPreset.value : "custom");
 
-        // Initialize layoutElementGuiConfigs based on initialFields and parsedLayout
         setLayoutElementGuiConfigs(initialFields.map((field, index) => {
           const existingLayoutElement = layoutElements.find((el: any) => el.fieldKey === field.key);
           const yOffset = 10 + (index % 8) * 35; 
@@ -304,24 +350,23 @@ export default function EditTemplatePage() {
             styleLeft: existingLayoutElement?.style?.left || `${xOffset}px`,
             styleRight: existingLayoutElement?.style?.right || '',
             styleBottom: existingLayoutElement?.style?.bottom || '',
-            // Width and height are no longer directly set in GUI for positioning by edges
-            styleFontSize: existingLayoutElement?.style?.fontSize || '12px',
-            styleFontWeight: existingLayoutElement?.style?.fontWeight || 'normal',
-            iconName: existingLayoutElement?.icon || (field.type === 'number' ? 'Coins' : ''),
-            
             styleMaxHeight: existingLayoutElement?.style?.maxHeight || '',
             styleFontStyle: existingLayoutElement?.style?.fontStyle || 'normal',
             styleTextAlign: existingLayoutElement?.style?.textAlign || 'left',
             stylePadding: existingLayoutElement?.style?.padding || '',
             styleBorderTop: existingLayoutElement?.style?.borderTop || '',
             styleBorderBottom: existingLayoutElement?.style?.borderBottom || '',
+            iconName: existingLayoutElement?.icon || (field.type === 'number' ? 'Coins' : ''),
             
-            tailwindTextColor: 'text-card-foreground',
-            tailwindFontSize: 'text-base',
-            tailwindFontWeight: 'font-normal',
-            tailwindLineHeight: 'leading-normal',
-            tailwindOverflow: 'overflow-visible',
+            tailwindTextColor: NONE_VALUE,
+            tailwindFontSize: NONE_VALUE,
+            tailwindFontWeight: NONE_VALUE,
+            tailwindLineHeight: NONE_VALUE,
+            tailwindOverflow: NONE_VALUE,
             tailwindTextOverflow: NONE_VALUE,
+            tailwindBorderRadius: NONE_VALUE,
+            tailwindBorderWidth: NONE_VALUE,
+            tailwindBorderColor: NONE_VALUE,
           };
 
           if (existingLayoutElement?.className) {
@@ -333,19 +378,26 @@ export default function EditTemplatePage() {
             const twOverflow = classes.find(c => TAILWIND_OVERFLOW.some(to => to.value === c && c !== '' && to.value !== NONE_VALUE));
             const twTextOverflow = classes.find(c => TAILWIND_TEXT_OVERFLOW.some(tto => tto.value === c && c !== '' && tto.value !== NONE_VALUE));
             
+            const twBorderRadius = classes.find(c => TAILWIND_BORDER_RADIUS.some(br => br.value === c && c !== '' && br.value !== NONE_VALUE));
+            const twBorderWidth = classes.find(c => TAILWIND_BORDER_WIDTHS.some(bw => bw.value === c && c !== '' && bw.value !== NONE_VALUE));
+            const twBorderColor = classes.find(c => TAILWIND_BORDER_COLORS.some(bc => bc.value === c && c !== '' && bc.value !== NONE_VALUE));
+
+
             if (twColor) config.tailwindTextColor = twColor;
             if (twSize) config.tailwindFontSize = twSize;
             if (twWeight) config.tailwindFontWeight = twWeight;
             if (twLeading) config.tailwindLineHeight = twLeading;
             if (twOverflow) config.tailwindOverflow = twOverflow;
             if (twTextOverflow) config.tailwindTextOverflow = twTextOverflow;
+            if (twBorderRadius) config.tailwindBorderRadius = twBorderRadius;
+            if (twBorderWidth) config.tailwindBorderWidth = twBorderWidth;
+            if (twBorderColor) config.tailwindBorderColor = twBorderColor;
           }
           return config;
         }));
 
       } catch (e) {
         console.warn("[DEBUG] EditTemplatePage: Could not parse initial layout definition for GUI config:", e);
-        // Fallback if JSON parsing fails
         setSelectedSizePreset(`${DEFAULT_CANVAS_WIDTH}x${DEFAULT_CANVAS_HEIGHT}`);
         setCanvasWidthSetting(`${DEFAULT_CANVAS_WIDTH}px`);
         setCanvasHeightSetting(`${DEFAULT_CANVAS_HEIGHT}px`);
@@ -357,20 +409,19 @@ export default function EditTemplatePage() {
                 fieldKey: field.key,
                 label: field.label,
                 originalType: field.type,
-                isEnabledOnCanvas: true, // Default to true
+                isEnabledOnCanvas: true, 
                 isExpandedInGui: false,
                 elementType: field.type === 'textarea' ? 'textarea' : (field.type === 'placeholderImage' ? 'image' : 'text'),
                 styleTop: `${yOffset}px`,
                 styleLeft: `${xOffset}px`,
                 styleRight: '',
                 styleBottom: '',
-                styleFontSize: '12px',
-                styleFontWeight: 'normal',
-                iconName: field.type === 'number' ? 'Coins' : '',
                 styleMaxHeight: '', 
                 styleFontStyle: 'normal', styleTextAlign: 'left', stylePadding: '', styleBorderTop: '', styleBorderBottom: '',
-                tailwindTextColor: 'text-card-foreground', tailwindFontSize: 'text-base', tailwindFontWeight: 'font-normal',
-                tailwindLineHeight: 'leading-normal', tailwindOverflow: 'overflow-visible', tailwindTextOverflow: NONE_VALUE,
+                iconName: field.type === 'number' ? 'Coins' : '',
+                tailwindTextColor: NONE_VALUE, tailwindFontSize: NONE_VALUE, tailwindFontWeight: NONE_VALUE,
+                tailwindLineHeight: NONE_VALUE, tailwindOverflow: NONE_VALUE, tailwindTextOverflow: NONE_VALUE,
+                tailwindBorderRadius: NONE_VALUE, tailwindBorderWidth: NONE_VALUE, tailwindBorderColor: NONE_VALUE,
             };
         }));
       }
@@ -391,7 +442,6 @@ export default function EditTemplatePage() {
       fields.forEach((field, index) => {
         const existingConfig = newConfigsMap.get(field._uiId || '');
         if (existingConfig) {
-            // Preserve most existing GUI settings but update label, originalType, fieldKey
             finalConfigs.push({
                 ...existingConfig,
                 label: field.label, 
@@ -399,8 +449,6 @@ export default function EditTemplatePage() {
                 fieldKey: field.key 
             });
         } else {
-          // Field was added (should not happen in edit mode unless dynamically adding fields becomes a feature)
-          // For robustness, add a default config if somehow a field exists without a GUI config
           const yOffset = 10 + (index % 8) * 35;
           const xOffset = 10;
           finalConfigs.push({
@@ -415,17 +463,15 @@ export default function EditTemplatePage() {
             styleLeft: `${xOffset}px`,
             styleRight: '',
             styleBottom: '',
-            styleFontSize: '12px',
-            styleFontWeight: 'normal',
-            iconName: field.type === 'number' ? 'Coins' : '',
             styleMaxHeight: '', 
+            iconName: field.type === 'number' ? 'Coins' : '',
             styleFontStyle: 'normal', styleTextAlign: 'left', stylePadding: '', styleBorderTop: '', styleBorderBottom: '',
-            tailwindTextColor: 'text-card-foreground', tailwindFontSize: 'text-base', tailwindFontWeight: 'font-normal',
-            tailwindLineHeight: 'leading-normal', tailwindOverflow: 'overflow-visible', tailwindTextOverflow: NONE_VALUE,
+            tailwindTextColor: NONE_VALUE, tailwindFontSize: NONE_VALUE, tailwindFontWeight: NONE_VALUE,
+            tailwindLineHeight: NONE_VALUE, tailwindOverflow: NONE_VALUE, tailwindTextOverflow: NONE_VALUE,
+            tailwindBorderRadius: NONE_VALUE, tailwindBorderWidth: NONE_VALUE, tailwindBorderColor: NONE_VALUE,
           });
         }
       });
-      // Filter out GUI configs for fields that no longer exist
       return finalConfigs.filter(nc => fields.some(f => f._uiId === nc._uiId));
     });
   }, [fields]);
@@ -649,14 +695,10 @@ export default function EditTemplatePage() {
         position: "absolute",
         top: config.styleTop.endsWith('px') || config.styleTop.endsWith('%') ? config.styleTop : `${config.styleTop}px`,
         left: config.styleLeft.endsWith('px') || config.styleLeft.endsWith('%') ? config.styleLeft : `${config.styleLeft}px`,
-        // Width and height are determined by left/right and top/bottom or content
       };
       if (config.styleRight && config.styleRight.trim() !== '') style.right = config.styleRight.trim();
       if (config.styleBottom && config.styleBottom.trim() !== '') style.bottom = config.styleBottom.trim();
       
-      // Add direct CSS properties if they have values
-      if (config.styleFontSize && config.styleFontSize.trim() !== '') style.fontSize = config.styleFontSize.trim();
-      if (config.styleFontWeight && config.styleFontWeight.trim() !== '') style.fontWeight = config.styleFontWeight.trim();
       if (config.styleMaxHeight && config.styleMaxHeight.trim() !== '') style.maxHeight = config.styleMaxHeight.trim();
       if (config.styleFontStyle && config.styleFontStyle.trim() !== '' && config.styleFontStyle !== 'normal') style.fontStyle = config.styleFontStyle.trim();
       if (config.styleTextAlign && config.styleTextAlign.trim() !== '' && config.styleTextAlign !== 'left') style.textAlign = config.styleTextAlign.trim();
@@ -678,15 +720,13 @@ export default function EditTemplatePage() {
       if (config.tailwindFontSize && config.tailwindFontSize.trim() !== '' && config.tailwindFontSize !== NONE_VALUE) {
         classNames.push(config.tailwindFontSize);
       } else if (config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') {
-        // Don't push default Tailwind font size if direct CSS font-size is set
-        if (!style.fontSize) classNames.push('text-base');
+        classNames.push('text-base');
       }
       
       if (config.tailwindFontWeight && config.tailwindFontWeight.trim() !== '' && config.tailwindFontWeight !== NONE_VALUE) {
         classNames.push(config.tailwindFontWeight);
       } else if (config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') {
-         // Don't push default Tailwind font weight if direct CSS font-weight is set
-        if(!style.fontWeight) classNames.push('font-normal');
+        classNames.push('font-normal');
       }
 
       if (config.tailwindLineHeight && config.tailwindLineHeight.trim() !== '' && config.tailwindLineHeight !== NONE_VALUE) {
@@ -704,13 +744,23 @@ export default function EditTemplatePage() {
       if (config.tailwindTextOverflow && config.tailwindTextOverflow.trim() !== '' && config.tailwindTextOverflow !== NONE_VALUE) {
         classNames.push(config.tailwindTextOverflow);
       }
+      
+      if (config.tailwindBorderRadius && config.tailwindBorderRadius.trim() !== '' && config.tailwindBorderRadius !== NONE_VALUE) {
+        classNames.push(config.tailwindBorderRadius);
+      }
+      if (config.tailwindBorderWidth && config.tailwindBorderWidth.trim() !== '' && config.tailwindBorderWidth !== NONE_VALUE) {
+        classNames.push(config.tailwindBorderWidth);
+      }
+      if (config.tailwindBorderColor && config.tailwindBorderColor.trim() !== '' && config.tailwindBorderColor !== NONE_VALUE) {
+        classNames.push(config.tailwindBorderColor);
+      }
 
 
       const element: any = {
         fieldKey: config.fieldKey,
         type: config.elementType,
         style: style,
-        className: classNames.join(' ').trim()
+        className: classNames.filter(Boolean).join(' ').trim()
       };
       if (config.elementType === 'iconValue' && config.iconName && config.iconName.trim() !== '') {
         element.icon = config.iconName.trim();
@@ -760,7 +810,7 @@ export default function EditTemplatePage() {
 
     let finalLayoutDefinition = layoutDefinition.trim();
     if (finalLayoutDefinition) {
-        if (!validateAndFormatLayoutJson()) { // This also prettifies it
+        if (!validateAndFormatLayoutJson()) { 
              toast({
                 title: "Invalid Layout JSON",
                 description: `The JSON in 'Layout Definition' is invalid. Error: ${layoutJsonError || 'Unknown JSON parsing error.'}. Please correct or regenerate.`,
@@ -769,14 +819,14 @@ export default function EditTemplatePage() {
             });
             return;
         }
-        finalLayoutDefinition = layoutDefinition; // Use the potentially prettified version
-    } else { // If textarea is empty, try to generate from GUI
+        finalLayoutDefinition = layoutDefinition; 
+    } else { 
         if (layoutElementGuiConfigs.some(c => c.isEnabledOnCanvas)) {
-            handleGenerateJsonFromBuilder(); // This will update layoutDefinition state
-            finalLayoutDefinition = layoutDefinition.trim(); // Use the newly generated one
-            if (!finalLayoutDefinition) finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING; // Fallback if generation somehow fails
+            handleGenerateJsonFromBuilder(); 
+            finalLayoutDefinition = layoutDefinition.trim(); 
+            if (!finalLayoutDefinition) finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING; 
         } else {
-             finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING; // No elements enabled in GUI
+             finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING; 
         }
     }
     setIsSaving(true);
@@ -827,7 +877,6 @@ export default function EditTemplatePage() {
   const handleSizePresetChange = (value: string) => {
     setSelectedSizePreset(value);
     if (value === "custom") {
-      // No change to width/height needed
     } else {
       const preset = COMMON_CARD_SIZES.find(s => s.value === value);
       if (preset) {
@@ -872,7 +921,6 @@ export default function EditTemplatePage() {
 
   return (
     <div className="space-y-6 container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      {/* Top Section: Template Info & Data Fields */}
       <Card className="shadow-lg">
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -943,19 +991,15 @@ export default function EditTemplatePage() {
         </CardContent>
       </Card>
 
-      {/* Bottom Section: Layout Builder and Preview */}
       <div className="md:flex md:flex-row md:gap-6 items-start">
-        {/* Left Column: Layout Builder */}
         <Card className="md:w-[65%] flex flex-col shadow-md mb-6 md:mb-0">
           <CardHeader>
               <CardTitle className="text-xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
               <CardDescription className="text-md">
-                Configure canvas size and choose which fields to display. Then use the GUI to set basic styles for each enabled element.
-                Click "Generate/Update JSON" to see the output and preview.
+                Configure canvas size and layout elements using the GUI. Click "Generate/Update JSON" to reflect changes in the JSON output and preview.
               </CardDescription>
           </CardHeader>
           <CardContent className="flex-grow space-y-4 flex flex-col">
-            {/* Canvas Setup */}
             <div className="space-y-3 p-3 border rounded-md bg-muted/30">
               <h4 className="text-base font-semibold mb-1">Card Canvas Setup</h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-2 items-end">
@@ -1010,7 +1054,6 @@ export default function EditTemplatePage() {
               </div>
             </div>
 
-            {/* Layout Elements GUI */}
             <div className="space-y-3 p-3 border rounded-md bg-muted/30">
               <h4 className="text-base font-semibold mb-1">Layout Elements (Toggle to Include & Configure)</h4>
                <ScrollArea className="pr-2"> 
@@ -1061,14 +1104,13 @@ export default function EditTemplatePage() {
                           </div>
                           </details>
 
-                            {/* Position & Sizing */}
                             <details className="space-y-2 group" open>
                             <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
                                 Position & Sizing (CSS)
                                 <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
                             </summary>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pl-1">
-                                {['styleTop', 'styleLeft', 'styleRight', 'styleBottom', /*'styleWidth', 'styleHeight',*/ 'styleMaxHeight', 'stylePadding'].map(prop => (
+                                {['styleTop', 'styleLeft', 'styleRight', 'styleBottom', 'styleMaxHeight', 'stylePadding'].map(prop => (
                                     <div key={prop}>
                                         <Label htmlFor={`el-${prop}-edit-${config._uiId}`} className="text-xs capitalize">{prop.replace('style', '').replace(/([A-Z])/g, ' $1').trim()}</Label>
                                         <Input id={`el-${prop}-edit-${config._uiId}`} value={(config as any)[prop] || ''} onChange={(e) => handleGuiConfigChange(config._uiId, prop as keyof LayoutElementGuiConfig, e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 10px or auto" disabled={isSaving}/>
@@ -1087,28 +1129,28 @@ export default function EditTemplatePage() {
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pl-1">
                                   <div>
                                     <Label htmlFor={`el-twTextColor-edit-${config._uiId}`} className="text-xs">Text Color (Tailwind)</Label>
-                                    <Select value={config.tailwindTextColor || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindTextColor', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
+                                    <Select value={config.tailwindTextColor || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindTextColor', value)} disabled={isSaving}>
                                       <SelectTrigger id={`el-twTextColor-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select color" /></SelectTrigger>
                                       <SelectContent>{TAILWIND_TEXT_COLORS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                   </div>
                                   <div>
                                     <Label htmlFor={`el-twFontSize-edit-${config._uiId}`} className="text-xs">Font Size (Tailwind)</Label>
-                                    <Select value={config.tailwindFontSize || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindFontSize', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
+                                    <Select value={config.tailwindFontSize || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindFontSize', value)} disabled={isSaving}>
                                       <SelectTrigger id={`el-twFontSize-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select size" /></SelectTrigger>
                                       <SelectContent>{TAILWIND_FONT_SIZES.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                   </div>
                                   <div>
                                     <Label htmlFor={`el-twFontWeight-edit-${config._uiId}`} className="text-xs">Font Weight (Tailwind)</Label>
-                                    <Select value={config.tailwindFontWeight || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindFontWeight', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
+                                    <Select value={config.tailwindFontWeight || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindFontWeight', value)} disabled={isSaving}>
                                       <SelectTrigger id={`el-twFontWeight-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select weight" /></SelectTrigger>
                                       <SelectContent>{TAILWIND_FONT_WEIGHTS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                   </div>
                                   <div>
                                     <Label htmlFor={`el-twLineHeight-edit-${config._uiId}`} className="text-xs">Line Height (Tailwind)</Label>
-                                    <Select value={config.tailwindLineHeight || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindLineHeight', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
+                                    <Select value={config.tailwindLineHeight || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindLineHeight', value)} disabled={isSaving}>
                                       <SelectTrigger id={`el-twLineHeight-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select line height" /></SelectTrigger>
                                       <SelectContent>{TAILWIND_LINE_HEIGHTS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
                                     </Select>
@@ -1140,14 +1182,14 @@ export default function EditTemplatePage() {
                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pl-1">
                                   <div>
                                     <Label htmlFor={`el-twOverflow-edit-${config._uiId}`} className="text-xs">Overflow</Label>
-                                    <Select value={config.tailwindOverflow || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindOverflow', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
+                                    <Select value={config.tailwindOverflow || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindOverflow', value)} disabled={isSaving}>
                                       <SelectTrigger id={`el-twOverflow-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select overflow" /></SelectTrigger>
                                       <SelectContent>{TAILWIND_OVERFLOW.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                   </div>
                                   <div>
                                     <Label htmlFor={`el-twTextOverflow-edit-${config._uiId}`} className="text-xs">Text Overflow</Label>
-                                    <Select value={config.tailwindTextOverflow || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindTextOverflow', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
+                                    <Select value={config.tailwindTextOverflow || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindTextOverflow', value)} disabled={isSaving}>
                                       <SelectTrigger id={`el-twTextOverflow-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select text overflow" /></SelectTrigger>
                                       <SelectContent>{TAILWIND_TEXT_OVERFLOW.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
                                     </Select>
@@ -1158,16 +1200,37 @@ export default function EditTemplatePage() {
                             )}
                             <details className="space-y-2 group" open>
                             <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5">
-                                Borders (CSS)
+                                Borders
                                 <ChevronRight className="h-3 w-3 group-open:rotate-90 transition-transform" />
                             </summary>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-1">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pl-1">
+                              <div>
+                                  <Label htmlFor={`el-twBorderRadius-edit-${config._uiId}`} className="text-xs">Border Radius (Tailwind)</Label>
+                                  <Select value={config.tailwindBorderRadius || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindBorderRadius', value)} disabled={isSaving}>
+                                      <SelectTrigger id={`el-twBorderRadius-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+                                      <SelectContent>{TAILWIND_BORDER_RADIUS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
+                                  </Select>
+                              </div>
+                              <div>
+                                  <Label htmlFor={`el-twBorderWidth-edit-${config._uiId}`} className="text-xs">Border Width (Tailwind)</Label>
+                                  <Select value={config.tailwindBorderWidth || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindBorderWidth', value)} disabled={isSaving}>
+                                      <SelectTrigger id={`el-twBorderWidth-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+                                      <SelectContent>{TAILWIND_BORDER_WIDTHS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
+                                  </Select>
+                              </div>
+                              <div>
+                                  <Label htmlFor={`el-twBorderColor-edit-${config._uiId}`} className="text-xs">Border Color (Tailwind)</Label>
+                                  <Select value={config.tailwindBorderColor || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindBorderColor', value)} disabled={isSaving}>
+                                      <SelectTrigger id={`el-twBorderColor-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+                                      <SelectContent>{TAILWIND_BORDER_COLORS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
+                                  </Select>
+                              </div>
                                <div>
-                                  <Label htmlFor={`el-styleBorderTop-edit-${config._uiId}`} className="text-xs">Border Top</Label>
+                                  <Label htmlFor={`el-styleBorderTop-edit-${config._uiId}`} className="text-xs">Border Top (CSS value)</Label>
                                   <Input id={`el-styleBorderTop-edit-${config._uiId}`} value={config.styleBorderTop || ''} onChange={(e) => handleGuiConfigChange(config._uiId, 'styleBorderTop', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 1px solid #ccc" disabled={isSaving}/>
                               </div>
                               <div>
-                                  <Label htmlFor={`el-styleBorderBottom-edit-${config._uiId}`} className="text-xs">Border Bottom</Label>
+                                  <Label htmlFor={`el-styleBorderBottom-edit-${config._uiId}`} className="text-xs">Border Bottom (CSS value)</Label>
                                   <Input id={`el-styleBorderBottom-edit-${config._uiId}`} value={config.styleBorderBottom || ''} onChange={(e) => handleGuiConfigChange(config._uiId, 'styleBorderBottom', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 1px solid #ccc" disabled={isSaving}/>
                               </div>
                             </div>
@@ -1211,7 +1274,7 @@ export default function EditTemplatePage() {
                   <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
                 </Alert>
               )}
-              <Accordion type="single" collapsible className="w-full mt-3" defaultValue="lucide-icon-explorer">
+               <Accordion type="single" collapsible className="w-full mt-3" defaultValue="lucide-icon-explorer">
                 <AccordionItem value="lucide-icon-explorer">
                    <AccordionTrigger className="text-sm py-2 hover:no-underline">
                     <div className="flex items-center text-muted-foreground">
@@ -1252,7 +1315,6 @@ export default function EditTemplatePage() {
           </CardFooter>
         </Card>
 
-        {/* Right Column: Live Preview */}
         <Card className="md:w-[35%] sticky top-20 self-start shadow-lg">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -1265,8 +1327,8 @@ export default function EditTemplatePage() {
                 </div>
             </div>
             <CardDescription className="text-sm">
-              This preview updates as you modify the Layout Definition JSON or template fields.
-              Uses sample data based on your field definitions.
+              This preview updates as you modify the Layout Definition JSON or use the builder.
+              Uses sample data based on your field definitions and preview values.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex items-center justify-center p-4 min-h-[450px] bg-muted/30 rounded-b-md">
