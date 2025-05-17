@@ -41,7 +41,7 @@ interface LayoutElementGuiConfig {
   label: string;
   originalType: TemplateFieldDefinition['type'];
   isEnabledOnCanvas: boolean;
-  isExpandedInGui: boolean; // New: To control GUI visibility for this element
+  isExpandedInGui: boolean;
 
   elementType: 'text' | 'textarea' | 'image' | 'iconValue' | 'iconFromData';
   styleTop: string;
@@ -49,7 +49,7 @@ interface LayoutElementGuiConfig {
   styleWidth: string;
   styleHeight: string;
   styleFontSize: string;
-  iconName?: string; // For elementType 'iconValue'
+  iconName?: string;
 }
 
 
@@ -134,8 +134,7 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  
-  path += `.png`; // Ensure PNG format for consistency
+  path += `.png`;
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
@@ -152,8 +151,7 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
   "AlertTriangle", "Info", "HelpCircle", "Wand2", "Sparkles", "Sun", "Moon",
   "Cloud", "Flame", "Leaf", "Droplets", "Feather", "Eye", "Swords", "ShieldCheck",
   "ShieldAlert", "Aperture", "Book", "Camera", "Castle", "Crown", "Diamond", "Dice5",
-  "Flag", // Removed "Flash"
-  "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock",
+  "Flag", "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock",
   "MapPin", "Medal", "Mountain", "Music", "Package", "Palette", "PawPrint", "Pencil",
   "Phone", "Puzzle", "Rocket", "Save", "Search", "Ship", "Sprout", "Ticket", "Trash2",
   "TreePine", "Trophy", "Umbrella", "User", "Video", "Wallet", "Watch", "Wifi", "Wrench"
@@ -162,8 +160,8 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
-  if (!Icon) {
-    // console.warn(`[DEBUG] IconComponent (TemplateDesigner): Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
+   if (!Icon || typeof Icon !== 'function') {
+    console.warn(`[DEBUG] IconComponent (TemplateDesigner): Lucide icon "${name}" not found or not a function. Fallback HelpCircle will be used.`);
     return <LucideIcons.HelpCircle {...props} />;
   }
   return <Icon {...props} />;
@@ -185,8 +183,7 @@ export default function TemplateDesignerPage() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [sampleCardForPreview, setSampleCardForPreview] = useState<CardData | null>(null);
-  const [showElementOutlines, setShowElementOutlines] = useState(false);
-  const [showPixelGrid, setShowPixelGrid] = useState(false); // New state for pixel grid
+  const [showPixelGrid, setShowPixelGrid] = useState(false);
 
 
   const { toast } = useToast();
@@ -194,7 +191,7 @@ export default function TemplateDesignerPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // console.log('[DEBUG] TemplateDesignerPage: templateName effect running. Name:', templateName);
+    console.log('[DEBUG] TemplateDesignerPage: templateName effect running. Name:', templateName);
     if (templateName) {
       setTemplateId(toCamelCase(templateName));
     } else {
@@ -209,34 +206,32 @@ export default function TemplateDesignerPage() {
         const newConfigs = fields.map((field, index) => {
             const existingConfig = prevConfigs.find(c => c.fieldKey === field.key);
             if (existingConfig) {
-                return { ...existingConfig, label: field.label, originalType: field.type }; // Preserve existing GUI settings, update label/type
+                return { ...existingConfig, label: field.label, originalType: field.type };
             }
-            // New field, create new GUI config with defaults
-            const yOffset = 10 + (index % 8) * 25; // Simple cascading for default position
+            const yOffset = 10 + (index % 8) * 25;
             const xOffset = 10;
             return {
                 fieldKey: field.key,
                 label: field.label,
                 originalType: field.type,
-                isEnabledOnCanvas: true, // Default to enabled
-                isExpandedInGui: false,  // Default to collapsed
+                isEnabledOnCanvas: true,
+                isExpandedInGui: false,
                 elementType: field.type === 'textarea' ? 'textarea' : (field.type === 'placeholderImage' ? 'image' : 'text'),
                 styleTop: `${yOffset}px`,
                 styleLeft: `${xOffset}px`,
                 styleWidth: '120px',
-                styleHeight: field.type === 'textarea' ? '60px' : '20px',
+                styleHeight: field.type === 'textarea' ? '60px' : (field.type === 'placeholderImage' ? '140px' : '20px'),
                 styleFontSize: '12px',
-                iconName: field.type === 'number' ? 'Coins' : '', 
+                iconName: field.type === 'number' ? 'Coins' : '',
             };
         });
-        // Filter out configs for fields that no longer exist
         return newConfigs.filter(nc => fields.some(f => f.key === nc.fieldKey));
     });
   }, [fields]);
 
 
   useEffect(() => {
-    // console.log('[DEBUG] TemplateDesignerPage: Generating sampleCardForPreview. Fields count:', fields.length, 'Template ID:', templateId);
+    console.log('[DEBUG] TemplateDesignerPage: Generating sampleCardForPreview. Fields count:', fields.length, 'Template ID:', templateId);
     const currentTemplateIdForPreview = templateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
@@ -292,11 +287,10 @@ export default function TemplateDesignerPage() {
       }
       (generatedSampleCard as any)[key] = valueForPreview;
     });
-    // Ensure some very common fields have sample data for the default layout preview
     if (generatedSampleCard.name === undefined && !fields.some(f => f.key === 'name')) generatedSampleCard.name = 'Awesome Card Name';
     if (generatedSampleCard.cost === undefined && !fields.some(f => f.key === 'cost')) generatedSampleCard.cost = 3;
     if (generatedSampleCard.imageUrl === undefined && !fields.some(f => f.key === 'imageUrl')) {
-      generatedSampleCard.imageUrl = generateSamplePlaceholderUrl({width: DEFAULT_CANVAS_WIDTH, height: 140, text: 'Main Image', bgColor: '444', textColor: 'fff'});
+      generatedSampleCard.imageUrl = generateSamplePlaceholderUrl({width: parseInt(canvasWidthSetting) || DEFAULT_CANVAS_WIDTH, height: 140, text: 'Main Image', bgColor: '444', textColor: 'fff'});
     }
     if (generatedSampleCard.dataAiHint === undefined && !fields.some(f => f.key === 'dataAiHint')) generatedSampleCard.dataAiHint = 'card art sample';
     if (generatedSampleCard.cardType === undefined && !fields.some(f => f.key === 'cardType')) generatedSampleCard.cardType = 'Creature - Goblin';
@@ -304,11 +298,11 @@ export default function TemplateDesignerPage() {
     if (generatedSampleCard.attack === undefined && !fields.some(f => f.key === 'attack')) generatedSampleCard.attack = 2;
     if (generatedSampleCard.defense === undefined && !fields.some(f => f.key === 'defense')) generatedSampleCard.defense = 2;
     if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) {
-      generatedSampleCard.artworkUrl = generateSamplePlaceholderUrl({width: DEFAULT_CANVAS_WIDTH, height: DEFAULT_CANVAS_HEIGHT, text: 'Background Art', bgColor: '222', textColor: 'ddd'});
+      generatedSampleCard.artworkUrl = generateSamplePlaceholderUrl({width: parseInt(canvasWidthSetting) || DEFAULT_CANVAS_WIDTH, height: parseInt(canvasHeightSetting) || DEFAULT_CANVAS_HEIGHT, text: 'Background Art', bgColor: '222', textColor: 'ddd'});
     }
     if (generatedSampleCard.statusIcon === undefined && !fields.some(f => f.key === 'statusIcon')) generatedSampleCard.statusIcon = 'ShieldCheck';
     setSampleCardForPreview(generatedSampleCard as CardData);
-  }, [fields, templateId, templateName]); 
+  }, [fields, templateId, templateName, canvasWidthSetting, canvasHeightSetting]);
 
   const templateForPreview = useMemo((): CardTemplate => ({
     id: (templateId || 'previewTemplateId') as CardTemplateId,
@@ -344,8 +338,8 @@ export default function TemplateDesignerPage() {
         defaultValue: '',
         previewValue: '',
         optionsString: '',
-        placeholderConfigWidth: DEFAULT_CANVAS_WIDTH, 
-        placeholderConfigHeight: 140, 
+        placeholderConfigWidth: parseInt(canvasWidthSetting) || DEFAULT_CANVAS_WIDTH,
+        placeholderConfigHeight: 140,
       }
     ]);
   };
@@ -381,7 +375,7 @@ export default function TemplateDesignerPage() {
         modifiedField.key = newKey;
     }
     if (updatedFieldDefinition.type === 'placeholderImage' && oldField.type !== 'placeholderImage') {
-        modifiedField.placeholderConfigWidth = modifiedField.placeholderConfigWidth || DEFAULT_CANVAS_WIDTH;
+        modifiedField.placeholderConfigWidth = modifiedField.placeholderConfigWidth || parseInt(canvasWidthSetting) || DEFAULT_CANVAS_WIDTH;
         modifiedField.placeholderConfigHeight = modifiedField.placeholderConfigHeight || 140;
     } else if (updatedFieldDefinition.type !== 'placeholderImage') {
         modifiedField.placeholderConfigWidth = undefined;
@@ -437,7 +431,7 @@ export default function TemplateDesignerPage() {
     const elementsToInclude = layoutElementGuiConfigs.filter(config => config.isEnabledOnCanvas);
     
     const generatedElements = elementsToInclude.map(config => {
-      const element: any = { // Using 'any' temporarily for flexibility
+      const element: any = {
         fieldKey: config.fieldKey,
         type: config.elementType,
         style: {
@@ -448,7 +442,7 @@ export default function TemplateDesignerPage() {
           height: config.styleHeight.endsWith('px') ? config.styleHeight : `${config.styleHeight}px`,
           fontSize: config.styleFontSize.endsWith('px') ? config.styleFontSize : `${config.styleFontSize}px`,
         },
-        className: "text-card-foreground" // Default class, can be made configurable later
+        className: "text-card-foreground"
       };
       if (config.elementType === 'iconValue' && config.iconName) {
         element.icon = config.iconName;
@@ -459,9 +453,9 @@ export default function TemplateDesignerPage() {
     const newLayout = {
       width: canvasWidthSetting || `${DEFAULT_CANVAS_WIDTH}px`,
       height: canvasHeightSetting || `${DEFAULT_CANVAS_HEIGHT}px`,
-      backgroundColor: "hsl(var(--card))", // Default, can be made configurable
-      borderColor: "hsl(var(--border))",   // Default
-      borderRadius: "calc(var(--radius) - 2px)", // Default
+      backgroundColor: "hsl(var(--card))",
+      borderColor: "hsl(var(--border))",
+      borderRadius: "calc(var(--radius) - 2px)",
       elements: generatedElements
     };
 
@@ -504,11 +498,10 @@ export default function TemplateDesignerPage() {
         });
         return;
     }
-    // Validate JSON from the textarea before saving
     let finalLayoutDefinition = layoutDefinition.trim();
     if (finalLayoutDefinition) {
         try {
-            JSON.parse(finalLayoutDefinition); // Test parsing
+            JSON.parse(finalLayoutDefinition);
         } catch (e) {
             toast({
                 title: "Invalid Layout JSON",
@@ -520,7 +513,7 @@ export default function TemplateDesignerPage() {
             return;
         }
     } else {
-        finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING; // Fallback if textarea is empty
+        finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING;
     }
 
     setIsSaving(true);
@@ -530,7 +523,7 @@ export default function TemplateDesignerPage() {
       fields: fields.map(mapFieldDefinitionToTemplateField),
       layoutDefinition: finalLayoutDefinition,
     };
-    // console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Calling saveTemplateToContext with:', newTemplate);
+    console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Calling saveTemplateToContext with:', newTemplate);
     const result = await saveTemplateToContext(newTemplate);
     if (result.success) {
       toast({
@@ -622,7 +615,7 @@ export default function TemplateDesignerPage() {
           </div>
           <div>
             <h3 className="text-xl font-semibold mb-3 text-foreground/90">Data Fields</h3>
-            <ScrollArea className="pr-3"> {/* Allow this section to grow naturally */}
+            <ScrollArea className="pr-3">
                 <div className="space-y-3"> 
                     {fields.map((field, index) => (
                     <FieldRow
@@ -654,18 +647,15 @@ export default function TemplateDesignerPage() {
         </CardContent>
       </Card>
 
-      {/* Bottom Section: Layout Builder & Preview */}
       <div className="flex flex-col md:flex-row gap-8">
-        {/* Visual Layout Builder & JSON Output Card */}
         <Card className="md:w-[65%] flex flex-col shadow-lg border-border/60">
           <CardHeader>
               <CardTitle className="text-2xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
               <CardDescription className="text-md">
-                Configure canvas size and included fields. Then generate JSON to preview and optionally refine in the textarea.
+                Configure canvas size and individual layout elements. Generate JSON to preview and save.
               </CardDescription>
           </CardHeader>
           <CardContent className="flex-grow space-y-4 flex flex-col">
-            {/* Card Canvas Setup */}
             <div className="space-y-3 p-4 border rounded-md bg-muted/30">
               <h4 className="text-lg font-semibold mb-2 text-foreground/90">Card Canvas Setup</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -679,12 +669,11 @@ export default function TemplateDesignerPage() {
                 </div>
               </div>
             </div>
-
-            {/* Layout Elements Configuration */}
+            
             <div className="space-y-3 p-4 border rounded-md bg-muted/30">
               <h4 className="text-lg font-semibold mb-2 text-foreground/90">Layout Elements Configuration</h4>
-              {layoutElementGuiConfigs.length > 0 ? (
-                <ScrollArea className="pr-2"> {/* Removed max-h to fit all */}
+               {layoutElementGuiConfigs.length > 0 ? (
+                <ScrollArea className="pr-2">
                   <div className="space-y-2">
                     {layoutElementGuiConfigs.map((config, index) => (
                       <div key={config.fieldKey} className="p-2.5 border rounded-md bg-card/80 hover:bg-card transition-colors">
@@ -778,10 +767,9 @@ export default function TemplateDesignerPage() {
               <Palette className="mr-2 h-4 w-4" /> Generate/Update JSON from Builder
             </Button>
 
-            {/* JSON Output & Guides Section */}
             <div className="mt-4 flex-grow flex flex-col min-h-0">
               <div>
-                <Label htmlFor="layoutDefinition" className="text-sm font-medium">Layout Definition JSON (Manually edit if needed)</Label>
+                <Label htmlFor="layoutDefinition" className="text-sm font-medium">Layout Definition JSON (Read-Only after generating from builder)</Label>
                 <Textarea
                   id="layoutDefinition"
                   value={layoutDefinition}
@@ -790,7 +778,7 @@ export default function TemplateDesignerPage() {
                   placeholder='Click "Generate/Update JSON from Builder" above, or paste your JSON here if making manual edits.'
                   rows={15}
                   className="font-mono text-xs flex-grow min-h-[200px] max-h-[300px] bg-muted/20 mt-1" 
-                  disabled={isSaving}
+                  disabled={false} // Allow manual editing for now
                 />
               </div>
               {layoutJsonError && (
@@ -810,7 +798,7 @@ export default function TemplateDesignerPage() {
                   <AccordionContent className="text-xs p-3 border rounded-md bg-muted/30">
                     <p className="font-semibold mb-1">Top-level properties:</p>
                     <ul className="list-disc list-inside pl-2 mb-2 space-y-0.5">
-                      <li><code>width</code>, <code>height</code>: Card dimensions (e.g., "{DEFAULT_CANVAS_WIDTH}px"). Set these in "Card Canvas Setup" above.</li>
+                      <li><code>width</code>, <code>height</code>: Card dimensions (e.g., "280px"). Set these in "Card Canvas Setup" above.</li>
                       <li><code>backgroundColor</code>, <code>borderColor</code>, <code>borderRadius</code>: CSS values. These are included in the generated JSON with defaults.</li>
                     </ul>
                     <p className="font-semibold mb-1 mt-3">Available Field Keys for this Template:</p>
@@ -826,26 +814,26 @@ export default function TemplateDesignerPage() {
                     <p className="text-xs mt-1 mb-2">Use these keys in the <code>fieldKey</code> property of elements below if manually editing JSON.</p>
                     <p className="font-semibold mb-1 mt-3"><code>elements</code> array (each object defines one visual piece):</p>
                     <ul className="list-disc list-inside pl-2 space-y-1">
-                      <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above (e.g., if you have "Card Title" with key "cardTitle", use "cardTitle").</li>
-                      <li><strong><code>type</code></strong>: (String) One of: <code>"text"</code>, <code>"textarea"</code>, <code>"image"</code>, <code>"iconValue"</code>, <code>"iconFromData"</code>. The builder currently defaults to "text".</li>
+                      <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above.</li>
+                      <li><strong><code>type</code></strong>: (String) One of: "text", "textarea", "image", "iconValue", "iconFromData". The builder currently defaults to "text".</li>
                       <li><strong><code>style</code></strong>: (Object) CSS-in-JS. The builder generates basic positional styles.</li>
                       <li><strong><code>className</code></strong>: (String, Optional) Tailwind CSS classes.</li>
-                      <li><strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue". Text added before/after the field's value.</li>
-                      <li><strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon. **Ensure the icon exists in lucide-react.**</li>
+                      <li><strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue".</li>
+                      <li><strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon.</li>
                     </ul>
                     <p className="mt-3 italic">After generating JSON with the builder, you can manually refine it in the textarea if needed, then validate by blurring. Final save uses the textarea content.</p>
                     <p className="font-semibold mb-1 mt-4">Example Element Snippets (for manual JSON editing):</p>
                     <pre className="text-xs bg-background/50 p-2 rounded border whitespace-pre-wrap">
 {`// For a simple text display
 {
-  "fieldKey": "yourCardNameFieldKey", // Replace with one of YOUR field keys from above
+  "fieldKey": "yourCardNameFieldKey", 
   "type": "text",
   "style": { "position": "absolute", "top": "20px", "left": "20px", "fontWeight": "bold" }
 }
 
-// For an image (ensure 'yourImageUrlFieldKey' is a field of type 'text' or 'placeholderImage' in Data Fields)
+// For an image
 {
-  "fieldKey": "yourImageUrlFieldKey", // Replace
+  "fieldKey": "yourImageUrlFieldKey",
   "type": "image",
   "style": { 
     "position": "absolute", "top": "50px", "left": "20px", 
@@ -853,18 +841,17 @@ export default function TemplateDesignerPage() {
   }
 }
 
-// For text with a preceding icon (ensure 'yourManaCostFieldKey' exists)
+// For text with a preceding icon
 {
-  "fieldKey": "yourManaCostFieldKey", // Replace
+  "fieldKey": "yourManaCostFieldKey",
   "type": "iconValue",
-  "icon": "Coins", // Lucide icon name
+  "icon": "Coins", 
   "style": { "position": "absolute", "top": "20px", "right": "20px" }
 }
 
 // For an icon whose name is stored in your card data
-// (ensure 'yourIconDataFieldKey' exists and is a 'text' field where you'd store "Zap" or "Shield")
 {
-  "fieldKey": "yourIconDataFieldKey", // Replace
+  "fieldKey": "yourIconDataFieldKey",
   "type": "iconFromData",
   "style": { "position": "absolute", "bottom": "20px", "left": "20px" }
 }`}
@@ -911,7 +898,6 @@ export default function TemplateDesignerPage() {
           </CardFooter>
         </Card>
         
-        {/* Live Preview Card */}
         <Card className="md:w-[35%] sticky top-20 self-start shadow-lg border-border/60">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -919,8 +905,8 @@ export default function TemplateDesignerPage() {
                     <Eye className="mr-2 h-5 w-5" /> Live Layout Preview
                 </CardTitle>
                 <div className="flex items-center space-x-2">
-                    <Switch id="show-outlines" checked={showElementOutlines} onCheckedChange={setShowElementOutlines} aria-label="Show element outlines" />
-                    <Label htmlFor="show-outlines" className="text-xs text-muted-foreground">Outlines</Label>
+                    {/* <Switch id="show-outlines" checked={showElementOutlines} onCheckedChange={setShowElementOutlines} aria-label="Show element outlines" />
+                    <Label htmlFor="show-outlines" className="text-xs text-muted-foreground">Outlines</Label> */}
                     <Switch id="show-pixel-grid" checked={showPixelGrid} onCheckedChange={setShowPixelGrid} aria-label="Show pixel grid" />
                     <Label htmlFor="show-pixel-grid" className="text-xs text-muted-foreground">Pixel Grid</Label>
                 </div>
@@ -935,7 +921,6 @@ export default function TemplateDesignerPage() {
               <DynamicCardRenderer
                 card={sampleCardForPreview}
                 template={templateForPreview}
-                showElementOutlines={showElementOutlines}
                 showPixelGrid={showPixelGrid}
               />
             ) : (
