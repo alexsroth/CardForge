@@ -52,6 +52,17 @@ interface LayoutElementGuiConfig {
   iconName?: string;
 }
 
+const COMMON_CARD_SIZES = [
+  { label: `Default (${DEFAULT_CANVAS_WIDTH}x${DEFAULT_CANVAS_HEIGHT} px)`, width: `${DEFAULT_CANVAS_WIDTH}px`, height: `${DEFAULT_CANVAS_HEIGHT}px`, value: `${DEFAULT_CANVAS_WIDTH}x${DEFAULT_CANVAS_HEIGHT}` },
+  { label: "Poker (250x350 px)", width: "250px", height: "350px", value: "250x350" },
+  { label: "Bridge (225x350 px)", width: "225px", height: "350px", value: "225x350" },
+  { label: "Tarot (275x475 px)", width: "275px", height: "475px", value: "275x475" },
+  { label: "Small Square (250x250 px)", width: "250px", height: "250px", value: "250x250" },
+  { label: "Jumbo (350x500 px)", width: "350px", height: "500px", value: "350x500" },
+  { label: "Business Card (350x200 px)", width: "350px", height: "200px", value: "350x200" },
+  { label: "Custom", value: "custom" }
+];
+
 
 function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
     // console.log('[DEBUG] TemplateDesignerPage/mapFieldDefinitionToTemplateField: Mapping def', def);
@@ -105,7 +116,7 @@ const toCamelCase = (str: string): string => {
   if (/^[0-9]/.test(result)) {
     result = '_' + result;
   }
-  console.log(`[DEBUG] TemplateDesignerPage/toCamelCase: Input: "${str}", Output: "${result}"`);
+  // console.log(`[DEBUG] TemplateDesignerPage/toCamelCase: Input: "${str}", Output: "${result}"`);
   return result;
 };
 
@@ -134,17 +145,14 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  // Always request PNG for card editor consistency.
-  // If colors are present, .png comes after them. If not, it comes after dimensions.
-  path += '.png';
-
+  path += `.png`; 
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
   if (text) {
     fullUrl += `?text=${encodeURIComponent(text)}`;
   }
-  console.log('[DEBUG] TemplateDesignerPage/generateSamplePlaceholderUrl: Generated URL', fullUrl, 'from config', config);
+  // console.log('[DEBUG] TemplateDesignerPage/generateSamplePlaceholderUrl: Generated URL', fullUrl, 'from config', config);
   return fullUrl;
 }
 
@@ -164,7 +172,7 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
    if (!Icon || typeof Icon !== 'function') {
-    console.warn(`[DEBUG] IconComponent (TemplateDesigner): Lucide icon "${name}" not found or not a function. Fallback HelpCircle will be used.`);
+    // console.warn(`[DEBUG] IconComponent (TemplateDesigner): Lucide icon "${name}" not found or not a function. Fallback HelpCircle will be used.`);
     return <LucideIcons.HelpCircle {...props} />;
   }
   return <Icon {...props} />;
@@ -172,7 +180,7 @@ const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.Lucide
 
 
 export default function TemplateDesignerPage() {
-  console.log('[DEBUG] TemplateDesignerPage: Component rendering/re-rendering.');
+  // console.log('[DEBUG] TemplateDesignerPage: Component rendering/re-rendering.');
   const [templateId, setTemplateId] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<TemplateFieldDefinition[]>([]);
@@ -180,8 +188,10 @@ export default function TemplateDesignerPage() {
   const [layoutDefinition, setLayoutDefinition] = useState<string>(DEFAULT_CARD_LAYOUT_JSON_STRING);
   const [layoutJsonError, setLayoutJsonError] = useState<string | null>(null);
 
+  const [selectedSizePreset, setSelectedSizePreset] = useState<string>(`${DEFAULT_CANVAS_WIDTH}x${DEFAULT_CANVAS_HEIGHT}`);
   const [canvasWidthSetting, setCanvasWidthSetting] = useState<string>(`${DEFAULT_CANVAS_WIDTH}px`);
   const [canvasHeightSetting, setCanvasHeightSetting] = useState<string>(`${DEFAULT_CANVAS_HEIGHT}px`);
+
   const [layoutElementGuiConfigs, setLayoutElementGuiConfigs] = useState<LayoutElementGuiConfig[]>([]);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -194,7 +204,7 @@ export default function TemplateDesignerPage() {
   const router = useRouter();
 
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesignerPage: templateName effect running. Name:', templateName);
+    // console.log('[DEBUG] TemplateDesignerPage: templateName effect running. Name:', templateName);
     if (templateName) {
       setTemplateId(toCamelCase(templateName));
     } else {
@@ -204,7 +214,7 @@ export default function TemplateDesignerPage() {
 
   // Sync fields state with layoutElementGuiConfigs
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesignerPage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
+    // console.log('[DEBUG] TemplateDesignerPage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
     setLayoutElementGuiConfigs(prevConfigs => {
         const newConfigs = fields.map((field, index) => {
             const existingConfig = prevConfigs.find(c => c.fieldKey === field.key);
@@ -213,7 +223,7 @@ export default function TemplateDesignerPage() {
                 return { ...existingConfig, label: field.label, originalType: field.type };
             }
             // Field was added, create new GUI config with defaults
-            const yOffset = 10 + (index % 8) * 25; // Adjusted default yOffset
+            const yOffset = 10 + (index % 8) * 25;
             const xOffset = 10;
             return {
                 fieldKey: field.key,
@@ -237,7 +247,7 @@ export default function TemplateDesignerPage() {
 
 
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesignerPage: Generating sampleCardForPreview. Fields count:', fields.length, 'Template ID:', templateId);
+    // console.log('[DEBUG] TemplateDesignerPage: Generating sampleCardForPreview. Fields count:', fields.length, 'Template ID:', templateId);
     const currentTemplateIdForPreview = templateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
@@ -319,7 +329,7 @@ export default function TemplateDesignerPage() {
   }), [templateId, templateName, fields, layoutDefinition]);
 
   const handleAddField = () => {
-    console.log('[DEBUG] TemplateDesignerPage/handleAddField: Adding new field.');
+    // console.log('[DEBUG] TemplateDesignerPage/handleAddField: Adding new field.');
     const newFieldBaseLabel = `New Field`;
     let newFieldLabel = `${newFieldBaseLabel} ${fields.length + 1}`;
     let counter = fields.length + 1;
@@ -352,20 +362,18 @@ export default function TemplateDesignerPage() {
   };
 
   const handleRemoveField = (index: number) => {
-    console.log('[DEBUG] TemplateDesignerPage/handleRemoveField: Removing field at index', index);
+    // console.log('[DEBUG] TemplateDesignerPage/handleRemoveField: Removing field at index', index);
     setFields(fields.filter((_, i) => i !== index));
   };
 
   const handleFieldChange = (index: number, updatedFieldDefinition: TemplateFieldDefinition) => {
-    console.log('[DEBUG] TemplateDesignerPage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
+    // console.log('[DEBUG] TemplateDesignerPage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
     const newFields = [...fields];
     const oldField = newFields[index];
     let modifiedField = { ...oldField, ...updatedFieldDefinition };
     if (updatedFieldDefinition.label !== undefined && updatedFieldDefinition.label !== oldField.label) {
-        // Regenerate key only if the old key was likely auto-generated from the old label
-        // This is a heuristic: if old key starts with camelCase of old label (minus potential numbers at end)
         let baseKey = toCamelCase(updatedFieldDefinition.label);
-        if (!baseKey) { // Handle empty label or label with only symbols
+        if (!baseKey) { 
             const prefix = 'field';
             let fallbackCounter = 1;
             let potentialKey = `${prefix}${fallbackCounter}`;
@@ -383,13 +391,10 @@ export default function TemplateDesignerPage() {
         }
         modifiedField.key = newKey;
     }
-    // Handle placeholderImage specific config reset if type changes
     if (updatedFieldDefinition.type === 'placeholderImage' && oldField.type !== 'placeholderImage') {
-        // If switching TO placeholderImage, ensure default configs are present if not already
         modifiedField.placeholderConfigWidth = modifiedField.placeholderConfigWidth || parseInt(canvasWidthSetting) || DEFAULT_CANVAS_WIDTH;
         modifiedField.placeholderConfigHeight = modifiedField.placeholderConfigHeight || 140;
     } else if (updatedFieldDefinition.type !== 'placeholderImage' && oldField.type === 'placeholderImage') {
-        // If switching FROM placeholderImage, clear its specific configs
         modifiedField.placeholderConfigWidth = undefined;
         modifiedField.placeholderConfigHeight = undefined;
         modifiedField.placeholderConfigBgColor = undefined;
@@ -402,7 +407,7 @@ export default function TemplateDesignerPage() {
 
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
-    console.log('[DEBUG] TemplateDesignerPage/handleLayoutDefinitionChange: Layout string changed.');
+    // console.log('[DEBUG] TemplateDesignerPage/handleLayoutDefinitionChange: Layout string changed.');
     setLayoutDefinition(newLayoutDef);
     if (layoutJsonError) setLayoutJsonError(null);
   };
@@ -412,11 +417,11 @@ export default function TemplateDesignerPage() {
       const parsed = JSON.parse(layoutDefinition);
       setLayoutDefinition(JSON.stringify(parsed, null, 2));
       setLayoutJsonError(null);
-      console.log('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: JSON is valid and formatted.');
+      // console.log('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: JSON is valid and formatted.');
       return true;
     } catch (e: any) {
       setLayoutJsonError(`Invalid JSON: ${e.message}`);
-      console.warn('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: Invalid JSON', e.message);
+      // console.warn('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: Invalid JSON', e.message);
       return false;
     }
   };
@@ -437,9 +442,8 @@ export default function TemplateDesignerPage() {
     );
   };
 
-
   const handleGenerateJsonFromBuilder = () => {
-    console.log('[DEBUG] TemplateDesignerPage/handleGenerateJsonFromBuilder: Generating JSON from GUI configs.');
+    // console.log('[DEBUG] TemplateDesignerPage/handleGenerateJsonFromBuilder: Generating JSON from GUI configs.');
     const elementsToInclude = layoutElementGuiConfigs.filter(config => config.isEnabledOnCanvas);
     
     const generatedElements = elementsToInclude.map(config => {
@@ -453,9 +457,8 @@ export default function TemplateDesignerPage() {
           width: config.styleWidth.endsWith('px') ? config.styleWidth : `${config.styleWidth}px`,
           height: config.styleHeight.endsWith('px') ? config.styleHeight : `${config.styleHeight}px`,
           fontSize: config.styleFontSize.endsWith('px') ? config.styleFontSize : `${config.styleFontSize}px`,
-          // Add other style properties based on elementType here later
         },
-        className: "text-card-foreground" // Default className
+        className: "text-card-foreground"
       };
       if (config.elementType === 'iconValue' && config.iconName) {
         element.icon = config.iconName;
@@ -477,9 +480,8 @@ export default function TemplateDesignerPage() {
     toast({ title: "Layout JSON Updated", description: "JSON generated from GUI builder and updated in the textarea and preview."});
   };
 
-
   const handleSaveTemplate = async () => {
-    console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Attempting to save.');
+    // console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Attempting to save.');
     if (!templateName.trim()) {
       toast({ title: "Missing Name", description: "Template Name cannot be empty.", variant: "destructive" });
       return;
@@ -518,7 +520,7 @@ export default function TemplateDesignerPage() {
         } catch (e) {
             toast({
                 title: "Invalid Layout JSON",
-                description: `The JSON in the 'Layout Definition' textarea is invalid and cannot be saved. Error: ${(e as Error).message}. Please correct it or use the 'Generate/Update JSON from Builder' button.`,
+                description: `The JSON in 'Layout Definition' is invalid and cannot be saved. Error: ${(e as Error).message}. Please correct it or use the 'Generate/Update JSON from Builder' button.`,
                 variant: "destructive",
                 duration: 7000,
             });
@@ -536,7 +538,7 @@ export default function TemplateDesignerPage() {
       fields: fields.map(mapFieldDefinitionToTemplateField),
       layoutDefinition: finalLayoutDefinition,
     };
-    console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Calling saveTemplateToContext with:', newTemplate);
+    // console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Calling saveTemplateToContext with:', newTemplate);
     const result = await saveTemplateToContext(newTemplate);
     if (result.success) {
       toast({
@@ -576,6 +578,31 @@ export default function TemplateDesignerPage() {
     }
   };
 
+  const handleSizePresetChange = (value: string) => {
+    setSelectedSizePreset(value);
+    if (value === "custom") {
+      // No change to width/height needed, user will input manually
+    } else {
+      const preset = COMMON_CARD_SIZES.find(s => s.value === value);
+      if (preset) {
+        setCanvasWidthSetting(preset.width);
+        setCanvasHeightSetting(preset.height);
+      }
+    }
+  };
+
+  const handleCustomDimensionChange = (dimension: 'width' | 'height', value: string) => {
+    if (dimension === 'width') {
+      setCanvasWidthSetting(value);
+    } else {
+      setCanvasHeightSetting(value);
+    }
+    // If user types into custom fields, switch preset to custom
+    if (selectedSizePreset !== "custom") {
+      setSelectedSizePreset("custom");
+    }
+  };
+
 
   if (templatesLoading) {
     return (
@@ -589,7 +616,7 @@ export default function TemplateDesignerPage() {
   return (
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
       {/* Top Section: Template Info & Data Fields */}
-      <Card className="shadow-lg border-border/60">
+      <Card className="shadow-lg">
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className="text-3xl font-bold">Template Designer</CardTitle>
@@ -598,13 +625,13 @@ export default function TemplateDesignerPage() {
             </Button>
           </div>
           <CardDescription className="text-md">
-            Define the data structure and visual layout for a new card template. Templates are saved to browser local storage.
+            Define the structure for a new card template. Template ID is auto-generated from the name. Field Keys are auto-generated from Field Labels. Templates are saved to browser local storage.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="templateName" className="font-semibold text-foreground/90">Template Name (e.g., 'Hero Unit Card')</Label>
+              <Label htmlFor="templateName" className="font-semibold">Template Name (e.g., 'Hero Unit Card')</Label>
               <Input
                 id="templateName"
                 value={templateName}
@@ -615,7 +642,7 @@ export default function TemplateDesignerPage() {
               />
             </div>
             <div>
-              <Label htmlFor="templateId" className="font-semibold text-foreground/90">Template ID (auto-generated)</Label>
+              <Label htmlFor="templateId" className="font-semibold">Template ID (auto-generated)</Label>
               <Input
                 id="templateId"
                 value={templateId}
@@ -626,13 +653,13 @@ export default function TemplateDesignerPage() {
               />
             </div>
           </div>
-          <div>
-            <h3 className="text-xl font-semibold mb-3 text-foreground/90">Data Fields</h3>
-            <ScrollArea className="pr-3">
+           <div>
+            <h3 className="text-xl font-semibold mb-3">Data Fields</h3>
+            <ScrollArea className="pr-3"> {/* Allow this section to grow naturally */}
                 <div className="space-y-3">
                     {fields.map((field, index) => (
                     <FieldRow
-                        key={index}
+                        key={index} 
                         field={field}
                         onChange={(updatedField) => handleFieldChange(index, updatedField)}
                         onRemove={() => handleRemoveField(index)}
@@ -646,7 +673,7 @@ export default function TemplateDesignerPage() {
                     )}
                 </div>
             </ScrollArea>
-            <Button
+             <Button
               onClick={handleAddField}
               variant="outline"
               size="sm"
@@ -662,9 +689,9 @@ export default function TemplateDesignerPage() {
 
       {/* Bottom Section: Layout Builder & Preview */}
       <div className="flex flex-col md:flex-row gap-8">
-        <Card className="md:w-[65%] flex flex-col shadow-lg border-border/60">
+        <Card className="md:w-[65%] flex flex-col shadow-lg">
           <CardHeader>
-              <CardTitle className="text-2xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
+              <CardTitle className="text-xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
               <CardDescription className="text-md">
                 Configure canvas size and individual layout elements. Generate JSON to preview and save.
               </CardDescription>
@@ -672,24 +699,65 @@ export default function TemplateDesignerPage() {
           <CardContent className="flex-grow space-y-4 flex flex-col">
             {/* Card Canvas Setup */}
             <div className="space-y-3 p-4 border rounded-md bg-muted/30">
-              <h4 className="text-lg font-semibold mb-2 text-foreground/90">Card Canvas Setup</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="canvasWidth" className="text-sm font-medium">Canvas Width (e.g., 280px)</Label>
-                  <Input id="canvasWidth" value={canvasWidthSetting} onChange={(e) => setCanvasWidthSetting(e.target.value)} disabled={isSaving} className="mt-1 h-9 text-sm"/>
+              <h4 className="text-lg font-semibold mb-2">Card Canvas Setup</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
+                <div className="sm:col-span-1">
+                  <Label htmlFor="canvasSizePreset" className="text-sm font-medium">Canvas Size Preset</Label>
+                  <Select value={selectedSizePreset} onValueChange={handleSizePresetChange} disabled={isSaving}>
+                    <SelectTrigger id="canvasSizePreset" className="mt-1 h-9 text-sm">
+                      <SelectValue placeholder="Select size preset" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COMMON_CARD_SIZES.map(size => (
+                        <SelectItem key={size.value} value={size.value}>{size.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div>
-                  <Label htmlFor="canvasHeight" className="text-sm font-medium">Canvas Height (e.g., 400px)</Label>
-                  <Input id="canvasHeight" value={canvasHeightSetting} onChange={(e) => setCanvasHeightSetting(e.target.value)} disabled={isSaving} className="mt-1 h-9 text-sm"/>
-                </div>
+                {selectedSizePreset === 'custom' && (
+                  <>
+                    <div>
+                      <Label htmlFor="canvasWidth" className="text-sm font-medium">Custom Width (e.g., 280px)</Label>
+                      <Input 
+                        id="canvasWidth" 
+                        value={canvasWidthSetting} 
+                        onChange={(e) => handleCustomDimensionChange('width', e.target.value)} 
+                        disabled={isSaving} 
+                        className="mt-1 h-9 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="canvasHeight" className="text-sm font-medium">Custom Height (e.g., 400px)</Label>
+                      <Input 
+                        id="canvasHeight" 
+                        value={canvasHeightSetting} 
+                        onChange={(e) => handleCustomDimensionChange('height', e.target.value)} 
+                        disabled={isSaving} 
+                        className="mt-1 h-9 text-sm"
+                      />
+                    </div>
+                  </>
+                )}
+                 {(selectedSizePreset !== 'custom' && COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)) && (
+                  <div className="sm:col-span-2 grid grid-cols-2 gap-4">
+                     <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Width</Label>
+                        <p className="text-sm mt-1 h-9 flex items-center">{COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)?.width}</p>
+                    </div>
+                    <div>
+                        <Label className="text-sm font-medium text-muted-foreground">Height</Label>
+                        <p className="text-sm mt-1 h-9 flex items-center">{COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)?.height}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
             {/* Layout Elements Configuration */}
             <div className="space-y-3 p-4 border rounded-md bg-muted/30">
-              <h4 className="text-lg font-semibold mb-2 text-foreground/90">Layout Elements (Toggle to Include)</h4>
+              <h4 className="text-lg font-semibold mb-2">Layout Elements (Toggle to Include)</h4>
                {layoutElementGuiConfigs.length > 0 ? (
-                <ScrollArea className="pr-2"> {/* Removed max-h to fit all */}
+                <ScrollArea className="pr-2"> 
                   <div className="space-y-2">
                     {layoutElementGuiConfigs.map((config, index) => (
                       <div key={config.fieldKey} className="p-2.5 border rounded-md bg-card/80 hover:bg-card transition-colors">
@@ -709,7 +777,7 @@ export default function TemplateDesignerPage() {
                             {config.isExpandedInGui ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </Button>
                         </div>
-                        {config.isExpandedInGui && (
+                        {config.isExpandedInGui && config.isEnabledOnCanvas && (
                           <div className="mt-3 pt-3 border-t border-dashed space-y-3">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div>
@@ -794,7 +862,7 @@ export default function TemplateDesignerPage() {
                   onBlur={validateAndFormatLayoutJson}
                   placeholder='Click "Generate/Update JSON from Builder" above, or paste/edit your JSON here.'
                   rows={15}
-                  className="font-mono text-xs flex-grow min-h-[200px] max-h-[300px] bg-muted/20 mt-1" 
+                  className="font-mono text-xs flex-grow min-h-[200px] max-h-[350px] bg-muted/20 mt-1" 
                   disabled={isSaving} 
                 />
               </div>
@@ -831,14 +899,14 @@ export default function TemplateDesignerPage() {
                     <p className="text-xs mt-1 mb-2">Use these keys in the <code>fieldKey</code> property of elements below if manually editing JSON, or select them in the builder.</p>
                     <p className="font-semibold mb-1 mt-3"><code>elements</code> array (each object defines one visual piece):</p>
                     <ul className="list-disc list-inside pl-2 space-y-1">
-                      <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above.</li>
-                      <li><strong><code>type</code></strong>: (String) One of: "text", "textarea", "image", "iconValue", "iconFromData". The builder allows selecting these.</li>
-                      <li><strong><code>style</code></strong>: (Object) CSS-in-JS. The builder helps set basic positional and font styles.</li>
+                      <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above (e.g., if you have "Card Title" with key "cardTitle", use "cardTitle").</li>
+                      <li><strong><code>type</code></strong>: (String) One of: "text", "textarea", "image", "iconValue", "iconFromData". The builder currently defaults to "text" or "textarea" based on original field type.</li>
+                      <li><strong><code>style</code></strong>: (Object) CSS-in-JS (e.g., { "position": "absolute", "top": "10px", "fontSize": "1.2em" }). Use camelCase for CSS properties. The builder generates basic positional styles.</li>
                       <li><strong><code>className</code></strong>: (String, Optional) Tailwind CSS classes. The builder defaults to "text-card-foreground".</li>
-                      <li><strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue".</li>
-                      <li><strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon.</li>
+                      <li><strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue". Text added before/after the field's value.</li>
+                      <li><strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon. **Ensure the icon exists in lucide-react.**</li>
                     </ul>
-                    <p className="mt-3 italic">The GUI builder helps create this JSON. You can also manually edit the JSON below; changes will be reflected in the preview.</p>
+                    <p className="mt-3 italic">The GUI builder helps create this JSON. You can also manually edit the JSON below; changes will be reflected in the preview. The "Save Template" button always uses the content of this textarea.</p>
                     <p className="font-semibold mb-1 mt-4">Example Element Snippets (for manual JSON editing):</p>
                     <pre className="text-xs bg-background/50 p-2 rounded border whitespace-pre-wrap">
 {`// For a simple text display
@@ -915,7 +983,7 @@ export default function TemplateDesignerPage() {
           </CardFooter>
         </Card>
         
-        <Card className="md:w-[35%] sticky top-20 self-start shadow-lg border-border/60">
+        <Card className="md:w-[35%] sticky top-20 self-start shadow-lg">
           <CardHeader>
             <div className="flex items-center justify-between">
                 <CardTitle className="text-xl font-bold flex items-center">
