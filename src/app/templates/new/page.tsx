@@ -1,3 +1,4 @@
+
 // src/app/templates/new/page.tsx
 "use client";
 
@@ -7,11 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Save, Loader2, Eye, HelpCircle, AlertTriangle, ArrowLeft, Copy, Palette } from 'lucide-react';
+import { PlusCircle, Save, Loader2, Eye, HelpCircle, AlertTriangle, ArrowLeft, Copy, Palette, ChevronDown, ChevronRight } from 'lucide-react';
 import FieldRow, { type TemplateFieldDefinition } from '@/components/template-designer/field-row';
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates } from '@/contexts/TemplateContext';
-import type { TemplateField, CardTemplate, CardTemplateId as ContextCardTemplateId } from '@/lib/card-templates'; // Renamed import alias
+import type { TemplateField, CardTemplate, CardTemplateId as ContextCardTemplateId } from '@/lib/card-templates';
 import { DEFAULT_CARD_LAYOUT_JSON_STRING, DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT } from '@/lib/card-templates';
 import type { CardData } from '@/lib/types';
 import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-renderer';
@@ -29,17 +30,26 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-// Use ContextCardTemplateId as CardTemplateId locally if needed, or just use ContextCardTemplateId
+
 type CardTemplateId = ContextCardTemplateId;
-
 
 // Define the structure for the GUI configuration of layout elements
 interface LayoutElementGuiConfig {
   fieldKey: string;
-  label: string; // From the original data field
-  originalType: TemplateFieldDefinition['type']; // Original type of the data field
-  isEnabledOnCanvas: boolean; // Is this field included in the layout?
+  label: string;
+  originalType: TemplateFieldDefinition['type'];
+  isEnabledOnCanvas: boolean;
+  isExpandedInGui: boolean; // New: To control GUI visibility for this element
+
+  elementType: 'text' | 'textarea' | 'image' | 'iconValue' | 'iconFromData';
+  styleTop: string;
+  styleLeft: string;
+  styleWidth: string;
+  styleHeight: string;
+  styleFontSize: string;
+  iconName?: string; // For elementType 'iconValue'
 }
 
 
@@ -74,7 +84,7 @@ function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): Templa
             };
         }).filter(opt => opt.value);
     }
-    console.log('[DEBUG] TemplateDesignerPage/mapFieldDefinitionToTemplateField: Resulting field', field);
+    // console.log('[DEBUG] TemplateDesignerPage/mapFieldDefinitionToTemplateField: Resulting field', field);
     return field;
 }
 
@@ -95,7 +105,7 @@ const toCamelCase = (str: string): string => {
   if (/^[0-9]/.test(result)) {
     result = '_' + result;
   }
-  console.log(`[DEBUG] TemplateDesignerPage/toCamelCase: Input: "${str}", Output: "${result}"`);
+  // console.log(`[DEBUG] TemplateDesignerPage/toCamelCase: Input: "${str}", Output: "${result}"`);
   return result;
 };
 
@@ -125,14 +135,14 @@ function generateSamplePlaceholderUrl(config: {
     }
   }
   
-  path += `.png`; 
+  path += `.png`;
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
   if (text) {
     fullUrl += `?text=${encodeURIComponent(text)}`;
   }
-  console.log('[DEBUG] TemplateDesignerPage/generateSamplePlaceholderUrl: Generated URL', fullUrl, 'from config', config);
+  // console.log('[DEBUG] TemplateDesignerPage/generateSamplePlaceholderUrl: Generated URL', fullUrl, 'from config', config);
   return fullUrl;
 }
 
@@ -142,16 +152,18 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
   "AlertTriangle", "Info", "HelpCircle", "Wand2", "Sparkles", "Sun", "Moon",
   "Cloud", "Flame", "Leaf", "Droplets", "Feather", "Eye", "Swords", "ShieldCheck",
   "ShieldAlert", "Aperture", "Book", "Camera", "Castle", "Crown", "Diamond", "Dice5",
-  "Flag", "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock",
+  "Flag", // Removed "Flash" as it caused build errors
+  "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock",
   "MapPin", "Medal", "Mountain", "Music", "Package", "Palette", "PawPrint", "Pencil",
   "Phone", "Puzzle", "Rocket", "Save", "Search", "Ship", "Sprout", "Ticket", "Trash2",
   "TreePine", "Trophy", "Umbrella", "User", "Video", "Wallet", "Watch", "Wifi", "Wrench"
 ];
 
+
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
   if (!Icon) {
-    console.warn(`[DEBUG] IconComponent (TemplateDesigner): Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
+    // console.warn(`[DEBUG] IconComponent (TemplateDesigner): Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
     return <LucideIcons.HelpCircle {...props} />;
   }
   return <Icon {...props} />;
@@ -167,7 +179,6 @@ export default function TemplateDesignerPage() {
   const [layoutDefinition, setLayoutDefinition] = useState<string>(DEFAULT_CARD_LAYOUT_JSON_STRING);
   const [layoutJsonError, setLayoutJsonError] = useState<string | null>(null);
   
-  // State for the new Visual Layout Builder
   const [canvasWidthSetting, setCanvasWidthSetting] = useState<string>(`${DEFAULT_CANVAS_WIDTH}px`);
   const [canvasHeightSetting, setCanvasHeightSetting] = useState<string>(`${DEFAULT_CANVAS_HEIGHT}px`);
   const [layoutElementGuiConfigs, setLayoutElementGuiConfigs] = useState<LayoutElementGuiConfig[]>([]);
@@ -182,7 +193,7 @@ export default function TemplateDesignerPage() {
   const router = useRouter();
 
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesignerPage: templateName effect running. Name:', templateName);
+    // console.log('[DEBUG] TemplateDesignerPage: templateName effect running. Name:', templateName);
     if (templateName) {
       setTemplateId(toCamelCase(templateName));
     } else {
@@ -194,23 +205,37 @@ export default function TemplateDesignerPage() {
   useEffect(() => {
     console.log('[DEBUG] TemplateDesignerPage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
     setLayoutElementGuiConfigs(prevConfigs => {
-      const newConfigs = fields.map(field => {
-        const existingConfig = prevConfigs.find(c => c.fieldKey === field.key);
-        return {
-          fieldKey: field.key,
-          label: field.label,
-          originalType: field.type,
-          isEnabledOnCanvas: existingConfig ? existingConfig.isEnabledOnCanvas : true, // Default to true for new fields
-        };
-      });
-      // Filter out configs for fields that no longer exist (if a field was removed)
-      return newConfigs.filter(nc => fields.some(f => f.key === nc.fieldKey));
+        const newConfigs = fields.map((field, index) => {
+            const existingConfig = prevConfigs.find(c => c.fieldKey === field.key);
+            if (existingConfig) {
+                return { ...existingConfig, label: field.label, originalType: field.type }; // Preserve existing GUI settings, update label/type
+            }
+            // New field, create new GUI config with defaults
+            const yOffset = 10 + (index % 8) * 30; // Simple cascading for default position
+            const xOffset = 10;
+            return {
+                fieldKey: field.key,
+                label: field.label,
+                originalType: field.type,
+                isEnabledOnCanvas: true, // Default to enabled
+                isExpandedInGui: false,  // Default to collapsed
+                elementType: field.type === 'textarea' ? 'textarea' : (field.type === 'placeholderImage' ? 'image' : 'text'),
+                styleTop: `${yOffset}px`,
+                styleLeft: `${xOffset}px`,
+                styleWidth: '120px',
+                styleHeight: field.type === 'textarea' ? '60px' : '20px',
+                styleFontSize: '12px',
+                iconName: field.originalType === 'number' ? 'Coins' : '', // Default icon for number types
+            };
+        });
+        // Filter out configs for fields that no longer exist
+        return newConfigs.filter(nc => fields.some(f => f.key === nc.fieldKey));
     });
   }, [fields]);
 
 
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesignerPage: Generating sampleCardForPreview. Fields count:', fields.length, 'Template ID:', templateId);
+    // console.log('[DEBUG] TemplateDesignerPage: Generating sampleCardForPreview. Fields count:', fields.length, 'Template ID:', templateId);
     const currentTemplateIdForPreview = templateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
@@ -219,7 +244,7 @@ export default function TemplateDesignerPage() {
     fields.forEach(fieldDef => {
       const key = fieldDef.key as keyof CardData;
       let valueForPreview: any;
-      const hasPreviewValue = fieldDef.previewValue !== undefined && fieldDef.previewValue.trim() !== '';
+      const hasPreviewValue = fieldDef.previewValue !== undefined && String(fieldDef.previewValue).trim() !== '';
       const hasDefaultValue = fieldDef.defaultValue !== undefined && String(fieldDef.defaultValue).trim() !== '';
 
       if (fieldDef.type === 'placeholderImage') {
@@ -330,7 +355,7 @@ export default function TemplateDesignerPage() {
   };
 
   const handleFieldChange = (index: number, updatedFieldDefinition: TemplateFieldDefinition) => {
-    console.log('[DEBUG] TemplateDesignerPage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
+    // console.log('[DEBUG] TemplateDesignerPage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
     const newFields = [...fields];
     const oldField = newFields[index];
     let modifiedField = { ...oldField, ...updatedFieldDefinition };
@@ -370,7 +395,7 @@ export default function TemplateDesignerPage() {
 
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
-    console.log('[DEBUG] TemplateDesignerPage/handleLayoutDefinitionChange: Layout string changed.');
+    // console.log('[DEBUG] TemplateDesignerPage/handleLayoutDefinitionChange: Layout string changed.');
     setLayoutDefinition(newLayoutDef);
     if (layoutJsonError) setLayoutJsonError(null);
   };
@@ -380,62 +405,69 @@ export default function TemplateDesignerPage() {
       const parsed = JSON.parse(layoutDefinition);
       setLayoutDefinition(JSON.stringify(parsed, null, 2));
       setLayoutJsonError(null);
-      console.log('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: JSON is valid and formatted.');
+      // console.log('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: JSON is valid and formatted.');
       return true;
     } catch (e: any) {
       setLayoutJsonError(`Invalid JSON: ${e.message}`);
-      console.warn('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: Invalid JSON', e.message);
+      // console.warn('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: Invalid JSON', e.message);
       return false;
     }
   };
 
-  const handleLayoutElementToggle = (fieldKey: string, checked: boolean) => {
-    setLayoutElementGuiConfigs(prevConfigs =>
-      prevConfigs.map(config =>
-        config.fieldKey === fieldKey ? { ...config, isEnabledOnCanvas: checked } : config
+  const handleGuiConfigChange = (fieldKey: string, property: keyof LayoutElementGuiConfig, value: any) => {
+    setLayoutElementGuiConfigs(prev =>
+      prev.map(config =>
+        config.fieldKey === fieldKey ? { ...config, [property]: value } : config
       )
     );
   };
 
+  const handleToggleGuiExpand = (fieldKey: string) => {
+    setLayoutElementGuiConfigs(prev =>
+      prev.map(config =>
+        config.fieldKey === fieldKey ? { ...config, isExpandedInGui: !config.isExpandedInGui } : config
+      )
+    );
+  };
+
+
   const handleGenerateJsonFromBuilder = () => {
     console.log('[DEBUG] TemplateDesignerPage/handleGenerateJsonFromBuilder: Generating JSON from GUI configs.');
     const elementsToInclude = layoutElementGuiConfigs.filter(config => config.isEnabledOnCanvas);
-    let yOffset = 10;
-    const xOffset = 10;
-    const elementHeight = 20; 
-    const elementWidth = 120; 
-    const verticalGap = 5;
-
+    
     const generatedElements = elementsToInclude.map(config => {
-      const element = {
+      const element: any = { // Using 'any' temporarily for flexibility
         fieldKey: config.fieldKey,
-        type: config.originalType === 'textarea' ? 'textarea' : 'text', 
+        type: config.elementType,
         style: {
           position: "absolute",
-          top: `${yOffset}px`,
-          left: `${xOffset}px`,
-          width: `${elementWidth}px`,
-          height: `${elementHeight}px`,
-          fontSize: "12px", 
+          top: config.styleTop.endsWith('px') ? config.styleTop : `${config.styleTop}px`,
+          left: config.styleLeft.endsWith('px') ? config.styleLeft : `${config.styleLeft}px`,
+          width: config.styleWidth.endsWith('px') ? config.styleWidth : `${config.styleWidth}px`,
+          height: config.styleHeight.endsWith('px') ? config.styleHeight : `${config.styleHeight}px`,
+          fontSize: config.styleFontSize.endsWith('px') ? config.styleFontSize : `${config.styleFontSize}px`,
         },
-        className: "text-card-foreground" 
+        className: "text-card-foreground" // Default class, can be made configurable later
       };
-      yOffset += elementHeight + verticalGap;
+      if (config.elementType === 'iconValue' && config.iconName) {
+        element.icon = config.iconName;
+      }
+      // Add other type-specific properties like prefix, suffix if GUI controls are added
       return element;
     });
 
     const newLayout = {
       width: canvasWidthSetting || `${DEFAULT_CANVAS_WIDTH}px`,
       height: canvasHeightSetting || `${DEFAULT_CANVAS_HEIGHT}px`,
-      backgroundColor: "hsl(var(--card))",
-      borderColor: "hsl(var(--border))",
-      borderRadius: "calc(var(--radius) - 2px)",
+      backgroundColor: "hsl(var(--card))", // Default, can be made configurable
+      borderColor: "hsl(var(--border))",   // Default
+      borderRadius: "calc(var(--radius) - 2px)", // Default
       elements: generatedElements
     };
 
     const newLayoutJsonString = JSON.stringify(newLayout, null, 2);
     setLayoutDefinition(newLayoutJsonString);
-    toast({ title: "Layout JSON Updated", description: "JSON generated from builder and updated in the textarea and preview."});
+    toast({ title: "Layout JSON Updated", description: "JSON generated from GUI builder and updated in the textarea and preview."});
   };
 
 
@@ -472,22 +504,33 @@ export default function TemplateDesignerPage() {
         });
         return;
     }
-    if (layoutDefinition.trim() && !validateAndFormatLayoutJson()) { 
-        toast({
-          title: "Invalid Layout JSON",
-          description: `Please correct the Layout Definition JSON in the textarea. Error: ${layoutJsonError || 'Unknown JSON error.'}`,
-          variant: "destructive",
-        });
-        return;
+    // Validate JSON from the textarea before saving
+    let finalLayoutDefinition = layoutDefinition.trim();
+    if (finalLayoutDefinition) {
+        try {
+            JSON.parse(finalLayoutDefinition); // Test parsing
+        } catch (e) {
+            toast({
+                title: "Invalid Layout JSON",
+                description: `The JSON in the 'Layout Definition' textarea is invalid and cannot be saved. Error: ${(e as Error).message}. Please correct it or use the 'Generate/Update JSON from Builder' button.`,
+                variant: "destructive",
+                duration: 7000,
+            });
+            setLayoutJsonError(`Invalid JSON: ${(e as Error).message}`);
+            return;
+        }
+    } else {
+        finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING; // Fallback if textarea is empty
     }
+
     setIsSaving(true);
     const newTemplate: CardTemplate = {
       id: finalTemplateId as CardTemplateId,
       name: templateName.trim(),
       fields: fields.map(mapFieldDefinitionToTemplateField),
-      layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : DEFAULT_CARD_LAYOUT_JSON_STRING,
+      layoutDefinition: finalLayoutDefinition,
     };
-    console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Calling saveTemplateToContext with:', newTemplate);
+    // console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Calling saveTemplateToContext with:', newTemplate);
     const result = await saveTemplateToContext(newTemplate);
     if (result.success) {
       toast({
@@ -538,48 +581,48 @@ export default function TemplateDesignerPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
-      {/* Card for Template Info and Data Fields */}
-      <Card className="shadow-md">
+    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+      {/* Top Section: Template Info & Data Fields */}
+      <Card className="shadow-lg border-border/60">
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-bold">Template Designer</CardTitle>
+            <CardTitle className="text-3xl font-bold">Template Designer</CardTitle>
             <Button variant="outline" size="sm" asChild>
               <Link href="/templates"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Library</Link>
             </Button>
           </div>
-          <CardDescription>
-            Define the structure for a new card template. Template ID is auto-generated from the name. Field Keys are auto-generated from Field Labels. Templates are saved to browser local storage.
+          <CardDescription className="text-md">
+            Define the data structure for a new card template. The Template ID is auto-generated from the name. Field Keys are auto-generated from Field Labels.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="templateName">Template Name (e.g., 'Hero Unit Card')</Label>
+              <Label htmlFor="templateName" className="font-semibold text-foreground/90">Template Name (e.g., 'Hero Unit Card')</Label>
               <Input
                 id="templateName"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
                 placeholder="Hero Unit Card"
                 disabled={isSaving}
+                className="mt-1"
               />
             </div>
             <div>
-              <Label htmlFor="templateId">Template ID (auto-generated)</Label>
+              <Label htmlFor="templateId" className="font-semibold text-foreground/90">Template ID (auto-generated)</Label>
               <Input
                 id="templateId"
                 value={templateId}
                 placeholder="heroUnitCard"
                 readOnly
                 disabled={isSaving}
-                className="bg-muted/50"
+                className="mt-1 bg-muted/50"
               />
             </div>
           </div>
           <div>
-            <h3 className="text-lg font-semibold mb-2">Data Fields</h3>
-            <ScrollArea className="h-auto pr-0">
-              <div className="space-y-3"> 
+            <h3 className="text-xl font-semibold mb-3 text-foreground/90">Data Fields</h3>
+            <div className="space-y-3"> 
                 {fields.map((field, index) => (
                   <FieldRow
                     key={index} 
@@ -595,13 +638,12 @@ export default function TemplateDesignerPage() {
                   </p>
                 )}
               </div>
-            </ScrollArea>
             <Button
               onClick={handleAddField}
               variant="outline"
               size="sm"
               disabled={isSaving}
-              className="mt-3"
+              className="mt-4"
               title={"Add a new data field"}
             >
               <PlusCircle className="mr-2 h-4 w-4" /> Add Field
@@ -610,76 +652,145 @@ export default function TemplateDesignerPage() {
         </CardContent>
       </Card>
 
-      {/* Row for Visual Layout Builder and Live Preview */}
-      <div className="flex flex-col md:flex-row gap-6">
+      {/* Bottom Section: Layout Builder & Preview */}
+      <div className="flex flex-col md:flex-row gap-8">
         {/* Visual Layout Builder & JSON Output Card */}
-        <Card className="md:w-[65%] flex flex-col shadow-md">
+        <Card className="md:w-[65%] flex flex-col shadow-lg border-border/60">
           <CardHeader>
-              <CardTitle className="text-xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
-              <CardDescription>
-                Configure canvas size and select fields to include. Then generate basic JSON to refine in the textarea or copy.
+              <CardTitle className="text-2xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
+              <CardDescription className="text-md">
+                Configure canvas size and included fields. Then generate basic JSON to preview and optionally refine in the textarea.
               </CardDescription>
           </CardHeader>
           <CardContent className="flex-grow space-y-4 flex flex-col">
             {/* Card Canvas Setup */}
-            <div className="space-y-2 p-3 border rounded-md bg-muted/30">
-              <h4 className="text-md font-semibold mb-1">Card Canvas Setup</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-3 p-4 border rounded-md bg-muted/30">
+              <h4 className="text-lg font-semibold mb-2 text-foreground/90">Card Canvas Setup</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="canvasWidth" className="text-xs">Canvas Width (e.g., 280px)</Label>
-                  <Input id="canvasWidth" value={canvasWidthSetting} onChange={(e) => setCanvasWidthSetting(e.target.value)} disabled={isSaving} className="h-8 text-xs"/>
+                  <Label htmlFor="canvasWidth" className="text-sm font-medium">Canvas Width (e.g., 280px)</Label>
+                  <Input id="canvasWidth" value={canvasWidthSetting} onChange={(e) => setCanvasWidthSetting(e.target.value)} disabled={isSaving} className="mt-1 h-9 text-sm"/>
                 </div>
                 <div>
-                  <Label htmlFor="canvasHeight" className="text-xs">Canvas Height (e.g., 400px)</Label>
-                  <Input id="canvasHeight" value={canvasHeightSetting} onChange={(e) => setCanvasHeightSetting(e.target.value)} disabled={isSaving} className="h-8 text-xs"/>
+                  <Label htmlFor="canvasHeight" className="text-sm font-medium">Canvas Height (e.g., 400px)</Label>
+                  <Input id="canvasHeight" value={canvasHeightSetting} onChange={(e) => setCanvasHeightSetting(e.target.value)} disabled={isSaving} className="mt-1 h-9 text-sm"/>
                 </div>
               </div>
             </div>
 
-            {/* Layout Elements Selection */}
-            <div className="space-y-2 p-3 border rounded-md bg-muted/30">
-              <h4 className="text-md font-semibold mb-1">Layout Elements (Toggle to Include)</h4>
+            {/* Layout Elements Configuration */}
+            <div className="space-y-3 p-4 border rounded-md bg-muted/30">
+              <h4 className="text-lg font-semibold mb-2 text-foreground/90">Layout Elements Configuration</h4>
               {layoutElementGuiConfigs.length > 0 ? (
-                <ScrollArea className="max-h-[250px] pr-2"> {/* Constrained height */}
-                  <div className="space-y-1.5">
-                    {layoutElementGuiConfigs.map(config => (
-                      <div key={config.fieldKey} className="flex items-center justify-between p-1.5 hover:bg-muted/70 rounded-sm">
-                        <Label htmlFor={`toggle-${config.fieldKey}`} className="text-sm cursor-pointer">
-                          {config.label} <span className="text-xs text-muted-foreground">({config.fieldKey})</span>
-                        </Label>
-                        <Switch
-                          id={`toggle-${config.fieldKey}`}
-                          checked={config.isEnabledOnCanvas}
-                          onCheckedChange={(checked) => handleLayoutElementToggle(config.fieldKey, checked)}
-                          disabled={isSaving}
-                        />
+                <ScrollArea className="pr-1"> {/* Removed max-h to fit all */}
+                  <div className="space-y-2">
+                    {layoutElementGuiConfigs.map((config, index) => (
+                      <div key={config.fieldKey} className="p-2.5 border rounded-md bg-card/80 hover:bg-card transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id={`enable-${config.fieldKey}`}
+                              checked={config.isEnabledOnCanvas}
+                              onCheckedChange={(checked) => handleGuiConfigChange(config.fieldKey, 'isEnabledOnCanvas', checked)}
+                              disabled={isSaving}
+                            />
+                            <Label htmlFor={`enable-${config.fieldKey}`} className="text-sm font-medium cursor-pointer">
+                              {config.label} <span className="text-xs text-muted-foreground">({config.fieldKey})</span>
+                            </Label>
+                          </div>
+                          <Button variant="ghost" size="icon" onClick={() => handleToggleGuiExpand(config.fieldKey)} className="h-7 w-7 text-muted-foreground">
+                            {config.isExpandedInGui ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        {config.isExpandedInGui && (
+                          <div className="mt-3 pt-3 border-t border-dashed space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <Label htmlFor={`el-type-${config.fieldKey}`} className="text-xs">Element Type</Label>
+                                <Select
+                                  value={config.elementType}
+                                  onValueChange={(value) => handleGuiConfigChange(config.fieldKey, 'elementType', value)}
+                                  disabled={isSaving}
+                                >
+                                  <SelectTrigger id={`el-type-${config.fieldKey}`} className="h-8 text-xs mt-0.5">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="text">Text</SelectItem>
+                                    <SelectItem value="textarea">Textarea</SelectItem>
+                                    <SelectItem value="image">Image</SelectItem>
+                                    <SelectItem value="iconValue">Icon & Value</SelectItem>
+                                    <SelectItem value="iconFromData">Icon from Data</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              {config.elementType === 'iconValue' && (
+                                <div>
+                                  <Label htmlFor={`el-icon-${config.fieldKey}`} className="text-xs">Icon Name</Label>
+                                  <Input
+                                    id={`el-icon-${config.fieldKey}`}
+                                    value={config.iconName || ''}
+                                    onChange={(e) => handleGuiConfigChange(config.fieldKey, 'iconName', e.target.value)}
+                                    placeholder="e.g., Coins"
+                                    className="h-8 text-xs mt-0.5"
+                                    disabled={isSaving}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground font-medium mt-2">Styling (px values):</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              <div>
+                                <Label htmlFor={`el-top-${config.fieldKey}`} className="text-xs">Top</Label>
+                                <Input id={`el-top-${config.fieldKey}`} value={config.styleTop} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleTop', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving}/>
+                              </div>
+                              <div>
+                                <Label htmlFor={`el-left-${config.fieldKey}`} className="text-xs">Left</Label>
+                                <Input id={`el-left-${config.fieldKey}`} value={config.styleLeft} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleLeft', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving}/>
+                              </div>
+                              <div>
+                                <Label htmlFor={`el-width-${config.fieldKey}`} className="text-xs">Width</Label>
+                                <Input id={`el-width-${config.fieldKey}`} value={config.styleWidth} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleWidth', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving}/>
+                              </div>
+                              <div>
+                                <Label htmlFor={`el-height-${config.fieldKey}`} className="text-xs">Height</Label>
+                                <Input id={`el-height-${config.fieldKey}`} value={config.styleHeight} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleHeight', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving}/>
+                              </div>
+                              <div className="sm:col-span-2">
+                                <Label htmlFor={`el-fontsize-${config.fieldKey}`} className="text-xs">Font Size</Label>
+                                <Input id={`el-fontsize-${config.fieldKey}`} value={config.styleFontSize} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleFontSize', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving}/>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 </ScrollArea>
               ) : (
-                <p className="text-xs text-muted-foreground">No data fields defined yet to build layout elements.</p>
+                <p className="text-sm text-muted-foreground">No data fields defined yet to build layout elements.</p>
               )}
             </div>
             
-            <Button onClick={handleGenerateJsonFromBuilder} variant="secondary" size="sm" disabled={isSaving || layoutElementGuiConfigs.length === 0} className="self-start">
+            <Button onClick={handleGenerateJsonFromBuilder} variant="secondary" size="sm" disabled={isSaving || layoutElementGuiConfigs.length === 0} className="self-start mt-2">
               <Palette className="mr-2 h-4 w-4" /> Generate/Update JSON from Builder
             </Button>
 
             {/* JSON Output & Guides Section */}
-            <div className="mt-2 flex-grow flex flex-col min-h-0">
+            <div className="mt-4 flex-grow flex flex-col min-h-0">
               <div>
                 <Label htmlFor="layoutDefinition" className="text-sm font-medium">Layout Definition JSON (Read-Only after generating from builder)</Label>
                 <Textarea
                   id="layoutDefinition"
                   value={layoutDefinition}
-                  onChange={handleLayoutDefinitionChange}
+                  onChange={handleLayoutDefinitionChange} // Still allow manual edits if desired
                   onBlur={validateAndFormatLayoutJson}
-                  placeholder='Click "Generate/Update JSON from Builder" above, or paste your JSON here.'
+                  placeholder='Click "Generate/Update JSON from Builder" above, or paste your JSON here if making manual edits.'
                   rows={15}
-                  className="font-mono text-xs flex-grow min-h-[200px] max-h-[300px] bg-muted/20" 
+                  className="font-mono text-xs flex-grow min-h-[200px] max-h-[300px] bg-muted/20 mt-1" 
                   disabled={isSaving}
-                  readOnly 
+                  // Consider making this readOnly={true} to enforce builder usage, or keep it editable for power users.
+                  // For now, let's keep it editable.
                 />
               </div>
               {layoutJsonError && (
@@ -689,7 +800,7 @@ export default function TemplateDesignerPage() {
                   <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
                 </Alert>
               )}
-              <Accordion type="single" collapsible className="w-full mt-2" defaultValue="layout-guide">
+              <Accordion type="single" collapsible className="w-full mt-3" defaultValue="layout-guide">
                 <AccordionItem value="layout-guide">
                   <AccordionTrigger className="text-sm py-2 hover:no-underline">
                     <div className="flex items-center text-muted-foreground">
@@ -715,11 +826,11 @@ export default function TemplateDesignerPage() {
                     <p className="text-xs mt-1 mb-2">Use these keys in the <code>fieldKey</code> property of elements below if manually editing JSON.</p>
                     <p className="font-semibold mb-1 mt-3"><code>elements</code> array (each object defines one visual piece):</p>
                     <ul className="list-disc list-inside pl-2 space-y-1">
-                      <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above (e.g., if you have "Card Title" with key "cardTitle", use "cardTitle").</li>
+                      <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above.</li>
                       <li><strong><code>type</code></strong>: (String) One of: <code>"text"</code>, <code>"textarea"</code>, <code>"image"</code>, <code>"iconValue"</code>, <code>"iconFromData"</code>. The builder currently defaults to "text".</li>
-                      <li><strong><code>style</code></strong>: (Object) CSS-in-JS (e.g., {`{ "position": "absolute", "top": "10px", "fontSize": "1.2em" }`}). Use camelCase for CSS properties.</li>
+                      <li><strong><code>style</code></strong>: (Object) CSS-in-JS. The builder generates basic positional styles.</li>
                       <li><strong><code>className</code></strong>: (String, Optional) Tailwind CSS classes.</li>
-                      <li><strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue". Text added before/after the field's value.</li>
+                      <li><strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue".</li>
                       <li><strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon. **Ensure the icon exists in `lucide-react`.**</li>
                     </ul>
                     <p className="mt-3 italic">After generating JSON with the builder, you can manually refine it in the textarea if needed, then validate by blurring. Final save uses the textarea content.</p>
@@ -801,7 +912,7 @@ export default function TemplateDesignerPage() {
         </Card>
         
         {/* Live Preview Card */}
-        <Card className="md:w-[35%] sticky top-20 self-start shadow-md">
+        <Card className="md:w-[35%] sticky top-20 self-start shadow-lg border-border/60">
           <CardHeader>
             <div className="flex items-center justify-between">
                 <CardTitle className="text-xl font-bold flex items-center">
@@ -812,8 +923,8 @@ export default function TemplateDesignerPage() {
                     <Label htmlFor="show-outlines" className="text-xs text-muted-foreground">Outlines</Label>
                 </div>
             </div>
-            <CardDescription>
-              This preview updates as you modify the Layout Definition JSON or template fields.
+            <CardDescription className="text-sm">
+              This preview updates as you modify the Layout Definition or template fields.
               Uses sample data based on your field definitions.
             </CardDescription>
           </CardHeader>
@@ -833,3 +944,4 @@ export default function TemplateDesignerPage() {
     </div>
   );
 }
+

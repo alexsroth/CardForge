@@ -1,3 +1,4 @@
+
 // src/app/templates/edit/[templateId]/page.tsx
 "use client";
 
@@ -7,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Save, AlertTriangle, Loader2, ArrowLeft, Eye, HelpCircle, Copy, Palette } from 'lucide-react';
+import { PlusCircle, Save, AlertTriangle, Loader2, ArrowLeft, Eye, HelpCircle, Copy, Palette, ChevronDown, ChevronRight } from 'lucide-react';
 import FieldRow, { type TemplateFieldDefinition } from '@/components/template-designer/field-row';
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates, type CardTemplateId as ContextCardTemplateId } from '@/contexts/TemplateContext';
@@ -29,20 +30,30 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type CardTemplateId = ContextCardTemplateId;
 
 // Define the structure for the GUI configuration of layout elements
 interface LayoutElementGuiConfig {
   fieldKey: string;
-  label: string; // From the original data field
-  originalType: TemplateFieldDefinition['type']; // Original type of the data field
-  isEnabledOnCanvas: boolean; // Is this field included in the layout?
+  label: string;
+  originalType: TemplateFieldDefinition['type'];
+  isEnabledOnCanvas: boolean;
+  isExpandedInGui: boolean;
+
+  elementType: 'text' | 'textarea' | 'image' | 'iconValue' | 'iconFromData';
+  styleTop: string;
+  styleLeft: string;
+  styleWidth: string;
+  styleHeight: string;
+  styleFontSize: string;
+  iconName?: string;
 }
 
 
 function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldDefinition {
-    console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Mapping field', field);
+    // console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Mapping field', field);
     const definition: TemplateFieldDefinition = {
         key: field.key,
         label: field.label,
@@ -59,12 +70,12 @@ function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldD
     if (field.type === 'select' && field.options) {
         definition.optionsString = field.options.map(opt => `${opt.value}:${opt.label}`).join(',');
     }
-    console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Resulting definition', definition);
+    // console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Resulting definition', definition);
     return definition;
 }
 
 function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
-    console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Mapping def', def);
+    // console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Mapping def', def);
     const field: TemplateField = {
         key: def.key,
         label: def.label,
@@ -94,7 +105,7 @@ function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): Templa
             };
         }).filter(opt => opt.value);
     }
-    console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Resulting field', field);
+    // console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Resulting field', field);
     return field;
 }
 
@@ -112,7 +123,7 @@ const toCamelCase = (str: string): string => {
    if (/^[0-9]/.test(result)) {
     result = '_' + result;
   }
-  console.log(`[DEBUG] EditTemplatePage/toCamelCase: Input: "${str}", Output: "${result}"`);
+  // console.log(`[DEBUG] EditTemplatePage/toCamelCase: Input: "${str}", Output: "${result}"`);
   return result;
 };
 
@@ -148,7 +159,7 @@ function generateSamplePlaceholderUrl(config: {
   if (text) {
     fullUrl += `?text=${encodeURIComponent(text)}`;
   }
-  console.log('[DEBUG] EditTemplatePage/generateSamplePlaceholderUrl: Generated URL', fullUrl, 'from config', config);
+  // console.log('[DEBUG] EditTemplatePage/generateSamplePlaceholderUrl: Generated URL', fullUrl, 'from config', config);
   return fullUrl;
 }
 
@@ -158,7 +169,8 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
   "AlertTriangle", "Info", "HelpCircle", "Wand2", "Sparkles", "Sun", "Moon",
   "Cloud", "Flame", "Leaf", "Droplets", "Feather", "Eye", "Swords", "ShieldCheck",
   "ShieldAlert", "Aperture", "Book", "Camera", "Castle", "Crown", "Diamond", "Dice5",
-  "Flag", "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock",
+  "Flag", // Removed "Flash"
+  "Flower", "Gift", "Globe", "KeyRound", "Lightbulb", "Lock",
   "MapPin", "Medal", "Mountain", "Music", "Package", "Palette", "PawPrint", "Pencil",
   "Phone", "Puzzle", "Rocket", "Save", "Search", "Ship", "Sprout", "Ticket", "Trash2",
   "TreePine", "Trophy", "Umbrella", "User", "Video", "Wallet", "Watch", "Wifi", "Wrench"
@@ -167,7 +179,7 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
   if (!Icon) {
-    console.warn(`[DEBUG] IconComponent (EditTemplatePage): Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
+    // console.warn(`[DEBUG] IconComponent (EditTemplatePage): Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
     return <LucideIcons.HelpCircle {...props} />;
   }
   return <Icon {...props} />;
@@ -189,7 +201,6 @@ export default function EditTemplatePage() {
   const [layoutDefinition, setLayoutDefinition] = useState<string>('');
   const [layoutJsonError, setLayoutJsonError] = useState<string | null>(null);
 
-  // State for the new Visual Layout Builder
   const [canvasWidthSetting, setCanvasWidthSetting] = useState<string>(`${DEFAULT_CANVAS_WIDTH}px`);
   const [canvasHeightSetting, setCanvasHeightSetting] = useState<string>(`${DEFAULT_CANVAS_HEIGHT}px`);
   const [layoutElementGuiConfigs, setLayoutElementGuiConfigs] = useState<LayoutElementGuiConfig[]>([]);
@@ -218,7 +229,6 @@ export default function EditTemplatePage() {
       const initialLayoutDef = templateToEdit.layoutDefinition?.trim() ? templateToEdit.layoutDefinition : DEFAULT_CARD_LAYOUT_JSON_STRING;
       setLayoutDefinition(initialLayoutDef);
 
-      // Initialize GUI configs based on loaded fields and existing layoutDefinition
       try {
         const parsedLayout = JSON.parse(initialLayoutDef || '{}');
         const layoutElements = Array.isArray(parsedLayout.elements) ? parsedLayout.elements : [];
@@ -226,21 +236,48 @@ export default function EditTemplatePage() {
         setCanvasWidthSetting(parsedLayout.width || `${DEFAULT_CANVAS_WIDTH}px`);
         setCanvasHeightSetting(parsedLayout.height || `${DEFAULT_CANVAS_HEIGHT}px`);
 
-        setLayoutElementGuiConfigs(initialFields.map(field => ({
-          fieldKey: field.key,
-          label: field.label,
-          originalType: field.type,
-          isEnabledOnCanvas: layoutElements.some((el: any) => el.fieldKey === field.key),
-        })));
+        // Initialize GUI configs based on loaded fields and existing layoutDefinition
+        setLayoutElementGuiConfigs(initialFields.map((field, index) => {
+          const existingLayoutElement = layoutElements.find((el: any) => el.fieldKey === field.key);
+          const yOffset = 10 + (index % 8) * 30;
+          const xOffset = 10;
+          return {
+            fieldKey: field.key,
+            label: field.label,
+            originalType: field.type,
+            isEnabledOnCanvas: !!existingLayoutElement, // True if found in layout
+            isExpandedInGui: false,
+            elementType: existingLayoutElement?.type || (field.type === 'textarea' ? 'textarea' : (field.type === 'placeholderImage' ? 'image' : 'text')),
+            styleTop: existingLayoutElement?.style?.top || `${yOffset}px`,
+            styleLeft: existingLayoutElement?.style?.left || `${xOffset}px`,
+            styleWidth: existingLayoutElement?.style?.width || '120px',
+            styleHeight: existingLayoutElement?.style?.height || (field.type === 'textarea' ? '60px' : '20px'),
+            styleFontSize: existingLayoutElement?.style?.fontSize || '12px',
+            iconName: existingLayoutElement?.icon || (field.type === 'number' ? 'Coins' : ''),
+          };
+        }));
 
       } catch (e) {
-        console.warn("Could not parse initial layout definition for GUI config:", e);
-        setLayoutElementGuiConfigs(initialFields.map(field => ({ // Fallback
-          fieldKey: field.key,
-          label: field.label,
-          originalType: field.type,
-          isEnabledOnCanvas: true, // Default to true if parsing fails
-        })));
+        console.warn("[DEBUG] EditTemplatePage: Could not parse initial layout definition for GUI config:", e);
+        // Fallback initialization if parsing layout fails
+        setLayoutElementGuiConfigs(initialFields.map((field, index) => {
+            const yOffset = 10 + (index % 8) * 30;
+            const xOffset = 10;
+            return {
+                fieldKey: field.key,
+                label: field.label,
+                originalType: field.type,
+                isEnabledOnCanvas: true, // Default to true if parsing fails
+                isExpandedInGui: false,
+                elementType: field.type === 'textarea' ? 'textarea' : (field.type === 'placeholderImage' ? 'image' : 'text'),
+                styleTop: `${yOffset}px`,
+                styleLeft: `${xOffset}px`,
+                styleWidth: '120px',
+                styleHeight: field.type === 'textarea' ? '60px' : '20px',
+                styleFontSize: '12px',
+                iconName: field.type === 'number' ? 'Coins' : '',
+            };
+        }));
       }
       setErrorLoading(null);
     } else {
@@ -254,25 +291,38 @@ export default function EditTemplatePage() {
   useEffect(() => {
     console.log('[DEBUG] EditTemplatePage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
     setLayoutElementGuiConfigs(prevConfigs => {
-      const newConfigs = fields.map(field => {
+      const newConfigs = fields.map((field, index) => {
         const existingConfig = prevConfigs.find(c => c.fieldKey === field.key);
-        const oldConfigForNewLabel = prevConfigs.find(c => c.label === field.label && c.fieldKey !== field.key);
-
+        if (existingConfig) {
+            // If label or originalType changed, update them in GUI config
+            return { ...existingConfig, label: field.label, originalType: field.type };
+        }
+        // Field was added, create new GUI config with defaults
+        const yOffset = 10 + (index % 8) * 30; // Simple cascading
+        const xOffset = 10;
         return {
           fieldKey: field.key,
           label: field.label,
           originalType: field.type,
-          isEnabledOnCanvas: existingConfig ? existingConfig.isEnabledOnCanvas : (oldConfigForNewLabel ? oldConfigForNewLabel.isEnabledOnCanvas : true),
+          isEnabledOnCanvas: true, // New fields default to enabled
+          isExpandedInGui: false,
+          elementType: field.type === 'textarea' ? 'textarea' : (field.type === 'placeholderImage' ? 'image' : 'text'),
+          styleTop: `${yOffset}px`,
+          styleLeft: `${xOffset}px`,
+          styleWidth: '120px',
+          styleHeight: field.type === 'textarea' ? '60px' : '20px',
+          styleFontSize: '12px',
+          iconName: field.type === 'number' ? 'Coins' : '',
         };
       });
-      // Filter out configs for fields that no longer exist
+      // Filter out GUI configs for fields that no longer exist
       return newConfigs.filter(nc => fields.some(f => f.key === nc.fieldKey));
     });
   }, [fields]);
 
 
   useEffect(() => {
-    console.log('[DEBUG] EditTemplatePage: Generating sampleCardForPreview. Fields count:', fields.length, 'Original ID:', originalTemplateId);
+    // console.log('[DEBUG] EditTemplatePage: Generating sampleCardForPreview. Fields count:', fields.length, 'Original ID:', originalTemplateId);
     const currentTemplateIdForPreview = originalTemplateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
@@ -281,7 +331,7 @@ export default function EditTemplatePage() {
     fields.forEach(fieldDef => {
       const key = fieldDef.key as keyof CardData;
       let valueForPreview: any;
-      const hasPreviewValue = fieldDef.previewValue !== undefined && fieldDef.previewValue.trim() !== '';
+      const hasPreviewValue = fieldDef.previewValue !== undefined && String(fieldDef.previewValue).trim() !== '';
       const hasDefaultValue = fieldDef.defaultValue !== undefined && String(fieldDef.defaultValue).trim() !== '';
 
       if (fieldDef.type === 'placeholderImage') {
@@ -391,12 +441,11 @@ export default function EditTemplatePage() {
   };
 
   const handleFieldChange = (index: number, updatedFieldDefinition: TemplateFieldDefinition) => {
-    console.log('[DEBUG] EditTemplatePage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
+    // console.log('[DEBUG] EditTemplatePage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
     const newFields = [...fields];
     const oldField = newFields[index];
     let modifiedField = { ...oldField, ...updatedFieldDefinition };
     if (updatedFieldDefinition.label !== undefined && updatedFieldDefinition.label !== oldField.label) {
-        // If key was auto-derived from old label, auto-derive new key from new label
         if (oldField.key === toCamelCase(oldField.label) || oldField.key.startsWith(toCamelCase(oldField.label).replace(/[\d]+$/, ''))) {
             let baseKey = toCamelCase(updatedFieldDefinition.label);
             if (!baseKey) {
@@ -434,7 +483,7 @@ export default function EditTemplatePage() {
 
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
-    console.log('[DEBUG] EditTemplatePage/handleLayoutDefinitionChange: Layout string changed.');
+    // console.log('[DEBUG] EditTemplatePage/handleLayoutDefinitionChange: Layout string changed.');
     setLayoutDefinition(newLayoutDef);
     if (layoutJsonError) setLayoutJsonError(null);
   };
@@ -444,19 +493,27 @@ export default function EditTemplatePage() {
       const parsed = JSON.parse(layoutDefinition);
       setLayoutDefinition(JSON.stringify(parsed, null, 2));
       setLayoutJsonError(null);
-      console.log('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: JSON is valid and formatted.');
+      // console.log('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: JSON is valid and formatted.');
       return true;
     } catch (e: any) {
       setLayoutJsonError(`Invalid JSON: ${e.message}`);
-      console.warn('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: Invalid JSON', e.message);
+      // console.warn('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: Invalid JSON', e.message);
       return false;
     }
   };
   
-  const handleLayoutElementToggle = (fieldKey: string, checked: boolean) => {
-    setLayoutElementGuiConfigs(prevConfigs =>
-      prevConfigs.map(config =>
-        config.fieldKey === fieldKey ? { ...config, isEnabledOnCanvas: checked } : config
+  const handleGuiConfigChange = (fieldKey: string, property: keyof LayoutElementGuiConfig, value: any) => {
+    setLayoutElementGuiConfigs(prev =>
+      prev.map(config =>
+        config.fieldKey === fieldKey ? { ...config, [property]: value } : config
+      )
+    );
+  };
+
+  const handleToggleGuiExpand = (fieldKey: string) => {
+    setLayoutElementGuiConfigs(prev =>
+      prev.map(config =>
+        config.fieldKey === fieldKey ? { ...config, isExpandedInGui: !config.isExpandedInGui } : config
       )
     );
   };
@@ -464,27 +521,24 @@ export default function EditTemplatePage() {
   const handleGenerateJsonFromBuilder = () => {
     console.log('[DEBUG] EditTemplatePage/handleGenerateJsonFromBuilder: Generating JSON from GUI configs.');
     const elementsToInclude = layoutElementGuiConfigs.filter(config => config.isEnabledOnCanvas);
-    let yOffset = 10;
-    const xOffset = 10;
-    const elementHeight = 20;
-    const elementWidth = 120;
-    const verticalGap = 5;
 
     const generatedElements = elementsToInclude.map(config => {
-      const element = {
+      const element: any = {
         fieldKey: config.fieldKey,
-        type: config.originalType === 'textarea' ? 'textarea' : 'text',
+        type: config.elementType,
         style: {
           position: "absolute",
-          top: `${yOffset}px`,
-          left: `${xOffset}px`,
-          width: `${elementWidth}px`,
-          height: `${elementHeight}px`,
-          fontSize: "12px",
+          top: config.styleTop.endsWith('px') ? config.styleTop : `${config.styleTop}px`,
+          left: config.styleLeft.endsWith('px') ? config.styleLeft : `${config.styleLeft}px`,
+          width: config.styleWidth.endsWith('px') ? config.styleWidth : `${config.styleWidth}px`,
+          height: config.styleHeight.endsWith('px') ? config.styleHeight : `${config.styleHeight}px`,
+          fontSize: config.styleFontSize.endsWith('px') ? config.styleFontSize : `${config.styleFontSize}px`,
         },
         className: "text-card-foreground"
       };
-      yOffset += elementHeight + verticalGap;
+      if (config.elementType === 'iconValue' && config.iconName) {
+        element.icon = config.iconName;
+      }
       return element;
     });
 
@@ -499,7 +553,7 @@ export default function EditTemplatePage() {
 
     const newLayoutJsonString = JSON.stringify(newLayout, null, 2);
     setLayoutDefinition(newLayoutJsonString);
-    toast({ title: "Layout JSON Updated", description: "JSON generated from builder and updated in the textarea and preview."});
+    toast({ title: "Layout JSON Updated", description: "JSON generated from GUI builder and updated in the textarea and preview."});
   };
 
 
@@ -527,22 +581,32 @@ export default function EditTemplatePage() {
         });
         return;
     }
-    if (layoutDefinition.trim() && !validateAndFormatLayoutJson()) {
-      toast({
-        title: "Invalid Layout JSON",
-        description: `Please correct the Layout Definition JSON. Error: ${layoutJsonError || 'Unknown JSON error.'}`,
-        variant: "destructive",
-      });
-      return;
+    // Validate JSON from the textarea before saving
+    let finalLayoutDefinition = layoutDefinition.trim();
+    if (finalLayoutDefinition) {
+        try {
+            JSON.parse(finalLayoutDefinition);
+        } catch (e) {
+            toast({
+                title: "Invalid Layout JSON",
+                description: `The JSON in the 'Layout Definition' textarea is invalid. Error: ${(e as Error).message}. Please correct or regenerate.`,
+                variant: "destructive",
+                duration: 7000,
+            });
+            setLayoutJsonError(`Invalid JSON: ${(e as Error).message}`);
+            return;
+        }
+    } else {
+        finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING; // Fallback
     }
     setIsSaving(true);
     const updatedTemplateData: CardTemplate = {
       id: originalTemplateId,
       name: templateName.trim(),
       fields: fields.map(mapFieldDefinitionToTemplateField),
-      layoutDefinition: layoutDefinition.trim() ? layoutDefinition.trim() : DEFAULT_CARD_LAYOUT_JSON_STRING,
+      layoutDefinition: finalLayoutDefinition,
     };
-    console.log('[DEBUG] EditTemplatePage/handleSaveTemplate: Calling updateTemplate with:', updatedTemplateData);
+    // console.log('[DEBUG] EditTemplatePage/handleSaveTemplate: Calling updateTemplate with:', updatedTemplateData);
     const result = await updateTemplate(updatedTemplateData);
     if (result.success) {
       toast({
@@ -603,47 +667,47 @@ export default function EditTemplatePage() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
-      {/* Card for Template Info and Data Fields */}
-      <Card className="shadow-md">
+    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8 space-y-8">
+      {/* Top Section: Template Info & Data Fields */}
+      <Card className="shadow-lg border-border/60">
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-bold">Edit Template</CardTitle>
+            <CardTitle className="text-3xl font-bold">Edit Template</CardTitle>
             <Button variant="outline" size="sm" asChild>
               <Link href="/templates"><ArrowLeft className="mr-2 h-4 w-4" /> Back to Library</Link>
             </Button>
           </div>
-          <CardDescription>
-            Modify the template's name, fields, and layout definition. The Template ID (<code>{originalTemplateId}</code>) is auto-generated and cannot be changed.
+          <CardDescription className="text-md">
+            Modify the template's name, fields, and layout. The Template ID (<code>{originalTemplateId}</code>) is auto-generated and cannot be changed.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="templateName">Template Name</Label>
+              <Label htmlFor="templateName" className="font-semibold text-foreground/90">Template Name</Label>
               <Input
                 id="templateName"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
                 placeholder="Hero Unit Card"
                 disabled={isSaving}
+                className="mt-1"
               />
             </div>
             <div>
-              <Label htmlFor="templateId">Template ID (Auto-generated, Read-only)</Label>
+              <Label htmlFor="templateIdDisplay" className="font-semibold text-foreground/90">Template ID (Auto-generated, Read-only)</Label>
               <Input
-                id="templateId"
+                id="templateIdDisplay" 
                 value={originalTemplateId || ''}
                 readOnly
-                disabled={isSaving}
-                className="bg-muted/50"
+                disabled
+                className="mt-1 bg-muted/50"
               />
             </div>
           </div>
            <div>
-            <h3 className="text-lg font-semibold mb-2">Data Fields</h3>
-            <ScrollArea className="h-auto pr-0">
-              <div className="space-y-3">
+            <h3 className="text-xl font-semibold mb-3 text-foreground/90">Data Fields</h3>
+            <div className="space-y-3">
                 {fields.map((field, index) => (
                   <FieldRow
                     key={index} 
@@ -659,13 +723,12 @@ export default function EditTemplatePage() {
                   </p>
                 )}
               </div>
-            </ScrollArea>
              <Button
               onClick={handleAddField}
               variant="outline"
               size="sm"
               disabled={isSaving}
-              className="mt-3"
+              className="mt-4"
               title={"Add a new data field"}
             >
               <PlusCircle className="mr-2 h-4 w-4" /> Add Field
@@ -674,76 +737,139 @@ export default function EditTemplatePage() {
         </CardContent>
       </Card>
 
-      {/* Row for Visual Layout Builder and Live Preview */}
-      <div className="flex flex-col md:flex-row gap-6">
-        {/* Visual Layout Builder & JSON Output Card */}
-        <Card className="md:w-[65%] flex flex-col shadow-md">
+      {/* Bottom Section: Layout Builder & Preview */}
+      <div className="flex flex-col md:flex-row gap-8">
+        <Card className="md:w-[65%] flex flex-col shadow-lg border-border/60">
           <CardHeader>
-              <CardTitle className="text-xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
-              <CardDescription>
-                Configure canvas size and select fields to include. Then generate basic JSON to refine in the textarea or copy.
+              <CardTitle className="text-2xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
+              <CardDescription className="text-md">
+                Configure canvas size and individual layout elements. Generate JSON to preview and save.
               </CardDescription>
           </CardHeader>
           <CardContent className="flex-grow space-y-4 flex flex-col">
-            {/* Card Canvas Setup */}
-            <div className="space-y-2 p-3 border rounded-md bg-muted/30">
-              <h4 className="text-md font-semibold mb-1">Card Canvas Setup</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-3 p-4 border rounded-md bg-muted/30">
+              <h4 className="text-lg font-semibold mb-2 text-foreground/90">Card Canvas Setup</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="canvasWidthEdit" className="text-xs">Canvas Width (e.g., 280px)</Label>
-                  <Input id="canvasWidthEdit" value={canvasWidthSetting} onChange={(e) => setCanvasWidthSetting(e.target.value)} disabled={isSaving} className="h-8 text-xs"/>
+                  <Label htmlFor="canvasWidthEdit" className="text-sm font-medium">Canvas Width (e.g., 280px)</Label>
+                  <Input id="canvasWidthEdit" value={canvasWidthSetting} onChange={(e) => setCanvasWidthSetting(e.target.value)} disabled={isSaving} className="mt-1 h-9 text-sm"/>
                 </div>
                 <div>
-                  <Label htmlFor="canvasHeightEdit" className="text-xs">Canvas Height (e.g., 400px)</Label>
-                  <Input id="canvasHeightEdit" value={canvasHeightSetting} onChange={(e) => setCanvasHeightSetting(e.target.value)} disabled={isSaving} className="h-8 text-xs"/>
+                  <Label htmlFor="canvasHeightEdit" className="text-sm font-medium">Canvas Height (e.g., 400px)</Label>
+                  <Input id="canvasHeightEdit" value={canvasHeightSetting} onChange={(e) => setCanvasHeightSetting(e.target.value)} disabled={isSaving} className="mt-1 h-9 text-sm"/>
                 </div>
               </div>
             </div>
-
-            {/* Layout Elements Selection */}
-            <div className="space-y-2 p-3 border rounded-md bg-muted/30">
-              <h4 className="text-md font-semibold mb-1">Layout Elements (Toggle to Include)</h4>
-              {layoutElementGuiConfigs.length > 0 ? (
-                 <ScrollArea className="max-h-[250px] pr-2">
-                  <div className="space-y-1.5">
-                    {layoutElementGuiConfigs.map(config => (
-                      <div key={config.fieldKey} className="flex items-center justify-between p-1.5 hover:bg-muted/70 rounded-sm">
-                        <Label htmlFor={`toggle-edit-${config.fieldKey}`} className="text-sm cursor-pointer">
-                          {config.label} <span className="text-xs text-muted-foreground">({config.fieldKey})</span>
-                        </Label>
-                        <Switch
-                          id={`toggle-edit-${config.fieldKey}`}
-                          checked={config.isEnabledOnCanvas}
-                          onCheckedChange={(checked) => handleLayoutElementToggle(config.fieldKey, checked)}
-                          disabled={isSaving}
-                        />
+            
+            <div className="space-y-3 p-4 border rounded-md bg-muted/30">
+              <h4 className="text-lg font-semibold mb-2 text-foreground/90">Layout Elements Configuration</h4>
+               {layoutElementGuiConfigs.length > 0 ? (
+                <ScrollArea className="pr-1"> {/* Removed max-h to fit all */}
+                  <div className="space-y-2">
+                    {layoutElementGuiConfigs.map((config, index) => (
+                      <div key={config.fieldKey} className="p-2.5 border rounded-md bg-card/80 hover:bg-card transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Switch
+                              id={`enable-edit-${config.fieldKey}`}
+                              checked={config.isEnabledOnCanvas}
+                              onCheckedChange={(checked) => handleGuiConfigChange(config.fieldKey, 'isEnabledOnCanvas', checked)}
+                              disabled={isSaving}
+                            />
+                            <Label htmlFor={`enable-edit-${config.fieldKey}`} className="text-sm font-medium cursor-pointer">
+                              {config.label} <span className="text-xs text-muted-foreground">({config.fieldKey})</span>
+                            </Label>
+                          </div>
+                          <Button variant="ghost" size="icon" onClick={() => handleToggleGuiExpand(config.fieldKey)} className="h-7 w-7 text-muted-foreground">
+                            {config.isExpandedInGui ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        {config.isExpandedInGui && (
+                          <div className="mt-3 pt-3 border-t border-dashed space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div>
+                                <Label htmlFor={`el-type-edit-${config.fieldKey}`} className="text-xs">Element Type</Label>
+                                <Select
+                                  value={config.elementType}
+                                  onValueChange={(value) => handleGuiConfigChange(config.fieldKey, 'elementType', value)}
+                                  disabled={isSaving}
+                                >
+                                  <SelectTrigger id={`el-type-edit-${config.fieldKey}`} className="h-8 text-xs mt-0.5">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="text">Text</SelectItem>
+                                    <SelectItem value="textarea">Textarea</SelectItem>
+                                    <SelectItem value="image">Image</SelectItem>
+                                    <SelectItem value="iconValue">Icon & Value</SelectItem>
+                                    <SelectItem value="iconFromData">Icon from Data</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              {config.elementType === 'iconValue' && (
+                                <div>
+                                  <Label htmlFor={`el-icon-edit-${config.fieldKey}`} className="text-xs">Icon Name (Lucide)</Label>
+                                  <Input
+                                    id={`el-icon-edit-${config.fieldKey}`}
+                                    value={config.iconName || ''}
+                                    onChange={(e) => handleGuiConfigChange(config.fieldKey, 'iconName', e.target.value)}
+                                    placeholder="e.g., Coins"
+                                    className="h-8 text-xs mt-0.5"
+                                    disabled={isSaving}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground font-medium mt-2">Styling (px values):</p>
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              <div>
+                                <Label htmlFor={`el-top-edit-${config.fieldKey}`} className="text-xs">Top</Label>
+                                <Input id={`el-top-edit-${config.fieldKey}`} value={config.styleTop} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleTop', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving}/>
+                              </div>
+                              <div>
+                                <Label htmlFor={`el-left-edit-${config.fieldKey}`} className="text-xs">Left</Label>
+                                <Input id={`el-left-edit-${config.fieldKey}`} value={config.styleLeft} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleLeft', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving}/>
+                              </div>
+                              <div>
+                                <Label htmlFor={`el-width-edit-${config.fieldKey}`} className="text-xs">Width</Label>
+                                <Input id={`el-width-edit-${config.fieldKey}`} value={config.styleWidth} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleWidth', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving}/>
+                              </div>
+                              <div>
+                                <Label htmlFor={`el-height-edit-${config.fieldKey}`} className="text-xs">Height</Label>
+                                <Input id={`el-height-edit-${config.fieldKey}`} value={config.styleHeight} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleHeight', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving}/>
+                              </div>
+                              <div className="sm:col-span-2">
+                                <Label htmlFor={`el-fontsize-edit-${config.fieldKey}`} className="text-xs">Font Size</Label>
+                                <Input id={`el-fontsize-edit-${config.fieldKey}`} value={config.styleFontSize} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleFontSize', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving}/>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 </ScrollArea>
               ) : (
-                <p className="text-xs text-muted-foreground">No data fields defined yet to build layout elements.</p>
+                <p className="text-sm text-muted-foreground">No data fields defined yet to build layout elements.</p>
               )}
             </div>
             
-            <Button onClick={handleGenerateJsonFromBuilder} variant="secondary" size="sm" disabled={isSaving || layoutElementGuiConfigs.length === 0} className="self-start">
+            <Button onClick={handleGenerateJsonFromBuilder} variant="secondary" size="sm" disabled={isSaving || layoutElementGuiConfigs.length === 0} className="self-start mt-2">
               <Palette className="mr-2 h-4 w-4" /> Generate/Update JSON from Builder
             </Button>
             
-            {/* JSON Output & Guides Section */}
-            <div className="mt-2 flex-grow flex flex-col min-h-0">
+            <div className="mt-4 flex-grow flex flex-col min-h-0">
               <div>
-                <Label htmlFor="layoutDefinition" className="text-sm font-medium">Layout Definition JSON (Read-Only after generating from builder)</Label>
+                <Label htmlFor="layoutDefinitionEdit" className="text-sm font-medium">Layout Definition JSON</Label>
                 <Textarea
-                  id="layoutDefinition"
+                  id="layoutDefinitionEdit"
                   value={layoutDefinition}
                   onChange={handleLayoutDefinitionChange}
                   onBlur={validateAndFormatLayoutJson}
-                  placeholder='Click "Generate/Update JSON from Builder" above, or paste your JSON here.'
+                  placeholder='Click "Generate/Update JSON from Builder" above, or paste your JSON here if making manual edits.'
                   rows={15}
-                  className="font-mono text-xs flex-grow min-h-[200px] max-h-[300px] bg-muted/20"
+                  className="font-mono text-xs flex-grow min-h-[200px] max-h-[300px] bg-muted/20 mt-1"
                   disabled={isSaving}
-                  readOnly
                 />
               </div>
               {layoutJsonError && (
@@ -753,7 +879,7 @@ export default function EditTemplatePage() {
                   <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
                 </Alert>
               )}
-              <Accordion type="single" collapsible className="w-full mt-2" defaultValue="layout-guide">
+              <Accordion type="single" collapsible className="w-full mt-3" defaultValue="layout-guide">
                 <AccordionItem value="layout-guide">
                   <AccordionTrigger className="text-sm py-2 hover:no-underline">
                     <div className="flex items-center text-muted-foreground">
@@ -779,11 +905,11 @@ export default function EditTemplatePage() {
                     <p className="text-xs mt-1 mb-2">Use these keys in the <code>fieldKey</code> property of elements below if manually editing JSON.</p>
                     <p className="font-semibold mb-1 mt-3"><code>elements</code> array (each object defines one visual piece):</p>
                     <ul className="list-disc list-inside pl-2 space-y-1">
-                      <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above (e.g., if you have "Card Title" with key "cardTitle", use "cardTitle").</li>
+                      <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above.</li>
                       <li><strong><code>type</code></strong>: (String) One of: <code>"text"</code>, <code>"textarea"</code>, <code>"image"</code>, <code>"iconValue"</code>, <code>"iconFromData"</code>. The builder currently defaults to "text".</li>
-                      <li><strong><code>style</code></strong>: (Object) CSS-in-JS (e.g., {`{ "position": "absolute", "top": "10px", "fontSize": "1.2em" }`}). Use camelCase for CSS properties.</li>
+                      <li><strong><code>style</code></strong>: (Object) CSS-in-JS. The builder generates basic positional styles.</li>
                       <li><strong><code>className</code></strong>: (String, Optional) Tailwind CSS classes.</li>
-                      <li><strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue". Text added before/after the field's value.</li>
+                      <li><strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue".</li>
                       <li><strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon. **Ensure the icon exists in `lucide-react`.**</li>
                     </ul>
                     <p className="mt-3 italic">After generating JSON with the builder, you can manually refine it in the textarea if needed, then validate by blurring. Final save uses the textarea content.</p>
@@ -864,8 +990,7 @@ export default function EditTemplatePage() {
           </CardFooter>
         </Card>
         
-        {/* Live Preview Card */}
-        <Card className="md:w-[35%] sticky top-20 self-start shadow-md">
+        <Card className="md:w-[35%] sticky top-20 self-start shadow-lg border-border/60">
           <CardHeader>
             <div className="flex items-center justify-between">
                 <CardTitle className="text-xl font-bold flex items-center">
@@ -876,8 +1001,8 @@ export default function EditTemplatePage() {
                     <Label htmlFor="show-outlines-edit" className="text-xs text-muted-foreground">Outlines</Label>
                 </div>
             </div>
-            <CardDescription>
-              This preview updates as you modify the Layout Definition JSON or template fields.
+            <CardDescription className="text-sm">
+              This preview updates as you modify the Layout Definition or template fields.
               Uses sample data based on your field definitions.
             </CardDescription>
           </CardHeader>
@@ -897,3 +1022,4 @@ export default function EditTemplatePage() {
     </div>
   );
 }
+
