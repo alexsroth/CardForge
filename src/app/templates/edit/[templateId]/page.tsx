@@ -22,6 +22,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react';
+import type { LucideProps } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -199,14 +200,14 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
   "TreePine", "Trophy", "Umbrella", "User", "Video", "Wallet", "Watch", "Wifi", "Wrench"
 ];
 
-const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
-  const Icon = (LucideIcons as any)[name];
-  if (!Icon || typeof Icon !== 'function') {
+const IconComponent = ({ name, className, ...props }: { name: string } & LucideIcons.LucideProps) => {
+  const Icon = (LucideIcons as keyof typeof LucideIcons)[name as keyof typeof LucideIcons];
+  if (!Icon) {
     console.warn(`[DEBUG] IconComponent (EditTemplatePage): Lucide icon "${name}" not found or not a function. Fallback HelpCircle will be used.`);
-    return <LucideIcons.HelpCircle {...props} />;
+ return <LucideIcons.HelpCircle className={cn("h-4 w-4", className)} {...props} />;
   }
-  return <Icon {...props} />;
-};
+  return <Icon className={cn("h-4 w-4", className)} {...props} />;
+}; 
 
 export default function EditTemplatePage() {
   console.log('[DEBUG] EditTemplatePage: Component rendering/re-rendering.');
