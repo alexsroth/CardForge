@@ -10,38 +10,38 @@
 
 @layer base {
   :root {
-    /* Material 3 Inspired Dark Theme based on image */
+    /* Material 3 Inspired Dark Theme - Default */
     /* Neutral Tones */
-    --background: 120 4% 10%; /* Surface (N-6) - Very Dark Gray */
-    --foreground: 80 6% 90%; /* On Surface (N-90) - Very Light Gray */
+    --background: 120 4% 10%; /* Surface (N-6) - Very Dark Gray (#181A1A) */
+    --foreground: 80 6% 90%; /* On Surface (N-90) - Very Light Gray (#E3E6E4) */
 
-    --card: 120 3% 19%; /* Surface Container (N-12) - Dark Gray */
+    --card: 120 3% 19%; /* Surface Container (N-12) - Dark Gray (#2D3030) */
     --card-foreground: 80 6% 90%; /* On Surface (N-90) */
 
     --popover: 120 3% 19%; /* Surface Container (N-12) */
     --popover-foreground: 80 6% 90%; /* On Surface (N-90) */
 
     /* Key Colors */
-    --primary: 145 40% 76%; /* Primary (P-80) - Light Pastel Green */
-    --primary-foreground: 143 100% 11%; /* On Primary (P-20) - Very Dark Green */
+    --primary: 145 40% 76%; /* Primary (P-80) - Light Pastel Green (#B1D8B7) */
+    --primary-foreground: 143 100% 11%; /* On Primary (P-20) - Very Dark Green (#00380F) */
 
-    --secondary: 142 22% 77%; /* Secondary (S-80) - Light Pastel Sage */
-    --secondary-foreground: 147 45% 15%; /* On Secondary (S-20) - Dark Sage */
+    --secondary: 142 22% 77%; /* Secondary (S-80) - Light Pastel Sage (#B8D4BE) */
+    --secondary-foreground: 147 45% 15%; /* On Secondary (S-20) - Dark Sage (#153C20) */
 
-    --accent: 190 87% 79%; /* Tertiary (T-80) - Light Pastel Teal */
-    --accent-foreground: 191 100% 12%; /* On Tertiary (T-20) - Dark Teal */
+    --accent: 190 87% 79%; /* Tertiary (T-80) - Light Pastel Teal (#A4EBF3) */
+    --accent-foreground: 191 100% 12%; /* On Tertiary (T-20) - Dark Teal (#003D42) */
     
     /* Muted Tones */
-    --muted: 120 4% 16%; /* Surface Container Low (N-10) - Darker Gray */
-    --muted-foreground: 93 11% 75%; /* On Surface Variant (NV-80) - Light Gray */
+    --muted: 120 4% 16%; /* Surface Container Low (N-10) - Darker Gray (#282928) */
+    --muted-foreground: 93 11% 75%; /* On Surface Variant (NV-80) - Light Gray (#B9BFBC) */
 
     /* Error Tones */
-    --destructive: 7 100% 83%; /* Error (E-80) - Light Pink */
-    --destructive-foreground: 357 100% 20%; /* On Error (E-20) - Dark Red */
+    --destructive: 7 100% 83%; /* Error (E-80) - Light Pink (#FFB4AB) */
+    --destructive-foreground: 357 100% 20%; /* On Error (E-20) - Dark Red (#690005) */
 
     /* Borders & Inputs */
-    --border: 98 5% 45%; /* Outline (NV-60) - Medium Gray */
-    --input: 120 3% 19%; /* Surface Container (N-12) */
+    --border: 98 5% 45%; /* Outline (NV-60) - Medium Gray (#6A7175) */
+    --input: 120 3% 19%; /* Surface Container (N-12) - Using card color for inputs */
     --ring: 145 40% 76%; /* Primary (P-80) for focus rings */
 
     --radius: 0.5rem;
@@ -54,7 +54,7 @@
     --chart-5: 27 87% 67%;
 
     /* Sidebar - Aligned with the new dark theme */
-    --sidebar-background: 120 3% 19%; /* Surface Container (N-12) - Slightly offset from main bg */
+    --sidebar-background: 120 3% 19%; /* Surface Container (N-12) */
     --sidebar-foreground: 80 6% 90%; /* On Surface (N-90) */
     --sidebar-primary: 145 40% 76%; /* Primary (P-80) */
     --sidebar-primary-foreground: 143 100% 11%; /* On Primary (P-20) */
@@ -120,5 +120,12 @@
   body {
     @apply bg-background text-foreground;
     /* Font is applied in layout.tsx via Geist font */
+  }
+
+  /* Override for Switch component in dark theme for better unchecked visibility */
+  /* This specifically targets the Switch component that ShadCN generates (which has 'peer' class) */
+  .dark .peer[data-state='unchecked'],
+  .peer[data-state='unchecked'] { /* Apply to default dark theme as well */
+    @apply bg-border; /* Use the border color for the unchecked track */
   }
 }
