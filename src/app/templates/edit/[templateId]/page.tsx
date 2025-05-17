@@ -47,12 +47,10 @@ interface LayoutElementGuiConfig {
   styleLeft: string;
   styleWidth: string;
   styleHeight: string;
-  styleFontSize: string; 
   iconName?: string;
-
-  // Advanced text styling (inline)
+  
+  // Direct CSS for more fine-grained control
   styleRight?: string;
-  styleFontWeight?: string; 
   styleLineHeight?: string;
   styleMaxHeight?: string;
   styleOverflow?: string;
@@ -62,6 +60,7 @@ interface LayoutElementGuiConfig {
   stylePadding?: string;
   styleBorderTop?: string;
   styleBorderBottom?: string;
+  // Removed styleFontSize, styleFontWeight -> use Tailwind classes instead
 
   // Tailwind class selectors
   tailwindTextColor?: string;
@@ -120,7 +119,7 @@ const TAILWIND_FONT_SIZES = [
     { value: "text-2xl", label: "2XL" },
     { value: "text-3xl", label: "3XL" },
     { value: "text-4xl", label: "4XL" },
-    { value: NONE_VALUE, label: "None (Inherit/CSS)" },
+    { value: NONE_VALUE, label: "None (Rely on CSS)" },
 ];
 
 const TAILWIND_FONT_WEIGHTS = [
@@ -133,12 +132,12 @@ const TAILWIND_FONT_WEIGHTS = [
     { value: "font-bold", label: "Bold (700)" },
     { value: "font-extrabold", label: "Extra Bold (800)" },
     { value: "font-black", label: "Black (900)" },
-    { value: NONE_VALUE, label: "None (Inherit/CSS)" },
+    { value: NONE_VALUE, label: "None (Rely on CSS)" },
 ];
 
 
 function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldDefinition {
-    console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Mapping field', field);
+    // console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Mapping field', field);
     const definition: TemplateFieldDefinition = {
         key: field.key,
         label: field.label,
@@ -155,12 +154,12 @@ function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldD
     if (field.type === 'select' && field.options) {
         definition.optionsString = field.options.map(opt => `${opt.value}:${opt.label}`).join(',');
     }
-    console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Resulting definition', definition);
+    // console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Resulting definition', definition);
     return definition;
 }
 
 function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
-    console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Mapping def', def);
+    // console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Mapping def', def);
     const field: TemplateField = {
         key: def.key,
         label: def.label,
@@ -190,7 +189,7 @@ function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): Templa
             };
         }).filter(opt => opt.value);
     }
-    console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Resulting field', field);
+    // console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Resulting field', field);
     return field;
 }
 
@@ -237,7 +236,7 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  path += `.png`; 
+  path += `.png`;
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
@@ -262,12 +261,12 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
-  if (!Icon) {
-    console.warn(`[EditTemplatePage] Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
+  if (!Icon || typeof Icon !== 'function') {
+    console.warn(`[EditTemplatePage] Lucide icon "${name}" not found or not a function. Fallback HelpCircle will be used.`);
     return <LucideIcons.HelpCircle {...props} />;
   }
   return <Icon {...props} />;
-}; 
+};
 
 export default function EditTemplatePage() {
   console.log('[DEBUG] EditTemplatePage: Component rendering/re-rendering.');
@@ -345,11 +344,9 @@ export default function EditTemplatePage() {
             styleLeft: existingLayoutElement?.style?.left || `${xOffset}px`,
             styleWidth: existingLayoutElement?.style?.width || '120px',
             styleHeight: existingLayoutElement?.style?.height || (field.type === 'textarea' ? '60px' : (field.type === 'placeholderImage' ? '140px' : '20px')),
-            styleFontSize: existingLayoutElement?.style?.fontSize || '12px',
             iconName: existingLayoutElement?.icon || (field.type === 'number' ? 'Coins' : ''),
-            
+
             styleRight: existingLayoutElement?.style?.right || '',
-            styleFontWeight: existingLayoutElement?.style?.fontWeight || '',
             styleLineHeight: existingLayoutElement?.style?.lineHeight || '',
             styleMaxHeight: existingLayoutElement?.style?.maxHeight || '',
             styleOverflow: existingLayoutElement?.style?.overflow || '',
@@ -360,21 +357,28 @@ export default function EditTemplatePage() {
             styleBorderTop: existingLayoutElement?.style?.borderTop || '',
             styleBorderBottom: existingLayoutElement?.style?.borderBottom || '',
 
-            tailwindTextColor: 'text-card-foreground', // Default
-            tailwindFontSize: 'text-base',      // Default
-            tailwindFontWeight: 'font-normal',  // Default
+            tailwindTextColor: 'text-card-foreground',
+            tailwindFontSize: 'text-base',
+            tailwindFontWeight: 'font-normal',
           };
-          
+
           // Attempt to parse className for Tailwind settings if an element exists
           if (existingLayoutElement?.className) {
             const classes = String(existingLayoutElement.className).split(' ');
-            const twColor = classes.find(c => TAILWIND_TEXT_COLORS.some(tc => tc.value === c && c !== ''));
-            const twSize = classes.find(c => TAILWIND_FONT_SIZES.some(ts => ts.value === c && c !== ''));
-            const twWeight = classes.find(c => TAILWIND_FONT_WEIGHTS.some(tw => tw.value === c && c !== ''));
+            const twColor = classes.find(c => TAILWIND_TEXT_COLORS.some(tc => tc.value === c && c !== '' && tc.value !== NONE_VALUE));
+            const twSize = classes.find(c => TAILWIND_FONT_SIZES.some(ts => ts.value === c && c !== '' && ts.value !== NONE_VALUE));
+            const twWeight = classes.find(c => TAILWIND_FONT_WEIGHTS.some(tw => tw.value === c && c !== '' && tw.value !== NONE_VALUE));
 
             if (twColor) config.tailwindTextColor = twColor;
             if (twSize) config.tailwindFontSize = twSize;
             if (twWeight) config.tailwindFontWeight = twWeight;
+          }
+           // Parse direct styles if Tailwind classes are not dominant
+          if (existingLayoutElement?.style?.fontSize && !config.tailwindFontSize) {
+            // We are not setting styleFontSize in config anymore, this part is just for reading existing
+          }
+          if (existingLayoutElement?.style?.fontWeight && !config.tailwindFontWeight) {
+            // We are not setting styleFontWeight in config anymore
           }
           return config;
         }));
@@ -398,10 +402,8 @@ export default function EditTemplatePage() {
                 styleLeft: `${xOffset}px`,
                 styleWidth: '120px',
                 styleHeight: field.type === 'textarea' ? '60px' : (field.type === 'placeholderImage' ? '140px' : '20px'),
-                styleFontSize: '12px',
                 iconName: field.type === 'number' ? 'Coins' : '',
                 styleRight: '',
-                styleFontWeight: '',
                 styleLineHeight: '',
                 styleMaxHeight: '',
                 styleOverflow: '',
@@ -431,10 +433,10 @@ export default function EditTemplatePage() {
       const newConfigs = fields.map((field, index) => {
         const existingConfig = prevConfigs.find(c => c.fieldKey === field.key);
         if (existingConfig) {
-            return { 
-                ...existingConfig, 
-                label: field.label, 
-                originalType: field.type 
+            return {
+                ...existingConfig,
+                label: field.label,
+                originalType: field.type
             };
         }
         const yOffset = 10 + (index % 8) * 35;
@@ -450,10 +452,8 @@ export default function EditTemplatePage() {
           styleLeft: `${xOffset}px`,
           styleWidth: '120px',
           styleHeight: field.type === 'textarea' ? '60px' : (field.type === 'placeholderImage' ? '140px' : '20px'),
-          styleFontSize: '12px',
           iconName: field.type === 'number' ? 'Coins' : '',
           styleRight: '',
-          styleFontWeight: '',
           styleLineHeight: '',
           styleMaxHeight: '',
           styleOverflow: '',
@@ -682,10 +682,9 @@ export default function EditTemplatePage() {
         width: config.styleWidth.endsWith('px') ? config.styleWidth : `${config.styleWidth}px`,
         height: config.styleHeight.endsWith('px') ? config.styleHeight : `${config.styleHeight}px`,
       };
-      
-      if (config.styleFontSize && config.styleFontSize.trim() !== '') style.fontSize = config.styleFontSize;
+
+      // Direct CSS styles - excluding font size and weight now
       if (config.styleRight && config.styleRight.trim() !== '') style.right = config.styleRight;
-      if (config.styleFontWeight && config.styleFontWeight.trim() !== '') style.fontWeight = config.styleFontWeight;
       if (config.styleLineHeight && config.styleLineHeight.trim() !== '') style.lineHeight = config.styleLineHeight;
       if (config.styleMaxHeight && config.styleMaxHeight.trim() !== '') style.maxHeight = config.styleMaxHeight;
       if (config.styleOverflow && config.styleOverflow.trim() !== '') style.overflow = config.styleOverflow;
@@ -698,15 +697,24 @@ export default function EditTemplatePage() {
 
       const classNames = [];
       if (config.originalType === 'textarea' || config.elementType === 'textarea') classNames.push('whitespace-pre-wrap');
-      
-      if (config.tailwindTextColor && config.tailwindTextColor.trim() !== '') classNames.push(config.tailwindTextColor);
-      else if (!style.color && classNames.filter(c => c.startsWith('text-')).length === 0) classNames.push('text-card-foreground');
-      
-      if (config.tailwindFontSize && config.tailwindFontSize.trim() !== '') classNames.push(config.tailwindFontSize);
-      else if (!style.fontSize && classNames.filter(c => c.startsWith('text-') && ['xs','sm','base','lg','xl','2xl','3xl','4xl'].some(s=>c.includes(s))).length === 0 ) classNames.push('text-base');
-      
-      if (config.tailwindFontWeight && config.tailwindFontWeight.trim() !== '') classNames.push(config.tailwindFontWeight);
-      else if (!style.fontWeight && classNames.filter(c => c.startsWith('font-')).length === 0) classNames.push('font-normal');
+
+      if (config.tailwindTextColor && config.tailwindTextColor.trim() !== '' && config.tailwindTextColor !== NONE_VALUE) {
+        classNames.push(config.tailwindTextColor);
+      } else if (classNames.filter(c => c.startsWith('text-')).length === 0) {
+         classNames.push('text-card-foreground'); // Default if nothing else set
+      }
+
+      if (config.tailwindFontSize && config.tailwindFontSize.trim() !== '' && config.tailwindFontSize !== NONE_VALUE) {
+        classNames.push(config.tailwindFontSize);
+      } else if (classNames.filter(c => c.startsWith('text-') && ['xs','sm','base','lg','xl','2xl','3xl','4xl'].some(s=>c.includes(s))).length === 0 ) {
+         classNames.push('text-base'); // Default Tailwind size
+      }
+
+      if (config.tailwindFontWeight && config.tailwindFontWeight.trim() !== '' && config.tailwindFontWeight !== NONE_VALUE) {
+        classNames.push(config.tailwindFontWeight);
+      } else if (classNames.filter(c => c.startsWith('font-')).length === 0) {
+         classNames.push('font-normal'); // Default Tailwind weight
+      }
 
 
       const element: any = {
@@ -760,7 +768,7 @@ export default function EditTemplatePage() {
         });
         return;
     }
-    
+
     let finalLayoutDefinition = layoutDefinition.trim();
     if (finalLayoutDefinition) {
         try {
@@ -776,11 +784,16 @@ export default function EditTemplatePage() {
             return;
         }
     } else {
-         handleGenerateJsonFromBuilder(); 
-         finalLayoutDefinition = layoutDefinition.trim(); 
-         if (!finalLayoutDefinition) {
+         // If layoutDefinition is empty, try to generate it from GUI builder if any elements are enabled
+        if (layoutElementGuiConfigs.some(c => c.isEnabledOnCanvas)) {
+            handleGenerateJsonFromBuilder();
+            finalLayoutDefinition = layoutDefinition.trim(); // Re-check after generation
+            if (!finalLayoutDefinition) { // Still empty, or generation failed silently
+                 finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING;
+            }
+        } else {
              finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING;
-         }
+        }
     }
     setIsSaving(true);
     const updatedTemplateData: CardTemplate = {
@@ -913,11 +926,11 @@ export default function EditTemplatePage() {
           </div>
            <div>
             <h3 className="text-xl font-semibold mb-3">Data Fields</h3>
-             <ScrollArea className="pr-3"> 
+             <ScrollArea className="pr-3">
                 <div className="space-y-3">
                     {fields.map((field, index) => (
                     <FieldRow
-                        key={field.key} 
+                        key={field.key}
                         field={field}
                         onChange={(updatedField) => handleFieldChange(index, updatedField)}
                         onRemove={() => handleRemoveField(index)}
@@ -945,8 +958,10 @@ export default function EditTemplatePage() {
         </CardContent>
       </Card>
 
-      <div className="flex flex-col md:flex-row gap-8">
-        <Card className="md:w-[65%] flex flex-col shadow-md">
+      {/* Layout Builder & Preview Section */}
+      <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        {/* Left Column: Layout Builder GUI */}
+        <Card className="lg:col-span-2 flex flex-col shadow-md">
           <CardHeader>
               <CardTitle className="text-xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
               <CardDescription className="text-md">
@@ -1011,7 +1026,7 @@ export default function EditTemplatePage() {
 
             <div className="space-y-3 p-4 border rounded-md bg-muted/30">
               <h4 className="text-lg font-semibold mb-2">Layout Elements (Toggle to Include)</h4>
-               <ScrollArea className="pr-2"> 
+               <ScrollArea className="pr-2">
                   <div className="space-y-2">
                     {layoutElementGuiConfigs.map((config) => (
                       <div key={config.fieldKey} className="p-2.5 border rounded-md bg-card/80 hover:bg-card transition-colors">
@@ -1067,7 +1082,7 @@ export default function EditTemplatePage() {
                                 </div>
                               )}
                             </div>
-                            
+
                             <h5 className="text-xs text-muted-foreground font-semibold mt-3 pt-2 border-t border-dotted">Position & Sizing</h5>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                 {['styleTop', 'styleLeft', 'styleRight', 'styleWidth', 'styleHeight', 'styleMaxHeight', 'stylePadding'].map(prop => (
@@ -1083,26 +1098,18 @@ export default function EditTemplatePage() {
                                 <h5 className="text-xs text-muted-foreground font-semibold mt-3 pt-2 border-t border-dotted">Typography</h5>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                   <div>
-                                    <Label htmlFor={`el-styleFontSize-${config.fieldKey}`} className="text-xs">Font Size (CSS)</Label>
-                                    <Input id={`el-styleFontSize-${config.fieldKey}`} value={config.styleFontSize} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleFontSize', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 12px, 1.1em" disabled={isSaving}/>
-                                  </div>
-                                  <div>
-                                    <Label htmlFor={`el-styleFontWeight-${config.fieldKey}`} className="text-xs">Font Weight (CSS)</Label>
-                                    <Input id={`el-styleFontWeight-${config.fieldKey}`} value={config.styleFontWeight || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleFontWeight', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., bold, 700" disabled={isSaving}/>
-                                  </div>
-                                  <div>
                                     <Label htmlFor={`el-styleLineHeight-${config.fieldKey}`} className="text-xs">Line Height (CSS)</Label>
                                     <Input id={`el-styleLineHeight-${config.fieldKey}`} value={config.styleLineHeight || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleLineHeight', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 1.5, 20px" disabled={isSaving}/>
                                   </div>
                                   <div>
-                                    <Label htmlFor={`el-styleFontStyle-${config.fieldKey}`} className="text-xs">Font Style</Label>
+                                    <Label htmlFor={`el-styleFontStyle-edit-${config.fieldKey}`} className="text-xs">Font Style</Label>
                                      <Select value={config.styleFontStyle || 'normal'} onValueChange={(value) => handleGuiConfigChange(config.fieldKey, 'styleFontStyle', value)} disabled={isSaving}>
                                       <SelectTrigger id={`el-styleFontStyle-edit-${config.fieldKey}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
                                       <SelectContent><SelectItem value="normal">Normal</SelectItem><SelectItem value="italic">Italic</SelectItem></SelectContent>
                                     </Select>
                                   </div>
                                   <div>
-                                    <Label htmlFor={`el-styleTextAlign-${config.fieldKey}`} className="text-xs">Text Align</Label>
+                                    <Label htmlFor={`el-styleTextAlign-edit-${config.fieldKey}`} className="text-xs">Text Align</Label>
                                     <Select value={config.styleTextAlign || 'left'} onValueChange={(value) => handleGuiConfigChange(config.fieldKey, 'styleTextAlign', value)} disabled={isSaving}>
                                       <SelectTrigger id={`el-styleTextAlign-edit-${config.fieldKey}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
                                       <SelectContent><SelectItem value="left">Left</SelectItem><SelectItem value="center">Center</SelectItem><SelectItem value="right">Right</SelectItem><SelectItem value="justify">Justify</SelectItem></SelectContent>
@@ -1183,7 +1190,7 @@ export default function EditTemplatePage() {
                   placeholder='Click "Generate/Update JSON from Builder" above, or paste/edit your JSON here.'
                   rows={15}
                   className="font-mono text-xs flex-grow min-h-[200px] max-h-[350px] bg-muted/20 mt-1"
-                  // disabled={isSaving} 
+                  disabled={isSaving}
                 />
               </div>
               {layoutJsonError && (
@@ -1193,7 +1200,7 @@ export default function EditTemplatePage() {
                   <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
                 </Alert>
               )}
-              <Accordion type="multiple" defaultValue={['layout-guide']} className="w-full mt-3">
+              <Accordion type="multiple" defaultValue={['layout-guide', 'lucide-icon-explorer']} className="w-full mt-3">
                 <AccordionItem value="layout-guide">
                   <AccordionTrigger className="text-sm py-2 hover:no-underline">
                     <div className="flex items-center text-muted-foreground">
@@ -1233,17 +1240,16 @@ export default function EditTemplatePage() {
 {
   "fieldKey": "yourCardNameFieldKey", // Replace with one of YOUR field keys from above
   "type": "text",
-  "style": { "position": "absolute", "top": "20px", "left": "20px", "fontWeight": "bold" },
-  "className": "text-lg text-primary" // Example Tailwind classes
+  "style": { "position": "absolute", "top": "20px", "left": "20px", "fontWeight": "bold" }
 }
 
 // For an image (ensure 'yourImageUrlFieldKey' is a field of type 'text' or 'placeholderImage' in Data Fields)
 {
   "fieldKey": "yourImageUrlFieldKey", // Replace
   "type": "image",
-  "style": { 
-    "position": "absolute", "top": "50px", "left": "20px", 
-    "width": "240px", "height": "120px", "objectFit": "cover", "borderRadius": "4px" 
+  "style": {
+    "position": "absolute", "top": "50px", "left": "20px",
+    "width": "240px", "height": "120px", "objectFit": "cover", "borderRadius": "4px"
   }
 }
 
@@ -1298,21 +1304,21 @@ export default function EditTemplatePage() {
             <Button
               onClick={handleSaveTemplate}
               className="w-full md:w-auto"
-              disabled={isSaving || !templateName.trim() || fields.length === 0 || !originalTemplateId}
+              disabled={isSaving || !originalTemplateId || !templateName.trim() || fields.length === 0}
             >
               {isSaving ? ( <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving Changes... </> ) : ( <> <Save className="mr-2 h-4 w-4" /> Save Changes </> )}
             </Button>
           </CardFooter>
         </Card>
 
-        <Card className="md:w-[35%] sticky top-20 self-start shadow-lg">
+        {/* Right Column: Live Preview */}
+        <Card className="lg:col-span-1 sticky top-20 self-start shadow-lg">
           <CardHeader>
             <div className="flex items-center justify-between">
                 <CardTitle className="text-xl font-bold flex items-center">
                     <Eye className="mr-2 h-5 w-5" /> Live Layout Preview
                 </CardTitle>
                 <div className="flex items-center space-x-2">
-                    {/* Removed 'Show Element Outlines' toggle */}
                     <Switch id="show-pixel-grid-edit" checked={showPixelGrid} onCheckedChange={setShowPixelGrid} aria-label="Show pixel grid" />
                     <Label htmlFor="show-pixel-grid-edit" className="text-xs text-muted-foreground">Pixel Grid</Label>
                 </div>
@@ -1338,5 +1344,5 @@ export default function EditTemplatePage() {
     </div>
   );
 }
-    
+
     

@@ -47,12 +47,10 @@ interface LayoutElementGuiConfig {
   styleLeft: string;
   styleWidth: string;
   styleHeight: string;
-  styleFontSize: string;
   iconName?: string;
 
-  // Advanced text styling (inline)
+  // Direct CSS for more fine-grained control
   styleRight?: string;
-  styleFontWeight?: string;
   styleLineHeight?: string;
   styleMaxHeight?: string;
   styleOverflow?: string;
@@ -62,6 +60,7 @@ interface LayoutElementGuiConfig {
   stylePadding?: string;
   styleBorderTop?: string;
   styleBorderBottom?: string;
+  // Removed styleFontSize, styleFontWeight -> use Tailwind classes instead
 
   // Tailwind class selectors
   tailwindTextColor?: string;
@@ -120,7 +119,7 @@ const TAILWIND_FONT_SIZES = [
     { value: "text-2xl", label: "2XL" },
     { value: "text-3xl", label: "3XL" },
     { value: "text-4xl", label: "4XL" },
-    { value: NONE_VALUE, label: "None (Inherit/CSS)" },
+    { value: NONE_VALUE, label: "None (Rely on CSS)" },
 ];
 
 const TAILWIND_FONT_WEIGHTS = [
@@ -133,12 +132,12 @@ const TAILWIND_FONT_WEIGHTS = [
     { value: "font-bold", label: "Bold (700)" },
     { value: "font-extrabold", label: "Extra Bold (800)" },
     { value: "font-black", label: "Black (900)" },
-    { value: NONE_VALUE, label: "None (Inherit/CSS)" },
+    { value: NONE_VALUE, label: "None (Rely on CSS)" },
 ];
 
 
 function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
-    console.log('[DEBUG] TemplateDesignerPage/mapFieldDefinitionToTemplateField: Mapping def', def);
+    // console.log('[DEBUG] TemplateDesignerPage/mapFieldDefinitionToTemplateField: Mapping def', def);
     const field: TemplateField = {
         key: def.key,
         label: def.label,
@@ -168,7 +167,7 @@ function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): Templa
             };
         }).filter(opt => opt.value);
     }
-    console.log('[DEBUG] TemplateDesignerPage/mapFieldDefinitionToTemplateField: Resulting field', field);
+    // console.log('[DEBUG] TemplateDesignerPage/mapFieldDefinitionToTemplateField: Resulting field', field);
     return field;
 }
 
@@ -218,8 +217,7 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  // .png is added after colors, before text query
-  path += `.png`; 
+  path += `.png`;
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
@@ -246,8 +244,8 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
-  if (!Icon) {
-    console.warn(`[TemplateDesignerPage] Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
+  if (!Icon || typeof Icon !== 'function') {
+    console.warn(`[TemplateDesignerPage] Lucide icon "${name}" not found or not a function. Fallback HelpCircle will be used.`);
     return <LucideIcons.HelpCircle {...props} />;
   }
   return <Icon {...props} />;
@@ -255,7 +253,7 @@ const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.Lucide
 
 
 export default function TemplateDesignerPage() {
-  console.log('[DEBUG] TemplateDesignerPage: Rendering.');
+  console.log('[DEBUG] TemplateDesignerPage (New): Component rendering.');
   const [templateId, setTemplateId] = useState('');
   const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<TemplateFieldDefinition[]>([]);
@@ -279,7 +277,7 @@ export default function TemplateDesignerPage() {
   const router = useRouter();
 
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesignerPage: templateName effect running. Name:', templateName);
+    console.log('[DEBUG] TemplateDesignerPage (New): templateName effect running. Name:', templateName);
     if (templateName) {
       setTemplateId(toCamelCase(templateName));
     } else {
@@ -288,18 +286,18 @@ export default function TemplateDesignerPage() {
   }, [templateName]);
 
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesignerPage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
+    console.log('[DEBUG] TemplateDesignerPage (New): Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
     setLayoutElementGuiConfigs(prevConfigs => {
         const newConfigs = fields.map((field, index) => {
             const existingConfig = prevConfigs.find(c => c.fieldKey === field.key);
             if (existingConfig) {
                 return {
                   ...existingConfig,
-                  label: field.label, 
-                  originalType: field.type, 
+                  label: field.label,
+                  originalType: field.type,
                 };
             }
-            const yOffset = 10 + (index % 8) * 35; 
+            const yOffset = 10 + (index % 8) * 35;
             const xOffset = 10;
             return {
                 fieldKey: field.key,
@@ -312,10 +310,10 @@ export default function TemplateDesignerPage() {
                 styleLeft: `${xOffset}px`,
                 styleWidth: '120px',
                 styleHeight: field.type === 'textarea' ? '60px' : (field.type === 'placeholderImage' ? '140px' : '20px'),
-                styleFontSize: '12px',
-                iconName: field.type === 'number' ? 'Coins' : '', 
+                // styleFontSize: '12px', // Removed, use Tailwind
+                iconName: field.type === 'number' ? 'Coins' : '',
                 styleRight: '',
-                styleFontWeight: '',
+                // styleFontWeight: '', // Removed, use Tailwind
                 styleLineHeight: '',
                 styleMaxHeight: '',
                 styleOverflow: '',
@@ -330,13 +328,14 @@ export default function TemplateDesignerPage() {
                 tailwindFontWeight: 'font-normal',
             };
         });
+        // Ensure we only keep configs for existing fields
         return newConfigs.filter(nc => fields.some(f => f.key === nc.fieldKey));
     });
   }, [fields]);
 
 
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesignerPage: Generating sampleCardForPreview. Fields count:', fields.length, 'Template ID:', templateId);
+    console.log('[DEBUG] TemplateDesignerPage (New): Generating sampleCardForPreview. Fields count:', fields.length, 'Template ID:', templateId);
     const currentTemplateIdForPreview = templateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
@@ -403,7 +402,7 @@ export default function TemplateDesignerPage() {
     if (generatedSampleCard.effectText === undefined && !fields.some(f => f.key === 'effectText')) generatedSampleCard.effectText = 'Sample effect: Draw a card. This unit gets +1/+1 until end of turn. This text might be long to test scrolling in a textarea layout element.';
     if (generatedSampleCard.attack === undefined && !fields.some(f => f.key === 'attack')) generatedSampleCard.attack = 2;
     if (generatedSampleCard.defense === undefined && !fields.some(f => f.key === 'defense')) generatedSampleCard.defense = 2;
-    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) { 
+    if (generatedSampleCard.artworkUrl === undefined && !fields.some(f => f.key === 'artworkUrl')) {
       generatedSampleCard.artworkUrl = generateSamplePlaceholderUrl({width: parseInt(canvasWidthSetting) || DEFAULT_CANVAS_WIDTH, height: parseInt(canvasHeightSetting) || DEFAULT_CANVAS_HEIGHT, text: 'Background Art', bgColor: '222222', textColor: 'dddddd'});
     }
     if (generatedSampleCard.statusIcon === undefined && !fields.some(f => f.key === 'statusIcon')) generatedSampleCard.statusIcon = 'ShieldCheck';
@@ -420,7 +419,7 @@ export default function TemplateDesignerPage() {
   }), [templateId, templateName, fields, layoutDefinition]);
 
   const handleAddField = () => {
-    console.log('[DEBUG] TemplateDesignerPage/handleAddField: Adding new field.');
+    console.log('[DEBUG] TemplateDesignerPage (New)/handleAddField: Adding new field.');
     const newFieldBaseLabel = `New Field`;
     let newFieldLabel = `${newFieldBaseLabel} ${fields.length + 1}`;
     let counter = fields.length + 1;
@@ -453,12 +452,12 @@ export default function TemplateDesignerPage() {
   };
 
   const handleRemoveField = (index: number) => {
-    console.log('[DEBUG] TemplateDesignerPage/handleRemoveField: Removing field at index', index);
+    console.log('[DEBUG] TemplateDesignerPage (New)/handleRemoveField: Removing field at index', index);
     setFields(fields.filter((_, i) => i !== index));
   };
 
   const handleFieldChange = (index: number, updatedFieldDefinition: TemplateFieldDefinition) => {
-    console.log('[DEBUG] TemplateDesignerPage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
+    console.log('[DEBUG] TemplateDesignerPage (New)/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
     const newFields = [...fields];
     const oldField = newFields[index];
     let modifiedField = { ...oldField, ...updatedFieldDefinition };
@@ -500,7 +499,7 @@ export default function TemplateDesignerPage() {
 
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
-    console.log('[DEBUG] TemplateDesignerPage/handleLayoutDefinitionChange: Layout string changed.');
+    console.log('[DEBUG] TemplateDesignerPage (New)/handleLayoutDefinitionChange: Layout string changed.');
     setLayoutDefinition(newLayoutDef);
     if (layoutJsonError) setLayoutJsonError(null);
   };
@@ -510,11 +509,11 @@ export default function TemplateDesignerPage() {
       const parsed = JSON.parse(layoutDefinition);
       setLayoutDefinition(JSON.stringify(parsed, null, 2));
       setLayoutJsonError(null);
-      console.log('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: JSON is valid and formatted.');
+      console.log('[DEBUG] TemplateDesignerPage (New)/validateAndFormatLayoutJson: JSON is valid and formatted.');
       return true;
     } catch (e: any) {
       setLayoutJsonError(`Invalid JSON: ${e.message}`);
-      console.warn('[DEBUG] TemplateDesignerPage/validateAndFormatLayoutJson: Invalid JSON', e.message);
+      console.warn('[DEBUG] TemplateDesignerPage (New)/validateAndFormatLayoutJson: Invalid JSON', e.message);
       return false;
     }
   };
@@ -536,7 +535,7 @@ export default function TemplateDesignerPage() {
   };
 
   const handleGenerateJsonFromBuilder = () => {
-    console.log('[DEBUG] TemplateDesignerPage/handleGenerateJsonFromBuilder: Generating JSON from GUI configs.');
+    console.log('[DEBUG] TemplateDesignerPage (New)/handleGenerateJsonFromBuilder: Generating JSON from GUI configs.');
     const elementsToInclude = layoutElementGuiConfigs.filter(config => config.isEnabledOnCanvas);
 
     const generatedElements = elementsToInclude.map(config => {
@@ -548,9 +547,8 @@ export default function TemplateDesignerPage() {
         height: config.styleHeight.endsWith('px') ? config.styleHeight : `${config.styleHeight}px`,
       };
 
-      if (config.styleFontSize && config.styleFontSize.trim() !== '') style.fontSize = config.styleFontSize;
+      // Direct CSS styles - excluding font size and weight now
       if (config.styleRight && config.styleRight.trim() !== '') style.right = config.styleRight;
-      if (config.styleFontWeight && config.styleFontWeight.trim() !== '') style.fontWeight = config.styleFontWeight;
       if (config.styleLineHeight && config.styleLineHeight.trim() !== '') style.lineHeight = config.styleLineHeight;
       if (config.styleMaxHeight && config.styleMaxHeight.trim() !== '') style.maxHeight = config.styleMaxHeight;
       if (config.styleOverflow && config.styleOverflow.trim() !== '') style.overflow = config.styleOverflow;
@@ -560,18 +558,28 @@ export default function TemplateDesignerPage() {
       if (config.stylePadding && config.stylePadding.trim() !== '') style.padding = config.stylePadding;
       if (config.styleBorderTop && config.styleBorderTop.trim() !== '') style.borderTop = config.styleBorderTop;
       if (config.styleBorderBottom && config.styleBorderBottom.trim() !== '') style.borderBottom = config.styleBorderBottom;
-      
+
       const classNames = [];
-      if (config.originalType === 'textarea' || config.elementType === 'textarea') classNames.push('whitespace-pre-wrap'); // Add for textarea
-      
-      if (config.tailwindTextColor && config.tailwindTextColor.trim() !== '') classNames.push(config.tailwindTextColor);
-      else if (!style.color && classNames.filter(c => c.startsWith('text-')).length === 0) classNames.push('text-card-foreground');
-      
-      if (config.tailwindFontSize && config.tailwindFontSize.trim() !== '') classNames.push(config.tailwindFontSize);
-      else if (!style.fontSize && classNames.filter(c => c.startsWith('text-') && ['xs','sm','base','lg','xl','2xl','3xl','4xl'].some(s=>c.includes(s))).length === 0 ) classNames.push('text-base');
-      
-      if (config.tailwindFontWeight && config.tailwindFontWeight.trim() !== '') classNames.push(config.tailwindFontWeight);
-      else if (!style.fontWeight && classNames.filter(c => c.startsWith('font-')).length === 0) classNames.push('font-normal');
+      if (config.originalType === 'textarea' || config.elementType === 'textarea') classNames.push('whitespace-pre-wrap');
+
+      if (config.tailwindTextColor && config.tailwindTextColor.trim() !== '' && config.tailwindTextColor !== NONE_VALUE) {
+        classNames.push(config.tailwindTextColor);
+      } else if (classNames.filter(c => c.startsWith('text-')).length === 0) {
+         classNames.push('text-card-foreground'); // Default if nothing else set
+      }
+
+      if (config.tailwindFontSize && config.tailwindFontSize.trim() !== '' && config.tailwindFontSize !== NONE_VALUE) {
+        classNames.push(config.tailwindFontSize);
+      } else if (classNames.filter(c => c.startsWith('text-') && ['xs','sm','base','lg','xl','2xl','3xl','4xl'].some(s=>c.includes(s))).length === 0 ) {
+         classNames.push('text-base'); // Default Tailwind size
+      }
+
+      if (config.tailwindFontWeight && config.tailwindFontWeight.trim() !== '' && config.tailwindFontWeight !== NONE_VALUE) {
+        classNames.push(config.tailwindFontWeight);
+      } else if (classNames.filter(c => c.startsWith('font-')).length === 0) {
+         classNames.push('font-normal'); // Default Tailwind weight
+      }
+
 
       const element: any = {
         fieldKey: config.fieldKey,
@@ -601,7 +609,7 @@ export default function TemplateDesignerPage() {
 
 
   const handleSaveTemplate = async () => {
-    console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Attempting to save.');
+    console.log('[DEBUG] TemplateDesignerPage (New)/handleSaveTemplate: Attempting to save.');
     if (!templateName.trim()) {
       toast({ title: "Missing Name", description: "Template Name cannot be empty.", variant: "destructive" });
       return;
@@ -637,7 +645,7 @@ export default function TemplateDesignerPage() {
     let finalLayoutDefinition = layoutDefinition.trim();
     if (finalLayoutDefinition) {
         try {
-            JSON.parse(finalLayoutDefinition); 
+            JSON.parse(finalLayoutDefinition);
         } catch (e) {
             toast({
                 title: "Invalid Layout JSON",
@@ -649,10 +657,15 @@ export default function TemplateDesignerPage() {
             return;
         }
     } else {
-        handleGenerateJsonFromBuilder(); 
-        finalLayoutDefinition = layoutDefinition.trim(); 
-        if (!finalLayoutDefinition) {
-            finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING; 
+        // If layoutDefinition is empty, try to generate it from GUI builder if any elements are enabled
+        if (layoutElementGuiConfigs.some(c => c.isEnabledOnCanvas)) {
+            handleGenerateJsonFromBuilder();
+            finalLayoutDefinition = layoutDefinition.trim(); // Re-check after generation
+            if (!finalLayoutDefinition) { // Still empty, or generation failed silently
+                 finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING;
+            }
+        } else {
+             finalLayoutDefinition = DEFAULT_CARD_LAYOUT_JSON_STRING;
         }
     }
 
@@ -664,7 +677,7 @@ export default function TemplateDesignerPage() {
       fields: fields.map(mapFieldDefinitionToTemplateField),
       layoutDefinition: finalLayoutDefinition,
     };
-    console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Calling saveTemplateToContext with:', newTemplate);
+    console.log('[DEBUG] TemplateDesignerPage (New)/handleSaveTemplate: Calling saveTemplateToContext with:', newTemplate);
     const result = await saveTemplateToContext(newTemplate);
     if (result.success) {
       toast({
@@ -774,16 +787,17 @@ export default function TemplateDesignerPage() {
                 value={templateId}
                 readOnly
                 className="mt-1 bg-muted/50"
+                disabled={isSaving}
               />
             </div>
           </div>
           <div>
             <h3 className="text-xl font-semibold mb-3">Data Fields</h3>
-            <ScrollArea className="pr-3"> 
+             <ScrollArea className="pr-3">
                 <div className="space-y-3">
                     {fields.map((field, index) => (
                     <FieldRow
-                        key={field.key} 
+                        key={field.key}
                         field={field}
                         onChange={(updatedField) => handleFieldChange(index, updatedField)}
                         onRemove={() => handleRemoveField(index)}
@@ -811,8 +825,10 @@ export default function TemplateDesignerPage() {
         </CardContent>
       </Card>
 
-      <div className="flex flex-col md:flex-row gap-8">
-        <Card className="md:w-[65%] flex flex-col shadow-md">
+      {/* Layout Builder & Preview Section */}
+      <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+        {/* Left Column: Layout Builder GUI */}
+        <Card className="lg:col-span-2 flex flex-col shadow-md">
           <CardHeader>
               <CardTitle className="text-xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
               <CardDescription className="text-md">
@@ -875,9 +891,9 @@ export default function TemplateDesignerPage() {
               </div>
             </div>
 
-            <div className="space-y-3 p-4 border rounded-md bg-muted/30">
+             <div className="space-y-3 p-4 border rounded-md bg-muted/30">
               <h4 className="text-lg font-semibold mb-2">Layout Elements (Toggle to Include)</h4>
-              <ScrollArea className="pr-2"> 
+              <ScrollArea className="pr-2">
                 <div className="space-y-2">
                   {layoutElementGuiConfigs.map((config) => (
                     <div key={config.fieldKey} className="p-2.5 border rounded-md bg-card/80 hover:bg-card transition-colors">
@@ -933,29 +949,21 @@ export default function TemplateDesignerPage() {
                               </div>
                             )}
                           </div>
-                          
+
                           <h5 className="text-xs text-muted-foreground font-semibold mt-3 pt-2 border-t border-dotted">Position & Sizing</h5>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {['styleTop', 'styleLeft', 'styleRight', 'styleWidth', 'styleHeight', 'styleMaxHeight', 'stylePadding'].map(prop => (
-                                <div key={prop}>
-                                    <Label htmlFor={`el-${prop}-${config.fieldKey}`} className="text-xs capitalize">{prop.replace('style', '').replace(/([A-Z])/g, ' $1').trim()}</Label>
-                                    <Input id={`el-${prop}-${config.fieldKey}`} value={(config as any)[prop] || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, prop as keyof LayoutElementGuiConfig, e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 10px or auto" disabled={isSaving}/>
-                                </div>
-                            ))}
+                              {['styleTop', 'styleLeft', 'styleRight', 'styleWidth', 'styleHeight', 'styleMaxHeight', 'stylePadding'].map(prop => (
+                                  <div key={prop}>
+                                      <Label htmlFor={`el-${prop}-${config.fieldKey}`} className="text-xs capitalize">{prop.replace('style', '').replace(/([A-Z])/g, ' $1').trim()}</Label>
+                                      <Input id={`el-${prop}-${config.fieldKey}`} value={(config as any)[prop] || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, prop as keyof LayoutElementGuiConfig, e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 10px or auto" disabled={isSaving}/>
+                                  </div>
+                              ))}
                           </div>
 
                           {(config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') && (
                             <>
                               <h5 className="text-xs text-muted-foreground font-semibold mt-3 pt-2 border-t border-dotted">Typography</h5>
                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                <div>
-                                  <Label htmlFor={`el-styleFontSize-${config.fieldKey}`} className="text-xs">Font Size (CSS)</Label>
-                                  <Input id={`el-styleFontSize-${config.fieldKey}`} value={config.styleFontSize} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleFontSize', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 12px, 1.1em" disabled={isSaving}/>
-                                </div>
-                                <div>
-                                  <Label htmlFor={`el-styleFontWeight-${config.fieldKey}`} className="text-xs">Font Weight (CSS)</Label>
-                                  <Input id={`el-styleFontWeight-${config.fieldKey}`} value={config.styleFontWeight || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleFontWeight', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., bold, 700" disabled={isSaving}/>
-                                </div>
                                 <div>
                                   <Label htmlFor={`el-styleLineHeight-${config.fieldKey}`} className="text-xs">Line Height (CSS)</Label>
                                   <Input id={`el-styleLineHeight-${config.fieldKey}`} value={config.styleLineHeight || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleLineHeight', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 1.5, 20px" disabled={isSaving}/>
@@ -1049,6 +1057,7 @@ export default function TemplateDesignerPage() {
                   placeholder='Click "Generate/Update JSON from Builder" above, or paste/edit your JSON here.'
                   rows={15}
                   className="font-mono text-xs flex-grow min-h-[200px] max-h-[350px] bg-muted/20 mt-1"
+                  disabled={isSaving}
                 />
               </div>
               {layoutJsonError && (
@@ -1058,7 +1067,7 @@ export default function TemplateDesignerPage() {
                   <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
                 </Alert>
               )}
-              <Accordion type="multiple" defaultValue={['layout-guide']} className="w-full mt-3">
+              <Accordion type="multiple" defaultValue={['layout-guide', 'lucide-icon-explorer']} className="w-full mt-3">
                 <AccordionItem value="layout-guide">
                   <AccordionTrigger className="text-sm py-2 hover:no-underline">
                     <div className="flex items-center text-muted-foreground">
@@ -1106,9 +1115,9 @@ export default function TemplateDesignerPage() {
 {
   "fieldKey": "yourImageUrlFieldKey", // Replace
   "type": "image",
-  "style": { 
-    "position": "absolute", "top": "50px", "left": "20px", 
-    "width": "240px", "height": "120px", "objectFit": "cover", "borderRadius": "4px" 
+  "style": {
+    "position": "absolute", "top": "50px", "left": "20px",
+    "width": "240px", "height": "120px", "objectFit": "cover", "borderRadius": "4px"
   }
 }
 
@@ -1159,7 +1168,7 @@ export default function TemplateDesignerPage() {
               </Accordion>
             </div>
           </CardContent>
-          <CardFooter className="mt-auto pt-4 border-t"> 
+          <CardFooter className="mt-auto pt-4 border-t">
             <Button
               onClick={handleSaveTemplate}
               className="w-full md:w-auto"
@@ -1170,14 +1179,14 @@ export default function TemplateDesignerPage() {
           </CardFooter>
         </Card>
 
-        <Card className="md:w-[35%] sticky top-20 self-start shadow-lg">
+        {/* Right Column: Live Preview */}
+        <Card className="lg:col-span-1 sticky top-20 self-start shadow-lg">
           <CardHeader>
             <div className="flex items-center justify-between">
                 <CardTitle className="text-xl font-bold flex items-center">
                     <Eye className="mr-2 h-5 w-5" /> Live Layout Preview
                 </CardTitle>
                 <div className="flex items-center space-x-2">
-                    {/* Removed 'Show Element Outlines' toggle */}
                     <Switch id="show-pixel-grid" checked={showPixelGrid} onCheckedChange={setShowPixelGrid} aria-label="Show pixel grid" />
                     <Label htmlFor="show-pixel-grid" className="text-xs text-muted-foreground">Pixel Grid</Label>
                 </div>
@@ -1203,5 +1212,5 @@ export default function TemplateDesignerPage() {
     </div>
   );
 }
-    
+
     
