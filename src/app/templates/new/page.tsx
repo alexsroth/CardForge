@@ -41,7 +41,7 @@ interface LayoutElementGuiConfig {
   label: string;
   originalType: TemplateFieldDefinition['type'];
   isEnabledOnCanvas: boolean;
-  isExpandedInGui: boolean;
+  isExpandedInGui: boolean; // To control accordion-like behavior for GUI
 
   elementType: 'text' | 'textarea' | 'image' | 'iconValue' | 'iconFromData';
   styleTop: string;
@@ -49,7 +49,15 @@ interface LayoutElementGuiConfig {
   styleWidth: string;
   styleHeight: string;
   styleFontSize: string;
-  iconName?: string;
+  iconName?: string; // For 'iconValue' type
+
+  // New advanced text styling properties
+  styleRight?: string;
+  styleFontWeight?: string;
+  styleLineHeight?: string;
+  styleMaxHeight?: string;
+  styleOverflow?: string;
+  styleTextOverflow?: string;
 }
 
 const COMMON_CARD_SIZES = [
@@ -145,7 +153,12 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  path += `.png`; 
+  // The .png suffix is now handled conditionally based on colors
+  if (bgColor || textColor) {
+    path += '.png'; // Add .png if colors are specified
+  } else {
+    path += '.png'; // Default to .png if no colors
+  }
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
@@ -172,7 +185,7 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
    if (!Icon || typeof Icon !== 'function') {
-    // console.warn(`[DEBUG] IconComponent (TemplateDesigner): Lucide icon "${name}" not found or not a function. Fallback HelpCircle will be used.`);
+    console.warn(`[DEBUG] IconComponent (TemplateDesigner): Lucide icon "${name}" not found or not a function. Fallback HelpCircle will be used.`);
     return <LucideIcons.HelpCircle {...props} />;
   }
   return <Icon {...props} />;
@@ -214,13 +227,16 @@ export default function TemplateDesignerPage() {
 
   // Sync fields state with layoutElementGuiConfigs
   useEffect(() => {
-    // console.log('[DEBUG] TemplateDesignerPage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
+    console.log('[DEBUG] TemplateDesignerPage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
     setLayoutElementGuiConfigs(prevConfigs => {
         const newConfigs = fields.map((field, index) => {
             const existingConfig = prevConfigs.find(c => c.fieldKey === field.key);
             if (existingConfig) {
-                // If label or originalType changed, update them in GUI config
-                return { ...existingConfig, label: field.label, originalType: field.type };
+                return {
+                  ...existingConfig,
+                  label: field.label,
+                  originalType: field.type
+                }; // Update label and original type if they changed
             }
             // Field was added, create new GUI config with defaults
             const yOffset = 10 + (index % 8) * 25;
@@ -238,6 +254,12 @@ export default function TemplateDesignerPage() {
                 styleHeight: field.type === 'textarea' ? '60px' : (field.type === 'placeholderImage' ? '140px' : '20px'),
                 styleFontSize: '12px',
                 iconName: field.type === 'number' ? 'Coins' : '',
+                styleRight: '',
+                styleFontWeight: '',
+                styleLineHeight: '',
+                styleMaxHeight: '',
+                styleOverflow: '',
+                styleTextOverflow: '',
             };
         });
         // Filter out GUI configs for fields that no longer exist
@@ -373,7 +395,7 @@ export default function TemplateDesignerPage() {
     let modifiedField = { ...oldField, ...updatedFieldDefinition };
     if (updatedFieldDefinition.label !== undefined && updatedFieldDefinition.label !== oldField.label) {
         let baseKey = toCamelCase(updatedFieldDefinition.label);
-        if (!baseKey) { 
+        if (!baseKey) {
             const prefix = 'field';
             let fallbackCounter = 1;
             let potentialKey = `${prefix}${fallbackCounter}`;
@@ -443,25 +465,34 @@ export default function TemplateDesignerPage() {
   };
 
   const handleGenerateJsonFromBuilder = () => {
-    // console.log('[DEBUG] TemplateDesignerPage/handleGenerateJsonFromBuilder: Generating JSON from GUI configs.');
+    console.log('[DEBUG] TemplateDesignerPage/handleGenerateJsonFromBuilder: Generating JSON from GUI configs.');
     const elementsToInclude = layoutElementGuiConfigs.filter(config => config.isEnabledOnCanvas);
-    
+
     const generatedElements = elementsToInclude.map(config => {
+      const style: any = {
+        position: "absolute",
+        top: config.styleTop.endsWith('px') ? config.styleTop : `${config.styleTop}px`,
+        left: config.styleLeft.endsWith('px') ? config.styleLeft : `${config.styleLeft}px`,
+        width: config.styleWidth.endsWith('px') ? config.styleWidth : `${config.styleWidth}px`,
+        height: config.styleHeight.endsWith('px') ? config.styleHeight : `${config.styleHeight}px`,
+        fontSize: config.styleFontSize.endsWith('px') ? config.styleFontSize : `${config.styleFontSize}px`,
+      };
+
+      if (config.styleRight && config.styleRight.trim() !== '') style.right = config.styleRight;
+      if (config.styleFontWeight && config.styleFontWeight.trim() !== '') style.fontWeight = config.styleFontWeight;
+      if (config.styleLineHeight && config.styleLineHeight.trim() !== '') style.lineHeight = config.styleLineHeight;
+      if (config.styleMaxHeight && config.styleMaxHeight.trim() !== '') style.maxHeight = config.styleMaxHeight;
+      if (config.styleOverflow && config.styleOverflow.trim() !== '') style.overflow = config.styleOverflow;
+      if (config.styleTextOverflow && config.styleTextOverflow.trim() !== '') style.textOverflow = config.styleTextOverflow;
+
       const element: any = {
         fieldKey: config.fieldKey,
         type: config.elementType,
-        style: {
-          position: "absolute",
-          top: config.styleTop.endsWith('px') ? config.styleTop : `${config.styleTop}px`,
-          left: config.styleLeft.endsWith('px') ? config.styleLeft : `${config.styleLeft}px`,
-          width: config.styleWidth.endsWith('px') ? config.styleWidth : `${config.styleWidth}px`,
-          height: config.styleHeight.endsWith('px') ? config.styleHeight : `${config.styleHeight}px`,
-          fontSize: config.styleFontSize.endsWith('px') ? config.styleFontSize : `${config.styleFontSize}px`,
-        },
-        className: "text-card-foreground"
+        style: style,
+        className: "text-card-foreground" // Default, can be overridden by GUI later
       };
-      if (config.elementType === 'iconValue' && config.iconName) {
-        element.icon = config.iconName;
+      if (config.elementType === 'iconValue' && config.iconName && config.iconName.trim() !== '') {
+        element.icon = config.iconName.trim();
       }
       return element;
     });
@@ -480,8 +511,9 @@ export default function TemplateDesignerPage() {
     toast({ title: "Layout JSON Updated", description: "JSON generated from GUI builder and updated in the textarea and preview."});
   };
 
+
   const handleSaveTemplate = async () => {
-    // console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Attempting to save.');
+    console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Attempting to save.');
     if (!templateName.trim()) {
       toast({ title: "Missing Name", description: "Template Name cannot be empty.", variant: "destructive" });
       return;
@@ -538,7 +570,7 @@ export default function TemplateDesignerPage() {
       fields: fields.map(mapFieldDefinitionToTemplateField),
       layoutDefinition: finalLayoutDefinition,
     };
-    // console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Calling saveTemplateToContext with:', newTemplate);
+    console.log('[DEBUG] TemplateDesignerPage/handleSaveTemplate: Calling saveTemplateToContext with:', newTemplate);
     const result = await saveTemplateToContext(newTemplate);
     if (result.success) {
       toast({
@@ -655,11 +687,11 @@ export default function TemplateDesignerPage() {
           </div>
            <div>
             <h3 className="text-xl font-semibold mb-3">Data Fields</h3>
-            <ScrollArea className="pr-3"> {/* Allow this section to grow naturally */}
+            <ScrollArea className="pr-3">
                 <div className="space-y-3">
                     {fields.map((field, index) => (
                     <FieldRow
-                        key={index} 
+                        key={field.key} // Use actual field key once unique generation is solid for re-renders
                         field={field}
                         onChange={(updatedField) => handleFieldChange(index, updatedField)}
                         onRemove={() => handleRemoveField(index)}
@@ -718,21 +750,21 @@ export default function TemplateDesignerPage() {
                   <>
                     <div>
                       <Label htmlFor="canvasWidth" className="text-sm font-medium">Custom Width (e.g., 280px)</Label>
-                      <Input 
-                        id="canvasWidth" 
-                        value={canvasWidthSetting} 
-                        onChange={(e) => handleCustomDimensionChange('width', e.target.value)} 
-                        disabled={isSaving} 
+                      <Input
+                        id="canvasWidth"
+                        value={canvasWidthSetting}
+                        onChange={(e) => handleCustomDimensionChange('width', e.target.value)}
+                        disabled={isSaving}
                         className="mt-1 h-9 text-sm"
                       />
                     </div>
                     <div>
                       <Label htmlFor="canvasHeight" className="text-sm font-medium">Custom Height (e.g., 400px)</Label>
-                      <Input 
-                        id="canvasHeight" 
-                        value={canvasHeightSetting} 
-                        onChange={(e) => handleCustomDimensionChange('height', e.target.value)} 
-                        disabled={isSaving} 
+                      <Input
+                        id="canvasHeight"
+                        value={canvasHeightSetting}
+                        onChange={(e) => handleCustomDimensionChange('height', e.target.value)}
+                        disabled={isSaving}
                         className="mt-1 h-9 text-sm"
                       />
                     </div>
@@ -752,14 +784,14 @@ export default function TemplateDesignerPage() {
                 )}
               </div>
             </div>
-            
+
             {/* Layout Elements Configuration */}
             <div className="space-y-3 p-4 border rounded-md bg-muted/30">
               <h4 className="text-lg font-semibold mb-2">Layout Elements (Toggle to Include)</h4>
                {layoutElementGuiConfigs.length > 0 ? (
-                <ScrollArea className="pr-2"> 
+                <ScrollArea className="pr-2">
                   <div className="space-y-2">
-                    {layoutElementGuiConfigs.map((config, index) => (
+                    {layoutElementGuiConfigs.map((config) => (
                       <div key={config.fieldKey} className="p-2.5 border rounded-md bg-card/80 hover:bg-card transition-colors">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -836,6 +868,37 @@ export default function TemplateDesignerPage() {
                                 <Input id={`el-fontsize-${config.fieldKey}`} value={config.styleFontSize} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleFontSize', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving}/>
                               </div>
                             </div>
+                             { (config.elementType === 'text' || config.elementType === 'textarea') && (
+                              <>
+                                <p className="text-xs text-muted-foreground font-medium mt-2">Advanced Text Styling:</p>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                  <div>
+                                    <Label htmlFor={`el-styleright-${config.fieldKey}`} className="text-xs">Right (CSS)</Label>
+                                    <Input id={`el-styleright-${config.fieldKey}`} value={config.styleRight || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleRight', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving} placeholder="e.g., 10px"/>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor={`el-stylefontweight-${config.fieldKey}`} className="text-xs">Font Weight</Label>
+                                    <Input id={`el-stylefontweight-${config.fieldKey}`} value={config.styleFontWeight || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleFontWeight', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving} placeholder="e.g., bold, 700"/>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor={`el-stylelineheight-${config.fieldKey}`} className="text-xs">Line Height</Label>
+                                    <Input id={`el-stylelineheight-${config.fieldKey}`} value={config.styleLineHeight || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleLineHeight', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving} placeholder="e.g., 1.5, 20px"/>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor={`el-stylemaxheight-${config.fieldKey}`} className="text-xs">Max Height (CSS)</Label>
+                                    <Input id={`el-stylemaxheight-${config.fieldKey}`} value={config.styleMaxHeight || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleMaxHeight', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving} placeholder="e.g., 40px"/>
+                                  </div>
+                                   <div>
+                                    <Label htmlFor={`el-styleoverflow-${config.fieldKey}`} className="text-xs">Overflow</Label>
+                                    <Input id={`el-styleoverflow-${config.fieldKey}`} value={config.styleOverflow || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleOverflow', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving} placeholder="e.g., hidden, auto"/>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor={`el-styletextoverflow-${config.fieldKey}`} className="text-xs">Text Overflow</Label>
+                                    <Input id={`el-styletextoverflow-${config.fieldKey}`} value={config.styleTextOverflow || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleTextOverflow', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving} placeholder="e.g., ellipsis"/>
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -846,24 +909,24 @@ export default function TemplateDesignerPage() {
                 <p className="text-sm text-muted-foreground">No data fields defined yet to build layout elements.</p>
               )}
             </div>
-            
+
             <Button onClick={handleGenerateJsonFromBuilder} variant="secondary" size="sm" disabled={isSaving || layoutElementGuiConfigs.length === 0} className="self-start mt-2">
               <Palette className="mr-2 h-4 w-4" /> Generate/Update JSON from Builder
             </Button>
-            
+
             {/* JSON Output and Guides */}
             <div className="mt-4 flex-grow flex flex-col min-h-0">
               <div>
-                <Label htmlFor="layoutDefinition" className="text-sm font-medium">Layout Definition JSON (Editable, builder output updates here)</Label>
+                <Label htmlFor="layoutDefinition" className="text-sm font-medium">Layout Definition JSON (Builder output updates here)</Label>
                 <Textarea
                   id="layoutDefinition"
                   value={layoutDefinition}
-                  onChange={handleLayoutDefinitionChange} 
+                  onChange={handleLayoutDefinitionChange}
                   onBlur={validateAndFormatLayoutJson}
                   placeholder='Click "Generate/Update JSON from Builder" above, or paste/edit your JSON here.'
                   rows={15}
-                  className="font-mono text-xs flex-grow min-h-[200px] max-h-[350px] bg-muted/20 mt-1" 
-                  disabled={isSaving} 
+                  className="font-mono text-xs flex-grow min-h-[200px] max-h-[350px] bg-muted/20 mt-1"
+                  disabled={isSaving}
                 />
               </div>
               {layoutJsonError && (
@@ -944,15 +1007,15 @@ export default function TemplateDesignerPage() {
                   </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="lucide-icon-explorer">
-                  <AccordionTrigger className="text-sm py-2 hover:no-underline">
+                   <AccordionTrigger className="text-sm py-2 hover:no-underline">
                     <div className="flex items-center text-muted-foreground">
                       <Copy className="mr-2 h-4 w-4" /> Browse Lucide Icons
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="text-xs p-3 border rounded-md bg-muted/30">
                     <p className="font-semibold mb-1 mt-0">Common Lucide Icons (Click to Copy Name):</p>
-                    <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border overflow-y-auto">
-                      <div className={cn("grid gap-1", "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16")}>
+                    <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border">
+                       <div className={cn("grid gap-1", "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16")}>
                         {commonLucideIconsForGuide.map(iconName => (
                           <TooltipProvider key={iconName as string} delayDuration={100}>
                             <Tooltip>
@@ -982,7 +1045,7 @@ export default function TemplateDesignerPage() {
             </Button>
           </CardFooter>
         </Card>
-        
+
         <Card className="md:w-[35%] sticky top-20 self-start shadow-lg">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -1016,3 +1079,5 @@ export default function TemplateDesignerPage() {
   );
 }
 
+
+    

@@ -40,7 +40,7 @@ interface LayoutElementGuiConfig {
   label: string;
   originalType: TemplateFieldDefinition['type'];
   isEnabledOnCanvas: boolean;
-  isExpandedInGui: boolean;
+  isExpandedInGui: boolean; // To control accordion-like behavior for GUI
 
   elementType: 'text' | 'textarea' | 'image' | 'iconValue' | 'iconFromData';
   styleTop: string;
@@ -48,7 +48,15 @@ interface LayoutElementGuiConfig {
   styleWidth: string;
   styleHeight: string;
   styleFontSize: string;
-  iconName?: string;
+  iconName?: string; // For 'iconValue' type
+
+  // New advanced text styling properties
+  styleRight?: string;
+  styleFontWeight?: string;
+  styleLineHeight?: string;
+  styleMaxHeight?: string;
+  styleOverflow?: string;
+  styleTextOverflow?: string;
 }
 
 const COMMON_CARD_SIZES = [
@@ -71,7 +79,7 @@ function mapTemplateFieldToFieldDefinition(field: TemplateField): TemplateFieldD
         type: field.type,
         placeholder: field.placeholder || '',
         defaultValue: field.defaultValue,
-        previewValue: typeof field.defaultValue === 'string' ? field.defaultValue : (field.defaultValue !== undefined ? String(field.defaultValue) : undefined), 
+        previewValue: typeof field.defaultValue === 'string' ? field.defaultValue : (field.defaultValue !== undefined ? String(field.defaultValue) : undefined),
         placeholderConfigWidth: field.placeholderConfigWidth,
         placeholderConfigHeight: field.placeholderConfigHeight,
         placeholderConfigBgColor: field.placeholderConfigBgColor,
@@ -163,7 +171,11 @@ function generateSamplePlaceholderUrl(config: {
       path += `/${textColor}`;
     }
   }
-  path += `.png`; 
+  if (bgColor || textColor) {
+    path += '.png';
+  } else {
+    path += '.png';
+  }
 
   let fullUrl = `https://placehold.co/${path}`;
   const text = rawText?.trim();
@@ -189,7 +201,7 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
   if (!Icon || typeof Icon !== 'function') {
-    // console.warn(`[DEBUG] IconComponent (EditTemplatePage): Lucide icon "${name}" not found or not a function. Fallback HelpCircle will be used.`);
+    console.warn(`[DEBUG] IconComponent (EditTemplatePage): Lucide icon "${name}" not found or not a function. Fallback HelpCircle will be used.`);
     return <LucideIcons.HelpCircle {...props} />;
   }
   return <Icon {...props} />;
@@ -207,7 +219,7 @@ export default function EditTemplatePage() {
   const [originalTemplateId, setOriginalTemplateId] = useState<CardTemplateId | undefined>(templateIdToEdit);
   const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<TemplateFieldDefinition[]>([]);
-  
+
   const [layoutDefinition, setLayoutDefinition] = useState<string>('');
   const [layoutJsonError, setLayoutJsonError] = useState<string | null>(null);
 
@@ -228,22 +240,22 @@ export default function EditTemplatePage() {
       setIsLoadingPage(templatesLoading);
       return;
     }
-    // console.log('[DEBUG] EditTemplatePage: Loading template for editing. ID:', templateIdToEdit);
+    console.log('[DEBUG] EditTemplatePage: Loading template for editing. ID:', templateIdToEdit);
     const templateToEdit = getTemplateById(templateIdToEdit);
     if (templateToEdit) {
-      // console.log('[DEBUG] EditTemplatePage: Template found.', templateToEdit);
+      console.log('[DEBUG] EditTemplatePage: Template found.', templateToEdit);
       setOriginalTemplateId(templateToEdit.id as CardTemplateId);
       setTemplateName(templateToEdit.name);
       const initialFields = templateToEdit.fields.map(mapTemplateFieldToFieldDefinition);
       setFields(initialFields);
-      
+
       const initialLayoutDef = templateToEdit.layoutDefinition?.trim() ? templateToEdit.layoutDefinition : DEFAULT_CARD_LAYOUT_JSON_STRING;
       setLayoutDefinition(initialLayoutDef);
 
       try {
         const parsedLayout = JSON.parse(initialLayoutDef || '{}');
         const layoutElements = Array.isArray(parsedLayout.elements) ? parsedLayout.elements : [];
-        
+
         const loadedWidth = parsedLayout.width || `${DEFAULT_CANVAS_WIDTH}px`;
         const loadedHeight = parsedLayout.height || `${DEFAULT_CANVAS_HEIGHT}px`;
         setCanvasWidthSetting(loadedWidth);
@@ -273,6 +285,12 @@ export default function EditTemplatePage() {
             styleHeight: existingLayoutElement?.style?.height || (field.type === 'textarea' ? '60px' : (field.type === 'placeholderImage' ? '140px' : '20px')),
             styleFontSize: existingLayoutElement?.style?.fontSize || '12px',
             iconName: existingLayoutElement?.icon || (field.type === 'number' ? 'Coins' : ''),
+            styleRight: existingLayoutElement?.style?.right || '',
+            styleFontWeight: existingLayoutElement?.style?.fontWeight || '',
+            styleLineHeight: existingLayoutElement?.style?.lineHeight || '',
+            styleMaxHeight: existingLayoutElement?.style?.maxHeight || '',
+            styleOverflow: existingLayoutElement?.style?.overflow || '',
+            styleTextOverflow: existingLayoutElement?.style?.textOverflow || '',
           };
         }));
 
@@ -283,13 +301,13 @@ export default function EditTemplatePage() {
         setCanvasWidthSetting(`${DEFAULT_CANVAS_WIDTH}px`);
         setCanvasHeightSetting(`${DEFAULT_CANVAS_HEIGHT}px`);
         setLayoutElementGuiConfigs(initialFields.map((field, index) => {
-            const yOffset = 10 + (index % 8) * 25; // Adjusted default yOffset
+            const yOffset = 10 + (index % 8) * 25;
             const xOffset = 10;
             return {
                 fieldKey: field.key,
                 label: field.label,
                 originalType: field.type,
-                isEnabledOnCanvas: true, // Default to true if parsing fails
+                isEnabledOnCanvas: true,
                 isExpandedInGui: false,
                 elementType: field.type === 'textarea' ? 'textarea' : (field.type === 'placeholderImage' ? 'image' : 'text'),
                 styleTop: `${yOffset}px`,
@@ -298,6 +316,12 @@ export default function EditTemplatePage() {
                 styleHeight: field.type === 'textarea' ? '60px' : (field.type === 'placeholderImage' ? '140px' : '20px'),
                 styleFontSize: '12px',
                 iconName: field.type === 'number' ? 'Coins' : '',
+                styleRight: '',
+                styleFontWeight: '',
+                styleLineHeight: '',
+                styleMaxHeight: '',
+                styleOverflow: '',
+                styleTextOverflow: '',
             };
         }));
       }
@@ -311,7 +335,7 @@ export default function EditTemplatePage() {
 
   // Sync fields state with layoutElementGuiConfigs
   useEffect(() => {
-    // console.log('[DEBUG] EditTemplatePage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
+    console.log('[DEBUG] EditTemplatePage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
     setLayoutElementGuiConfigs(prevConfigs => {
       const newConfigs = fields.map((field, index) => {
         const existingConfig = prevConfigs.find(c => c.fieldKey === field.key);
@@ -320,13 +344,13 @@ export default function EditTemplatePage() {
             return { ...existingConfig, label: field.label, originalType: field.type };
         }
         // Field was added, create new GUI config with defaults
-        const yOffset = 10 + (index % 8) * 25; // Adjusted default yOffset
+        const yOffset = 10 + (index % 8) * 25;
         const xOffset = 10;
         return {
           fieldKey: field.key,
           label: field.label,
           originalType: field.type,
-          isEnabledOnCanvas: true, // New fields default to enabled
+          isEnabledOnCanvas: true,
           isExpandedInGui: false,
           elementType: field.type === 'textarea' ? 'textarea' : (field.type === 'placeholderImage' ? 'image' : 'text'),
           styleTop: `${yOffset}px`,
@@ -335,6 +359,12 @@ export default function EditTemplatePage() {
           styleHeight: field.type === 'textarea' ? '60px' : (field.type === 'placeholderImage' ? '140px' : '20px'),
           styleFontSize: '12px',
           iconName: field.type === 'number' ? 'Coins' : '',
+          styleRight: '',
+          styleFontWeight: '',
+          styleLineHeight: '',
+          styleMaxHeight: '',
+          styleOverflow: '',
+          styleTextOverflow: '',
         };
       });
       // Filter out GUI configs for fields that no longer exist
@@ -470,7 +500,7 @@ export default function EditTemplatePage() {
     if (updatedFieldDefinition.label !== undefined && updatedFieldDefinition.label !== oldField.label) {
         if (oldField.key === toCamelCase(oldField.label) || oldField.key.startsWith(toCamelCase(oldField.label).replace(/[\d]+$/, ''))) {
             let baseKey = toCamelCase(updatedFieldDefinition.label);
-            if (!baseKey) { 
+            if (!baseKey) {
                 const prefix = 'field';
                 let fallbackCounter = 1;
                 let potentialKey = `${prefix}${fallbackCounter}`;
@@ -523,7 +553,7 @@ export default function EditTemplatePage() {
       return false;
     }
   };
-  
+
   const handleGuiConfigChange = (fieldKey: string, property: keyof LayoutElementGuiConfig, value: any) => {
     setLayoutElementGuiConfigs(prev =>
       prev.map(config =>
@@ -541,25 +571,35 @@ export default function EditTemplatePage() {
   };
 
   const handleGenerateJsonFromBuilder = () => {
-    // console.log('[DEBUG] EditTemplatePage/handleGenerateJsonFromBuilder: Generating JSON from GUI configs.');
+    console.log('[DEBUG] EditTemplatePage/handleGenerateJsonFromBuilder: Generating JSON from GUI configs.');
     const elementsToInclude = layoutElementGuiConfigs.filter(config => config.isEnabledOnCanvas);
 
     const generatedElements = elementsToInclude.map(config => {
+      const style: any = {
+        position: "absolute",
+        top: config.styleTop.endsWith('px') ? config.styleTop : `${config.styleTop}px`,
+        left: config.styleLeft.endsWith('px') ? config.styleLeft : `${config.styleLeft}px`,
+        width: config.styleWidth.endsWith('px') ? config.styleWidth : `${config.styleWidth}px`,
+        height: config.styleHeight.endsWith('px') ? config.styleHeight : `${config.styleHeight}px`,
+        fontSize: config.styleFontSize.endsWith('px') ? config.styleFontSize : `${config.styleFontSize}px`,
+      };
+
+      if (config.styleRight && config.styleRight.trim() !== '') style.right = config.styleRight;
+      if (config.styleFontWeight && config.styleFontWeight.trim() !== '') style.fontWeight = config.styleFontWeight;
+      if (config.styleLineHeight && config.styleLineHeight.trim() !== '') style.lineHeight = config.styleLineHeight;
+      if (config.styleMaxHeight && config.styleMaxHeight.trim() !== '') style.maxHeight = config.styleMaxHeight;
+      if (config.styleOverflow && config.styleOverflow.trim() !== '') style.overflow = config.styleOverflow;
+      if (config.styleTextOverflow && config.styleTextOverflow.trim() !== '') style.textOverflow = config.styleTextOverflow;
+
+
       const element: any = {
         fieldKey: config.fieldKey,
         type: config.elementType,
-        style: {
-          position: "absolute",
-          top: config.styleTop.endsWith('px') ? config.styleTop : `${config.styleTop}px`,
-          left: config.styleLeft.endsWith('px') ? config.styleLeft : `${config.styleLeft}px`,
-          width: config.styleWidth.endsWith('px') ? config.styleWidth : `${config.styleWidth}px`,
-          height: config.styleHeight.endsWith('px') ? config.styleHeight : `${config.styleHeight}px`,
-          fontSize: config.styleFontSize.endsWith('px') ? config.styleFontSize : `${config.styleFontSize}px`,
-        },
+        style: style,
         className: "text-card-foreground"
       };
-      if (config.elementType === 'iconValue' && config.iconName) {
-        element.icon = config.iconName;
+      if (config.elementType === 'iconValue' && config.iconName && config.iconName.trim() !== '') {
+        element.icon = config.iconName.trim();
       }
       return element;
     });
@@ -743,7 +783,7 @@ export default function EditTemplatePage() {
             <div>
               <Label htmlFor="templateIdDisplay" className="font-semibold">Template ID (Auto-generated, Read-only)</Label>
               <Input
-                id="templateIdDisplay" 
+                id="templateIdDisplay"
                 value={originalTemplateId || ''}
                 readOnly
                 disabled
@@ -753,11 +793,11 @@ export default function EditTemplatePage() {
           </div>
            <div>
             <h3 className="text-xl font-semibold mb-3">Data Fields</h3>
-             <ScrollArea className="pr-3"> {/* Allow this section to grow naturally */}
+             <ScrollArea className="pr-3">
                 <div className="space-y-3">
                     {fields.map((field, index) => (
                     <FieldRow
-                        key={index} 
+                        key={field.key} // Use actual field key once unique generation is solid for re-renders
                         field={field}
                         onChange={(updatedField) => handleFieldChange(index, updatedField)}
                         onRemove={() => handleRemoveField(index)}
@@ -816,21 +856,21 @@ export default function EditTemplatePage() {
                   <>
                     <div>
                       <Label htmlFor="canvasWidthEdit" className="text-sm font-medium">Custom Width (e.g., 280px)</Label>
-                      <Input 
-                        id="canvasWidthEdit" 
-                        value={canvasWidthSetting} 
-                        onChange={(e) => handleCustomDimensionChange('width', e.target.value)} 
-                        disabled={isSaving} 
+                      <Input
+                        id="canvasWidthEdit"
+                        value={canvasWidthSetting}
+                        onChange={(e) => handleCustomDimensionChange('width', e.target.value)}
+                        disabled={isSaving}
                         className="mt-1 h-9 text-sm"
                       />
                     </div>
                     <div>
                       <Label htmlFor="canvasHeightEdit" className="text-sm font-medium">Custom Height (e.g., 400px)</Label>
-                      <Input 
-                        id="canvasHeightEdit" 
-                        value={canvasHeightSetting} 
-                        onChange={(e) => handleCustomDimensionChange('height', e.target.value)} 
-                        disabled={isSaving} 
+                      <Input
+                        id="canvasHeightEdit"
+                        value={canvasHeightSetting}
+                        onChange={(e) => handleCustomDimensionChange('height', e.target.value)}
+                        disabled={isSaving}
                         className="mt-1 h-9 text-sm"
                       />
                     </div>
@@ -850,14 +890,14 @@ export default function EditTemplatePage() {
                 )}
               </div>
             </div>
-            
+
             {/* Layout Elements Configuration */}
             <div className="space-y-3 p-4 border rounded-md bg-muted/30">
               <h4 className="text-lg font-semibold mb-2">Layout Elements (Toggle to Include)</h4>
                {layoutElementGuiConfigs.length > 0 ? (
-                <ScrollArea className="pr-2"> 
+                <ScrollArea className="pr-2">
                   <div className="space-y-2">
-                    {layoutElementGuiConfigs.map((config, index) => (
+                    {layoutElementGuiConfigs.map((config) => (
                       <div key={config.fieldKey} className="p-2.5 border rounded-md bg-card/80 hover:bg-card transition-colors">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -934,6 +974,37 @@ export default function EditTemplatePage() {
                                 <Input id={`el-fontsize-edit-${config.fieldKey}`} value={config.styleFontSize} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleFontSize', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving}/>
                               </div>
                             </div>
+                            { (config.elementType === 'text' || config.elementType === 'textarea') && (
+                              <>
+                                <p className="text-xs text-muted-foreground font-medium mt-2">Advanced Text Styling:</p>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                  <div>
+                                    <Label htmlFor={`el-styleright-edit-${config.fieldKey}`} className="text-xs">Right (CSS)</Label>
+                                    <Input id={`el-styleright-edit-${config.fieldKey}`} value={config.styleRight || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleRight', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving} placeholder="e.g., 10px"/>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor={`el-stylefontweight-edit-${config.fieldKey}`} className="text-xs">Font Weight</Label>
+                                    <Input id={`el-stylefontweight-edit-${config.fieldKey}`} value={config.styleFontWeight || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleFontWeight', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving} placeholder="e.g., bold, 700"/>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor={`el-stylelineheight-edit-${config.fieldKey}`} className="text-xs">Line Height</Label>
+                                    <Input id={`el-stylelineheight-edit-${config.fieldKey}`} value={config.styleLineHeight || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleLineHeight', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving} placeholder="e.g., 1.5, 20px"/>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor={`el-stylemaxheight-edit-${config.fieldKey}`} className="text-xs">Max Height (CSS)</Label>
+                                    <Input id={`el-stylemaxheight-edit-${config.fieldKey}`} value={config.styleMaxHeight || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleMaxHeight', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving} placeholder="e.g., 40px"/>
+                                  </div>
+                                   <div>
+                                    <Label htmlFor={`el-styleoverflow-edit-${config.fieldKey}`} className="text-xs">Overflow</Label>
+                                    <Input id={`el-styleoverflow-edit-${config.fieldKey}`} value={config.styleOverflow || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleOverflow', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving} placeholder="e.g., hidden, auto"/>
+                                  </div>
+                                  <div>
+                                    <Label htmlFor={`el-styletextoverflow-edit-${config.fieldKey}`} className="text-xs">Text Overflow</Label>
+                                    <Input id={`el-styletextoverflow-edit-${config.fieldKey}`} value={config.styleTextOverflow || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleTextOverflow', e.target.value)} className="h-8 text-xs mt-0.5" disabled={isSaving} placeholder="e.g., ellipsis"/>
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -944,11 +1015,11 @@ export default function EditTemplatePage() {
                 <p className="text-sm text-muted-foreground">No data fields defined yet to build layout elements.</p>
               )}
             </div>
-            
+
             <Button onClick={handleGenerateJsonFromBuilder} variant="secondary" size="sm" disabled={isSaving || layoutElementGuiConfigs.length === 0} className="self-start mt-2">
               <Palette className="mr-2 h-4 w-4" /> Generate/Update JSON from Builder
             </Button>
-            
+
             {/* JSON Output and Guides */}
             <div className="mt-4 flex-grow flex flex-col min-h-0">
               <div>
@@ -1081,7 +1152,7 @@ export default function EditTemplatePage() {
             </Button>
           </CardFooter>
         </Card>
-        
+
         <Card className="md:w-[35%] sticky top-20 self-start shadow-lg">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -1115,3 +1186,5 @@ export default function EditTemplatePage() {
   );
 }
 
+
+    
