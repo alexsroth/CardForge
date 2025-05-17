@@ -50,18 +50,13 @@ interface LayoutElementGuiConfig {
   iconName?: string;
   
   styleRight?: string;
-  // styleFontSize?: string; // Replaced by Tailwind
-  // styleFontWeight?: string; // Replaced by Tailwind
-  // styleLineHeight?: string; // Replaced by Tailwind
   styleMaxHeight?: string;
-  // styleOverflow?: string; // Replaced by Tailwind
-  // styleTextOverflow?: string; // Replaced by Tailwind
   styleFontStyle?: string;
   styleTextAlign?: string;
   stylePadding?: string;
   styleBorderTop?: string;
   styleBorderBottom?: string;
-
+  
   tailwindTextColor?: string;
   tailwindFontSize?: string;
   tailwindFontWeight?: string;
@@ -132,7 +127,7 @@ const TAILWIND_TEXT_OVERFLOW = [
 
 
 function mapTemplateFieldToFieldDefinition(field: TemplateField, index: number): TemplateFieldDefinition {
-    // console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Mapping field', field);
+    console.log('[DEBUG] EditTemplatePage/mapTemplateFieldToFieldDefinition: Mapping field', field);
     const definition: TemplateFieldDefinition = {
         _uiId: `loaded-field-${field.key}-${index}-${Date.now()}`, // Ensure stable UI ID for loaded fields
         key: field.key,
@@ -154,7 +149,7 @@ function mapTemplateFieldToFieldDefinition(field: TemplateField, index: number):
 }
 
 function mapFieldDefinitionToTemplateField(def: TemplateFieldDefinition): TemplateField {
-    // console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Mapping def', def);
+    console.log('[DEBUG] EditTemplatePage/mapFieldDefinitionToTemplateField: Mapping def', def);
     const field: TemplateField = {
         key: def.key,
         label: def.label,
@@ -253,15 +248,15 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
 
 const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
   const Icon = (LucideIcons as any)[name];
-   if (!Icon) { 
-    console.warn(`[EditTemplatePage] Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
+   if (!Icon || typeof Icon !== 'function') { 
+    console.warn(`[EditTemplatePage] Lucide icon "${name}" not found or not a function. Fallback HelpCircle will be used.`);
     return <LucideIcons.HelpCircle {...props} />;
   }
   return <Icon {...props} />;
 };
 
 export default function EditTemplatePage() {
-  // console.log('[DEBUG] EditTemplatePage: Component rendering/re-rendering.');
+  console.log('[DEBUG] EditTemplatePage: Component rendering/re-rendering.');
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
@@ -296,7 +291,7 @@ export default function EditTemplatePage() {
     console.log('[DEBUG] EditTemplatePage: Loading template for editing. ID:', templateIdToEdit);
     const templateToEdit = getTemplateById(templateIdToEdit);
     if (templateToEdit) {
-      // console.log('[DEBUG] EditTemplatePage: Template found.', templateToEdit);
+      console.log('[DEBUG] EditTemplatePage: Template found.', templateToEdit);
       setOriginalTemplateId(templateToEdit.id as CardTemplateId);
       setTemplateName(templateToEdit.name);
       const initialFields = templateToEdit.fields.map((field, index) => mapTemplateFieldToFieldDefinition(field, index));
@@ -339,12 +334,7 @@ export default function EditTemplatePage() {
             iconName: existingLayoutElement?.icon || (field.type === 'number' ? 'Coins' : ''),
             
             styleRight: existingLayoutElement?.style?.right || '',
-            // styleFontSize: existingLayoutElement?.style?.fontSize || '12px', // Replaced by Tailwind
-            // styleFontWeight: existingLayoutElement?.style?.fontWeight || 'normal', // Replaced by Tailwind
-            // styleLineHeight: existingLayoutElement?.style?.lineHeight || '', // Replaced by Tailwind
             styleMaxHeight: existingLayoutElement?.style?.maxHeight || '',
-            // styleOverflow: existingLayoutElement?.style?.overflow || '', // Replaced by Tailwind
-            // styleTextOverflow: existingLayoutElement?.style?.textOverflow || '', // Replaced by Tailwind
             styleFontStyle: existingLayoutElement?.style?.fontStyle || 'normal',
             styleTextAlign: existingLayoutElement?.style?.textAlign || 'left',
             stylePadding: existingLayoutElement?.style?.padding || '',
@@ -400,9 +390,7 @@ export default function EditTemplatePage() {
                 styleHeight: field.type === 'textarea' ? '60px' : (field.type === 'placeholderImage' ? '140px' : '20px'),
                 iconName: field.type === 'number' ? 'Coins' : '',
                 styleRight: '', 
-                // styleFontSize: '12px', styleFontWeight: 'normal', styleLineHeight: '', 
                 styleMaxHeight: '', 
-                // styleOverflow: '', styleTextOverflow: '',
                 styleFontStyle: 'normal', styleTextAlign: 'left', stylePadding: '', styleBorderTop: '', styleBorderBottom: '',
                 tailwindTextColor: 'text-card-foreground', tailwindFontSize: 'text-base', tailwindFontWeight: 'font-normal',
                 tailwindLineHeight: 'leading-normal', tailwindOverflow: 'overflow-visible', tailwindTextOverflow: NONE_VALUE,
@@ -418,15 +406,16 @@ export default function EditTemplatePage() {
   }, [templateIdToEdit, getTemplateById, templatesLoading]);
 
   useEffect(() => {
-    // console.log('[DEBUG] EditTemplatePage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
+    console.log('[DEBUG] EditTemplatePage: Syncing fields to layoutElementGuiConfigs. Fields count:', fields.length);
     setLayoutElementGuiConfigs(prevConfigs => {
       const newConfigs = fields.map((field, index) => {
-        const existingConfig = prevConfigs.find(c => c.fieldKey === field.key);
+        const existingConfig = prevConfigs.find(c => c._uiId === field._uiId); // Match by _uiId
         if (existingConfig) {
             return {
                 ...existingConfig,
                 label: field.label, // Keep label in sync
-                originalType: field.type // Keep original type in sync
+                originalType: field.type, // Keep original type in sync
+                fieldKey: field.key // Ensure fieldKey is also updated
             };
         }
         // Field was added, create a new GUI config for it
@@ -446,22 +435,20 @@ export default function EditTemplatePage() {
           styleHeight: field.type === 'textarea' ? '60px' : (field.type === 'placeholderImage' ? '140px' : '20px'),
           iconName: field.type === 'number' ? 'Coins' : '',
           styleRight: '', 
-          // styleFontSize: '12px', styleFontWeight: 'normal', styleLineHeight: '', 
           styleMaxHeight: '', 
-          // styleOverflow: '', styleTextOverflow: '',
           styleFontStyle: 'normal', styleTextAlign: 'left', stylePadding: '', styleBorderTop: '', styleBorderBottom: '',
           tailwindTextColor: 'text-card-foreground', tailwindFontSize: 'text-base', tailwindFontWeight: 'font-normal',
           tailwindLineHeight: 'leading-normal', tailwindOverflow: 'overflow-visible', tailwindTextOverflow: NONE_VALUE,
         };
       });
       // Filter out GUI configs for fields that no longer exist
-      return newConfigs.filter(nc => fields.some(f => f.key === nc.fieldKey));
+      return newConfigs.filter(nc => fields.some(f => f._uiId === nc._uiId));
     });
   }, [fields]);
 
 
   useEffect(() => {
-    // console.log('[DEBUG] EditTemplatePage: Generating sampleCardForPreview. Fields count:', fields.length, 'Original ID:', originalTemplateId);
+    console.log('[DEBUG] EditTemplatePage: Generating sampleCardForPreview. Fields count:', fields.length, 'Original ID:', originalTemplateId);
     const currentTemplateIdForPreview = originalTemplateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> = {
       id: 'preview-card',
@@ -575,70 +562,64 @@ export default function EditTemplatePage() {
     ]);
   };
 
-  const handleRemoveField = (index: number) => {
-    console.log('[DEBUG] EditTemplatePage/handleRemoveField: Removing field at index', index);
-    const fieldToRemove = fields[index];
-    setFields(fields.filter((_, i) => i !== index));
-    // Also remove from GUI configs
-    setLayoutElementGuiConfigs(prev => prev.filter(c => c.fieldKey !== fieldToRemove.key));
+  const handleRemoveField = (uiIdToRemove: string) => {
+    console.log('[DEBUG] EditTemplatePage/handleRemoveField: Removing field with _uiId', uiIdToRemove);
+    const fieldToRemove = fields.find(f => f._uiId === uiIdToRemove);
+    setFields(fields.filter(f => f._uiId !== uiIdToRemove));
+    if (fieldToRemove) {
+      setLayoutElementGuiConfigs(prev => prev.filter(c => c._uiId !== fieldToRemove._uiId));
+    }
   };
+  
+  const handleFieldChange = (uiIdToUpdate: string, updatedFieldDefinition: Partial<TemplateFieldDefinition>) => {
+    console.log('[DEBUG] EditTemplatePage/handleFieldChange: Updating field _uiId:', uiIdToUpdate, updatedFieldDefinition);
+    setFields(prevFields =>
+      prevFields.map(field => {
+        if (field._uiId === uiIdToUpdate) {
+          const oldField = { ...field };
+          let modifiedField = { ...field, ...updatedFieldDefinition };
 
-  const handleFieldChange = (index: number, updatedFieldDefinition: TemplateFieldDefinition) => {
-    // console.log('[DEBUG] EditTemplatePage/handleFieldChange: Updating field at index', index, updatedFieldDefinition);
-    const newFields = [...fields];
-    const oldField = newFields[index];
-    const oldFieldKey = oldField.key;
-    let modifiedField = { ...oldField, ...updatedFieldDefinition };
-    if (updatedFieldDefinition.label !== undefined && updatedFieldDefinition.label !== oldField.label) {
-        if (oldField.key === toCamelCase(oldField.label) || oldField.key.startsWith(toCamelCase(oldField.label).replace(/[\d]+$/, ''))) {
+          if (updatedFieldDefinition.label !== undefined && updatedFieldDefinition.label !== oldField.label) {
             let baseKey = toCamelCase(updatedFieldDefinition.label);
             if (!baseKey) {
-                const prefix = 'field';
-                let fallbackCounter = 1;
-                let potentialKey = `${prefix}${fallbackCounter}`;
-                while(newFields.some((f,i) => i !== index && f.key === potentialKey)) {
-                    fallbackCounter++;
-                    potentialKey = `${prefix}${fallbackCounter}`;
-                }
-                baseKey = potentialKey;
+              const prefix = 'field';
+              let fallbackCounter = 1;
+              let potentialKey = `${prefix}${fallbackCounter}`;
+              while (prevFields.some(f => f._uiId !== uiIdToUpdate && f.key === potentialKey)) {
+                fallbackCounter++;
+                potentialKey = `${prefix}${fallbackCounter}`;
+              }
+              baseKey = potentialKey;
             }
             let newKey = baseKey;
             let keyCounter = 1;
-            while (newFields.some((f, i) => i !== index && f.key === newKey)) {
-                newKey = `${baseKey}${keyCounter}`;
-                keyCounter++;
+            while (prevFields.some(f => f._uiId !== uiIdToUpdate && f.key === newKey)) {
+              newKey = `${baseKey}${keyCounter}`;
+              keyCounter++;
             }
             modifiedField.key = newKey;
-        }
-    }
-    if (updatedFieldDefinition.type === 'placeholderImage' && oldField.type !== 'placeholderImage') {
-        modifiedField.placeholderConfigWidth = modifiedField.placeholderConfigWidth || parseInt(canvasWidthSetting) || DEFAULT_CANVAS_WIDTH;
-        modifiedField.placeholderConfigHeight = modifiedField.placeholderConfigHeight || 140;
-    } else if (updatedFieldDefinition.type !== 'placeholderImage' && oldField.type === 'placeholderImage') {
-        modifiedField.placeholderConfigWidth = undefined;
-        modifiedField.placeholderConfigHeight = undefined;
-        modifiedField.placeholderConfigBgColor = undefined;
-        modifiedField.placeholderConfigTextColor = undefined;
-        modifiedField.placeholderConfigText = undefined;
-    }
-    newFields[index] = modifiedField;
-    setFields(newFields);
+          }
 
-    // Update corresponding GUI config if field key changed or just label/type
-     if (modifiedField.key !== oldFieldKey) {
-        setLayoutElementGuiConfigs(prev => prev.map(c => 
-            c.fieldKey === oldFieldKey ? { ...c, fieldKey: modifiedField.key, label: modifiedField.label, originalType: modifiedField.type } : c
-        ));
-    } else {
-        setLayoutElementGuiConfigs(prev => prev.map(c =>
-            c.fieldKey === modifiedField.key ? { ...c, label: modifiedField.label, originalType: modifiedField.type } : c
-        ));
-    }
+          if (updatedFieldDefinition.type === 'placeholderImage' && oldField.type !== 'placeholderImage') {
+            modifiedField.placeholderConfigWidth = modifiedField.placeholderConfigWidth || parseInt(canvasWidthSetting) || DEFAULT_CANVAS_WIDTH;
+            modifiedField.placeholderConfigHeight = modifiedField.placeholderConfigHeight || 140;
+          } else if (updatedFieldDefinition.type !== 'placeholderImage' && oldField.type === 'placeholderImage') {
+            modifiedField.placeholderConfigWidth = undefined;
+            modifiedField.placeholderConfigHeight = undefined;
+            modifiedField.placeholderConfigBgColor = undefined;
+            modifiedField.placeholderConfigTextColor = undefined;
+            modifiedField.placeholderConfigText = undefined;
+          }
+          return modifiedField;
+        }
+        return field;
+      })
+    );
   };
 
   const handleLayoutDefinitionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
-    // console.log('[DEBUG] EditTemplatePage/handleLayoutDefinitionChange: Layout string changed.');
+    console.log('[DEBUG] EditTemplatePage/handleLayoutDefinitionChange: Layout string changed.');
     setLayoutDefinition(newLayoutDef);
     if (layoutJsonError) setLayoutJsonError(null);
   };
@@ -648,7 +629,7 @@ export default function EditTemplatePage() {
       const parsed = JSON.parse(layoutDefinition);
       setLayoutDefinition(JSON.stringify(parsed, null, 2));
       setLayoutJsonError(null);
-      // console.log('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: JSON is valid and formatted.');
+      console.log('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: JSON is valid and formatted.');
       return true;
     } catch (e: any) {
       setLayoutJsonError(`Invalid JSON: ${e.message}`);
@@ -657,18 +638,19 @@ export default function EditTemplatePage() {
     }
   };
 
-  const handleGuiConfigChange = (fieldKey: string, property: keyof LayoutElementGuiConfig, value: any) => {
+  const handleGuiConfigChange = (targetUiId: string, property: keyof LayoutElementGuiConfig, value: any) => {
+    console.log(`[DEBUG] EditTemplatePage/handleGuiConfigChange: fieldUiId: ${targetUiId}, prop: ${property}, value: ${value}`);
     setLayoutElementGuiConfigs(prev =>
       prev.map(config =>
-        config.fieldKey === fieldKey ? { ...config, [property]: value } : config
+        config._uiId === targetUiId ? { ...config, [property]: value } : config
       )
     );
   };
 
-  const handleToggleGuiExpand = (fieldKey: string) => {
+  const handleToggleGuiExpand = (targetUiId: string) => {
     setLayoutElementGuiConfigs(prev =>
       prev.map(config =>
-        config.fieldKey === fieldKey ? { ...config, isExpandedInGui: !config.isExpandedInGui } : config
+        config._uiId === targetUiId ? { ...config, isExpandedInGui: !config.isExpandedInGui } : config
       )
     );
   };
@@ -698,19 +680,19 @@ export default function EditTemplatePage() {
       if (config.originalType === 'textarea' || config.elementType === 'textarea') classNames.push('whitespace-pre-wrap');
       
       if (config.tailwindTextColor && config.tailwindTextColor.trim() !== '' && config.tailwindTextColor !== NONE_VALUE) classNames.push(config.tailwindTextColor);
-      else classNames.push('text-card-foreground');
+      else if (config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') classNames.push('text-card-foreground');
       
       if (config.tailwindFontSize && config.tailwindFontSize.trim() !== '' && config.tailwindFontSize !== NONE_VALUE) classNames.push(config.tailwindFontSize);
-      else classNames.push('text-base');
+      else if (config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') classNames.push('text-base');
       
       if (config.tailwindFontWeight && config.tailwindFontWeight.trim() !== '' && config.tailwindFontWeight !== NONE_VALUE) classNames.push(config.tailwindFontWeight);
-      else classNames.push('font-normal');
+      else if (config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') classNames.push('font-normal');
 
       if (config.tailwindLineHeight && config.tailwindLineHeight.trim() !== '' && config.tailwindLineHeight !== NONE_VALUE) classNames.push(config.tailwindLineHeight);
-      // else classNames.push('leading-normal');
+      else if (config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') classNames.push('leading-normal');
 
       if (config.tailwindOverflow && config.tailwindOverflow.trim() !== '' && config.tailwindOverflow !== NONE_VALUE) classNames.push(config.tailwindOverflow);
-      // else classNames.push('overflow-visible');
+      else if (config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') classNames.push('overflow-visible');
 
       if (config.tailwindTextOverflow && config.tailwindTextOverflow.trim() !== '' && config.tailwindTextOverflow !== NONE_VALUE) classNames.push(config.tailwindTextOverflow);
 
@@ -743,7 +725,7 @@ export default function EditTemplatePage() {
 
 
   const handleSaveTemplate = async () => {
-    // console.log('[DEBUG] EditTemplatePage/handleSaveTemplate: Attempting to save.');
+    console.log('[DEBUG] EditTemplatePage/handleSaveTemplate: Attempting to save.');
     if (!originalTemplateId) {
         toast({ title: "Error", description: "Original template ID is missing. Cannot update.", variant: "destructive" });
         return;
@@ -797,7 +779,7 @@ export default function EditTemplatePage() {
       fields: fields.map(mapFieldDefinitionToTemplateField),
       layoutDefinition: finalLayoutDefinition,
     };
-    // console.log('[DEBUG] EditTemplatePage/handleSaveTemplate: Calling updateTemplate with:', updatedTemplateData);
+    console.log('[DEBUG] EditTemplatePage/handleSaveTemplate: Calling updateTemplate with:', updatedTemplateData);
     const result = await updateTemplate(updatedTemplateData);
     if (result.success) {
       toast({
@@ -921,22 +903,24 @@ export default function EditTemplatePage() {
           </div>
            <div>
             <h3 className="text-xl font-semibold mb-3">Data Fields</h3>
-            <div className="space-y-3">
-                {fields.map((field, index) => (
-                <FieldRow
-                    key={field._uiId || index} // Use stable _uiId
-                    field={field}
-                    onChange={(updatedField) => handleFieldChange(index, updatedField)}
-                    onRemove={() => handleRemoveField(index)}
-                    isSaving={isSaving}
-                />
-                ))}
-                {fields.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4 border rounded-md">
-                    No fields added yet. Click "Add Field" to begin.
-                </p>
-                )}
-            </div>
+            <ScrollArea className="pr-3"> 
+                <div className="space-y-3">
+                    {fields.map((field) => (
+                    <FieldRow
+                        key={field._uiId || field.key} 
+                        field={field}
+                        onChange={(updatedField) => handleFieldChange(field._uiId || field.key, updatedField)}
+                        onRemove={() => handleRemoveField(field._uiId || field.key)}
+                        isSaving={isSaving}
+                    />
+                    ))}
+                    {fields.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4 border rounded-md">
+                        No fields added yet. Click "Add Field" to begin.
+                    </p>
+                    )}
+                </div>
+            </ScrollArea>
             <Button
               onClick={handleAddField}
               variant="outline"
@@ -951,15 +935,16 @@ export default function EditTemplatePage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-1 gap-8 items-start">
-        <Card className="md:w-full flex flex-col shadow-md">
+      <div className="md:flex md:flex-row md:gap-8 items-start">
+        <Card className="md:w-[65%] flex flex-col shadow-md mb-8 md:mb-0">
           <CardHeader>
               <CardTitle className="text-xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
               <CardDescription className="text-md">
-                Configure canvas size, choose which fields to display, and define their basic layout properties. The generated JSON below can be further customized.
+                Configure canvas size, choose which fields to display, and define their layout properties using the GUI. The generated JSON below can be further customized.
               </CardDescription>
           </CardHeader>
           <CardContent className="flex-grow space-y-4 flex flex-col">
+            {/* Canvas Setup */}
             <div className="space-y-3 p-4 border rounded-md bg-muted/30">
               <h4 className="text-lg font-semibold mb-2">Card Canvas Setup</h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
@@ -1015,6 +1000,7 @@ export default function EditTemplatePage() {
               </div>
             </div>
 
+            {/* Layout Elements GUI */}
             <div className="space-y-3 p-4 border rounded-md bg-muted/30">
               <h4 className="text-lg font-semibold mb-2">Layout Elements (Toggle to Include & Configure)</h4>
                <ScrollArea className="pr-2"> 
@@ -1024,28 +1010,27 @@ export default function EditTemplatePage() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Switch
-                              id={`enable-edit-${config.fieldKey}`}
+                              id={`enable-edit-${config._uiId}`}
                               checked={config.isEnabledOnCanvas}
-                              onCheckedChange={(checked) => handleGuiConfigChange(config.fieldKey, 'isEnabledOnCanvas', checked)}
+                              onCheckedChange={(checked) => handleGuiConfigChange(config._uiId, 'isEnabledOnCanvas', checked)}
                               disabled={isSaving}
                             />
-                            <Label htmlFor={`enable-edit-${config.fieldKey}`} className="text-sm font-medium cursor-pointer">
+                            <Label htmlFor={`enable-edit-${config._uiId}`} className="text-sm font-medium cursor-pointer">
                               {config.label} <span className="text-xs text-muted-foreground">({config.fieldKey})</span>
                             </Label>
                           </div>
-                          <Button variant="ghost" size="icon" onClick={() => handleToggleGuiExpand(config.fieldKey)} className="h-7 w-7 text-muted-foreground">
+                          <Button variant="ghost" size="icon" onClick={() => handleToggleGuiExpand(config._uiId)} className="h-7 w-7 text-muted-foreground">
                             {config.isExpandedInGui ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </Button>
                         </div>
                         {config.isExpandedInGui && config.isEnabledOnCanvas && (
                           <div className="mt-3 pt-3 border-t border-dashed space-y-3">
-                            {/* Element Type & Icon Name */}
                            <h5 className="text-xs text-muted-foreground font-semibold pt-1">Element Type & Icon</h5>
                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                              <Label htmlFor={`el-type-edit-${config.fieldKey}`} className="text-xs">Element Type</Label>
-                              <Select value={config.elementType} onValueChange={(value) => handleGuiConfigChange(config.fieldKey, 'elementType', value)} disabled={isSaving}>
-                                <SelectTrigger id={`el-type-edit-${config.fieldKey}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+                              <Label htmlFor={`el-type-edit-${config._uiId}`} className="text-xs">Element Type</Label>
+                              <Select value={config.elementType} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'elementType', value)} disabled={isSaving}>
+                                <SelectTrigger id={`el-type-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="text">Text</SelectItem><SelectItem value="textarea">Textarea</SelectItem>
                                   <SelectItem value="image">Image</SelectItem><SelectItem value="iconValue">Icon & Value</SelectItem>
@@ -1055,8 +1040,8 @@ export default function EditTemplatePage() {
                             </div>
                             {config.elementType === 'iconValue' && (
                               <div>
-                                <Label htmlFor={`el-icon-edit-${config.fieldKey}`} className="text-xs">Icon Name (Lucide)</Label>
-                                <Input id={`el-icon-edit-${config.fieldKey}`} value={config.iconName || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'iconName', e.target.value)} placeholder="e.g., Coins" className="h-8 text-xs mt-0.5" disabled={isSaving}/>
+                                <Label htmlFor={`el-icon-edit-${config._uiId}`} className="text-xs">Icon Name (Lucide)</Label>
+                                <Input id={`el-icon-edit-${config._uiId}`} value={config.iconName || ''} onChange={(e) => handleGuiConfigChange(config._uiId, 'iconName', e.target.value)} placeholder="e.g., Coins" className="h-8 text-xs mt-0.5" disabled={isSaving}/>
                               </div>
                             )}
                           </div>
@@ -1066,56 +1051,55 @@ export default function EditTemplatePage() {
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                 {['styleTop', 'styleLeft', 'styleRight', 'styleWidth', 'styleHeight', 'styleMaxHeight', 'stylePadding'].map(prop => (
                                     <div key={prop}>
-                                        <Label htmlFor={`el-${prop}-edit-${config.fieldKey}`} className="text-xs capitalize">{prop.replace('style', '').replace(/([A-Z])/g, ' $1').trim()}</Label>
-                                        <Input id={`el-${prop}-edit-${config.fieldKey}`} value={(config as any)[prop] || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, prop as keyof LayoutElementGuiConfig, e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 10px or auto" disabled={isSaving}/>
+                                        <Label htmlFor={`el-${prop}-edit-${config._uiId}`} className="text-xs capitalize">{prop.replace('style', '').replace(/([A-Z])/g, ' $1').trim()}</Label>
+                                        <Input id={`el-${prop}-edit-${config._uiId}`} value={(config as any)[prop] || ''} onChange={(e) => handleGuiConfigChange(config._uiId, prop as keyof LayoutElementGuiConfig, e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 10px or auto" disabled={isSaving}/>
                                     </div>
                                 ))}
                             </div>
                             
-                            {/* Typography (Conditional for text-based elements) */}
                             {(config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') && (
                               <>
                                 <h5 className="text-xs text-muted-foreground font-semibold mt-2 pt-2 border-t border-dotted">Typography</h5>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                   <div>
-                                    <Label htmlFor={`el-twTextColor-edit-${config.fieldKey}`} className="text-xs">Text Color (Tailwind)</Label>
-                                    <Select value={config.tailwindTextColor || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config.fieldKey, 'tailwindTextColor', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
-                                      <SelectTrigger id={`el-twTextColor-edit-${config.fieldKey}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select color" /></SelectTrigger>
+                                    <Label htmlFor={`el-twTextColor-edit-${config._uiId}`} className="text-xs">Text Color (Tailwind)</Label>
+                                    <Select value={config.tailwindTextColor || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindTextColor', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
+                                      <SelectTrigger id={`el-twTextColor-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select color" /></SelectTrigger>
                                       <SelectContent>{TAILWIND_TEXT_COLORS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                   </div>
                                   <div>
-                                    <Label htmlFor={`el-twFontSize-edit-${config.fieldKey}`} className="text-xs">Font Size (Tailwind)</Label>
-                                    <Select value={config.tailwindFontSize || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config.fieldKey, 'tailwindFontSize', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
-                                      <SelectTrigger id={`el-twFontSize-edit-${config.fieldKey}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select size" /></SelectTrigger>
+                                    <Label htmlFor={`el-twFontSize-edit-${config._uiId}`} className="text-xs">Font Size (Tailwind)</Label>
+                                    <Select value={config.tailwindFontSize || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindFontSize', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
+                                      <SelectTrigger id={`el-twFontSize-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select size" /></SelectTrigger>
                                       <SelectContent>{TAILWIND_FONT_SIZES.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                   </div>
                                   <div>
-                                    <Label htmlFor={`el-twFontWeight-edit-${config.fieldKey}`} className="text-xs">Font Weight (Tailwind)</Label>
-                                    <Select value={config.tailwindFontWeight || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config.fieldKey, 'tailwindFontWeight', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
-                                      <SelectTrigger id={`el-twFontWeight-edit-${config.fieldKey}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select weight" /></SelectTrigger>
+                                    <Label htmlFor={`el-twFontWeight-edit-${config._uiId}`} className="text-xs">Font Weight (Tailwind)</Label>
+                                    <Select value={config.tailwindFontWeight || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindFontWeight', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
+                                      <SelectTrigger id={`el-twFontWeight-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select weight" /></SelectTrigger>
                                       <SelectContent>{TAILWIND_FONT_WEIGHTS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                   </div>
                                   <div>
-                                    <Label htmlFor={`el-twLineHeight-edit-${config.fieldKey}`} className="text-xs">Line Height (Tailwind)</Label>
-                                    <Select value={config.tailwindLineHeight || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config.fieldKey, 'tailwindLineHeight', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
-                                      <SelectTrigger id={`el-twLineHeight-edit-${config.fieldKey}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select line height" /></SelectTrigger>
+                                    <Label htmlFor={`el-twLineHeight-edit-${config._uiId}`} className="text-xs">Line Height (Tailwind)</Label>
+                                    <Select value={config.tailwindLineHeight || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindLineHeight', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
+                                      <SelectTrigger id={`el-twLineHeight-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select line height" /></SelectTrigger>
                                       <SelectContent>{TAILWIND_LINE_HEIGHTS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                   </div>
                                   <div>
-                                    <Label htmlFor={`el-styleFontStyle-edit-${config.fieldKey}`} className="text-xs">Font Style (CSS)</Label>
-                                     <Select value={config.styleFontStyle || 'normal'} onValueChange={(value) => handleGuiConfigChange(config.fieldKey, 'styleFontStyle', value)} disabled={isSaving}>
-                                      <SelectTrigger id={`el-styleFontStyle-edit-${config.fieldKey}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+                                    <Label htmlFor={`el-styleFontStyle-edit-${config._uiId}`} className="text-xs">Font Style (CSS)</Label>
+                                     <Select value={config.styleFontStyle || 'normal'} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'styleFontStyle', value)} disabled={isSaving}>
+                                      <SelectTrigger id={`el-styleFontStyle-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
                                       <SelectContent><SelectItem value="normal">Normal</SelectItem><SelectItem value="italic">Italic</SelectItem></SelectContent>
                                     </Select>
                                   </div>
                                   <div>
-                                    <Label htmlFor={`el-styleTextAlign-edit-${config.fieldKey}`} className="text-xs">Text Align (CSS)</Label>
-                                    <Select value={config.styleTextAlign || 'left'} onValueChange={(value) => handleGuiConfigChange(config.fieldKey, 'styleTextAlign', value)} disabled={isSaving}>
-                                      <SelectTrigger id={`el-styleTextAlign-edit-${config.fieldKey}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+                                    <Label htmlFor={`el-styleTextAlign-edit-${config._uiId}`} className="text-xs">Text Align (CSS)</Label>
+                                    <Select value={config.styleTextAlign || 'left'} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'styleTextAlign', value)} disabled={isSaving}>
+                                      <SelectTrigger id={`el-styleTextAlign-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
                                       <SelectContent>
                                         <SelectItem value="left">Left</SelectItem><SelectItem value="center">Center</SelectItem>
                                         <SelectItem value="right">Right</SelectItem><SelectItem value="justify">Justify</SelectItem>
@@ -1126,32 +1110,31 @@ export default function EditTemplatePage() {
                                 <h5 className="text-xs text-muted-foreground font-semibold mt-2 pt-2 border-t border-dotted">Overflow & Display (Text - Tailwind)</h5>
                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                   <div>
-                                    <Label htmlFor={`el-twOverflow-edit-${config.fieldKey}`} className="text-xs">Overflow</Label>
-                                    <Select value={config.tailwindOverflow || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config.fieldKey, 'tailwindOverflow', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
-                                      <SelectTrigger id={`el-twOverflow-edit-${config.fieldKey}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select overflow" /></SelectTrigger>
+                                    <Label htmlFor={`el-twOverflow-edit-${config._uiId}`} className="text-xs">Overflow</Label>
+                                    <Select value={config.tailwindOverflow || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindOverflow', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
+                                      <SelectTrigger id={`el-twOverflow-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select overflow" /></SelectTrigger>
                                       <SelectContent>{TAILWIND_OVERFLOW.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                   </div>
                                   <div>
-                                    <Label htmlFor={`el-twTextOverflow-edit-${config.fieldKey}`} className="text-xs">Text Overflow</Label>
-                                    <Select value={config.tailwindTextOverflow || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config.fieldKey, 'tailwindTextOverflow', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
-                                      <SelectTrigger id={`el-twTextOverflow-edit-${config.fieldKey}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select text overflow" /></SelectTrigger>
+                                    <Label htmlFor={`el-twTextOverflow-edit-${config._uiId}`} className="text-xs">Text Overflow</Label>
+                                    <Select value={config.tailwindTextOverflow || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindTextOverflow', value === NONE_VALUE ? '' : value)} disabled={isSaving}>
+                                      <SelectTrigger id={`el-twTextOverflow-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue placeholder="Select text overflow" /></SelectTrigger>
                                       <SelectContent>{TAILWIND_TEXT_OVERFLOW.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent>
                                     </Select>
                                   </div>
                                 </div>
                               </>
                             )}
-                            {/* Borders */}
                             <h5 className="text-xs text-muted-foreground font-semibold mt-2 pt-2 border-t border-dotted">Borders (CSS)</h5>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                <div>
-                                  <Label htmlFor={`el-styleBorderTop-edit-${config.fieldKey}`} className="text-xs">Border Top</Label>
-                                  <Input id={`el-styleBorderTop-edit-${config.fieldKey}`} value={config.styleBorderTop || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleBorderTop', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 1px solid #ccc" disabled={isSaving}/>
+                                  <Label htmlFor={`el-styleBorderTop-edit-${config._uiId}`} className="text-xs">Border Top</Label>
+                                  <Input id={`el-styleBorderTop-edit-${config._uiId}`} value={config.styleBorderTop || ''} onChange={(e) => handleGuiConfigChange(config._uiId, 'styleBorderTop', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 1px solid #ccc" disabled={isSaving}/>
                               </div>
                               <div>
-                                  <Label htmlFor={`el-styleBorderBottom-edit-${config.fieldKey}`} className="text-xs">Border Bottom</Label>
-                                  <Input id={`el-styleBorderBottom-edit-${config.fieldKey}`} value={config.styleBorderBottom || ''} onChange={(e) => handleGuiConfigChange(config.fieldKey, 'styleBorderBottom', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 1px solid #ccc" disabled={isSaving}/>
+                                  <Label htmlFor={`el-styleBorderBottom-edit-${config._uiId}`} className="text-xs">Border Bottom</Label>
+                                  <Input id={`el-styleBorderBottom-edit-${config._uiId}`} value={config.styleBorderBottom || ''} onChange={(e) => handleGuiConfigChange(config._uiId, 'styleBorderBottom', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 1px solid #ccc" disabled={isSaving}/>
                               </div>
                             </div>
                           </div>
@@ -1182,19 +1165,20 @@ export default function EditTemplatePage() {
               </div>
               {layoutJsonError && (
                 <Alert variant="destructive" className="mt-2">
+                   <AlertTriangle className="h-4 w-4 !text-destructive-foreground" />
                   <AlertTitle>JSON Error</AlertTitle>
                   <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
                 </Alert>
               )}
-              <Accordion type="single" collapsible className="w-full mt-3">
-                <AccordionItem value="lucide-icon-explorer">
+              <Accordion type="single" collapsible className="w-full mt-3" defaultValue="lucide-icon-explorer">
+                 <AccordionItem value="lucide-icon-explorer">
                    <AccordionTrigger className="text-sm py-2 hover:no-underline">
                     <div className="flex items-center text-muted-foreground">
                       <Copy className="mr-2 h-4 w-4" /> Browse Lucide Icons
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="text-xs p-3 border rounded-md bg-muted/30">
-                    <p className="font-semibold mb-1 mt-0">Common Lucide Icons (Click to Copy Name):</p>
+                    <p className="font-semibold mb-1 mt-0">Common Lucide Icons (Click icon to Copy Name):</p>
                     <ScrollArea className="max-h-[120px] bg-background/50 p-2 rounded border overflow-y-auto">
                        <div className={cn("grid gap-1", "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16")}>
                         {commonLucideIconsForGuide.map(iconName => (
