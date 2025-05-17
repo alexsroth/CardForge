@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Save, AlertTriangle, Loader2, ArrowLeft, Eye, HelpCircle, Copy, Layout, Settings, Palette } from 'lucide-react';
+import { PlusCircle, Save, AlertTriangle, Loader2, ArrowLeft, Eye, HelpCircle, Copy, Palette } from 'lucide-react';
 import FieldRow, { type TemplateFieldDefinition } from '@/components/template-designer/field-row';
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates, type CardTemplateId as ContextCardTemplateId } from '@/contexts/TemplateContext';
@@ -604,6 +604,7 @@ export default function EditTemplatePage() {
 
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
+      {/* Card for Template Info and Data Fields */}
       <Card className="shadow-md">
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -645,7 +646,7 @@ export default function EditTemplatePage() {
               <div className="space-y-3">
                 {fields.map((field, index) => (
                   <FieldRow
-                    key={index} // Consider field.key or unique id
+                    key={index} 
                     field={field}
                     onChange={(updatedField) => handleFieldChange(index, updatedField)}
                     onRemove={() => handleRemoveField(index)}
@@ -673,7 +674,9 @@ export default function EditTemplatePage() {
         </CardContent>
       </Card>
 
+      {/* Row for Visual Layout Builder and Live Preview */}
       <div className="flex flex-col md:flex-row gap-6">
+        {/* Visual Layout Builder & JSON Output Card */}
         <Card className="md:w-[65%] flex flex-col shadow-md">
           <CardHeader>
               <CardTitle className="text-xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
@@ -701,7 +704,7 @@ export default function EditTemplatePage() {
             <div className="space-y-2 p-3 border rounded-md bg-muted/30">
               <h4 className="text-md font-semibold mb-1">Layout Elements (Toggle to Include)</h4>
               {layoutElementGuiConfigs.length > 0 ? (
-                <ScrollArea className="max-h-[150px] pr-2">
+                 <ScrollArea className="max-h-[250px] pr-2">
                   <div className="space-y-1.5">
                     {layoutElementGuiConfigs.map(config => (
                       <div key={config.fieldKey} className="flex items-center justify-between p-1.5 hover:bg-muted/70 rounded-sm">
@@ -727,29 +730,31 @@ export default function EditTemplatePage() {
               <Palette className="mr-2 h-4 w-4" /> Generate/Update JSON from Builder
             </Button>
             
-            <div>
-              <Label htmlFor="layoutDefinition" className="text-sm font-medium">Layout Definition JSON (Read-Only after generating from builder)</Label>
-              <Textarea
-                id="layoutDefinition"
-                value={layoutDefinition}
-                onChange={handleLayoutDefinitionChange}
-                onBlur={validateAndFormatLayoutJson}
-                placeholder='Click "Generate/Update JSON from Builder" above, or paste your JSON here.'
-                rows={15}
-                className="font-mono text-xs flex-grow min-h-[200px] max-h-[300px] bg-muted/20"
-                disabled={isSaving}
-                readOnly
-              />
-            </div>
-            {layoutJsonError && (
-              <Alert variant="destructive" className="mt-2">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>JSON Error</AlertTitle>
-                <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
-              </Alert>
-            )}
-            <Accordion type="single" collapsible className="w-full mt-2" defaultValue="layout-guide">
-              <AccordionItem value="layout-guide">
+            {/* JSON Output & Guides Section */}
+            <div className="mt-2 flex-grow flex flex-col min-h-0">
+              <div>
+                <Label htmlFor="layoutDefinition" className="text-sm font-medium">Layout Definition JSON (Read-Only after generating from builder)</Label>
+                <Textarea
+                  id="layoutDefinition"
+                  value={layoutDefinition}
+                  onChange={handleLayoutDefinitionChange}
+                  onBlur={validateAndFormatLayoutJson}
+                  placeholder='Click "Generate/Update JSON from Builder" above, or paste your JSON here.'
+                  rows={15}
+                  className="font-mono text-xs flex-grow min-h-[200px] max-h-[300px] bg-muted/20"
+                  disabled={isSaving}
+                  readOnly
+                />
+              </div>
+              {layoutJsonError && (
+                <Alert variant="destructive" className="mt-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>JSON Error</AlertTitle>
+                  <AlertDescription className="text-xs">{layoutJsonError}</AlertDescription>
+                </Alert>
+              )}
+              <Accordion type="single" collapsible className="w-full mt-2" defaultValue="layout-guide">
+                <AccordionItem value="layout-guide">
                   <AccordionTrigger className="text-sm py-2 hover:no-underline">
                     <div className="flex items-center text-muted-foreground">
                       <HelpCircle className="mr-2 h-4 w-4" /> Show Layout JSON Guide
@@ -774,23 +779,48 @@ export default function EditTemplatePage() {
                     <p className="text-xs mt-1 mb-2">Use these keys in the <code>fieldKey</code> property of elements below if manually editing JSON.</p>
                     <p className="font-semibold mb-1 mt-3"><code>elements</code> array (each object defines one visual piece):</p>
                     <ul className="list-disc list-inside pl-2 space-y-1">
-                      <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above.</li>
+                      <li><strong><code>fieldKey</code></strong>: (String) **Must exactly match** a 'Field Key' from the list above (e.g., if you have "Card Title" with key "cardTitle", use "cardTitle").</li>
                       <li><strong><code>type</code></strong>: (String) One of: <code>"text"</code>, <code>"textarea"</code>, <code>"image"</code>, <code>"iconValue"</code>, <code>"iconFromData"</code>. The builder currently defaults to "text".</li>
-                      <li><strong><code>style</code></strong>: (Object) CSS-in-JS. The builder generates basic positional styles.</li>
+                      <li><strong><code>style</code></strong>: (Object) CSS-in-JS (e.g., {`{ "position": "absolute", "top": "10px", "fontSize": "1.2em" }`}). Use camelCase for CSS properties.</li>
                       <li><strong><code>className</code></strong>: (String, Optional) Tailwind CSS classes.</li>
-                      <li><strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue".</li>
-                      <li><strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon.</li>
+                      <li><strong><code>prefix</code> / <code>suffix</code></strong>: (String, Optional) For "text", "iconValue". Text added before/after the field's value.</li>
+                      <li><strong><code>icon</code></strong>: (String, Optional) For "iconValue" type. Name of a Lucide icon. **Ensure the icon exists in `lucide-react`.**</li>
                     </ul>
                     <p className="mt-3 italic">After generating JSON with the builder, you can manually refine it in the textarea if needed, then validate by blurring. Final save uses the textarea content.</p>
                     <p className="font-semibold mb-1 mt-4">Example Element Snippets (for manual JSON editing):</p>
                     <pre className="text-xs bg-background/50 p-2 rounded border whitespace-pre-wrap">
 {`// For a simple text display
 {
-  "fieldKey": "yourCardNameFieldKey", 
+  "fieldKey": "yourCardNameFieldKey", // Replace with one of YOUR field keys from above
   "type": "text",
   "style": { "position": "absolute", "top": "20px", "left": "20px", "fontWeight": "bold" }
 }
-// ... other examples remain the same ...`}
+
+// For an image (ensure 'yourImageUrlFieldKey' is a field of type 'text' or 'placeholderImage' in Data Fields)
+{
+  "fieldKey": "yourImageUrlFieldKey", // Replace
+  "type": "image",
+  "style": { 
+    "position": "absolute", "top": "50px", "left": "20px", 
+    "width": "240px", "height": "120px", "objectFit": "cover", "borderRadius": "4px" 
+  }
+}
+
+// For text with a preceding icon (ensure 'yourManaCostFieldKey' exists)
+{
+  "fieldKey": "yourManaCostFieldKey", // Replace
+  "type": "iconValue",
+  "icon": "Coins", // Lucide icon name
+  "style": { "position": "absolute", "top": "20px", "right": "20px" }
+}
+
+// For an icon whose name is stored in your card data
+// (ensure 'yourIconDataFieldKey' exists and is a 'text' field where you'd store "Zap" or "Shield")
+{
+  "fieldKey": "yourIconDataFieldKey", // Replace
+  "type": "iconFromData",
+  "style": { "position": "absolute", "bottom": "20px", "left": "20px" }
+}`}
                   </pre>
                   </AccordionContent>
                 </AccordionItem>
@@ -820,7 +850,8 @@ export default function EditTemplatePage() {
                     </ScrollArea>
                   </AccordionContent>
                 </AccordionItem>
-            </Accordion>
+              </Accordion>
+            </div>
           </CardContent>
           <CardFooter className="mt-auto pt-4 border-t">
             <Button
@@ -833,6 +864,7 @@ export default function EditTemplatePage() {
           </CardFooter>
         </Card>
         
+        {/* Live Preview Card */}
         <Card className="md:w-[35%] sticky top-20 self-start shadow-md">
           <CardHeader>
             <div className="flex items-center justify-between">
