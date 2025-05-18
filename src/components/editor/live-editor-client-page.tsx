@@ -16,13 +16,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useProjects } from '@/contexts/ProjectContext'; 
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { LayoutGrid } from 'lucide-react';
+import { LayoutGrid, Loader2 } from 'lucide-react'; // Removed LayoutGrid as it's not used anymore
 
 interface LiveEditorClientPageProps {
   initialProjectData: EditorProjectData; 
 }
 
 function EditorClientPageSkeleton() {
+  console.log('[DEBUG] LiveEditorClientPage/EditorClientPageSkeleton: Rendering skeleton.');
   return (
     <div className="flex h-full bg-muted/40">
       {/* Left Panel Skeleton */}
@@ -30,7 +31,7 @@ function EditorClientPageSkeleton() {
         <div className="p-4 border-b space-y-3">
           <div className="flex justify-between items-center">
             <Skeleton className="h-7 w-1/2" /> {/* Deck Name Placeholder */}
-            <Skeleton className="h-9 w-32" /> {/* View Deck Button Placeholder */}
+            {/* Removed View Deck Button Placeholder */}
           </div>
           <div className="flex gap-2"> {/* DataControls Placeholder */}
             <Skeleton className="h-9 w-24" />
@@ -161,7 +162,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
       } else {
         console.warn(`[DEBUG] LiveEditorClientPage: Debounced save - Project with ID ${editorProjectId} not found in context.`);
       }
-    }, 1000); // Increased debounce time to 1 second
+    }, 1000);
 
     return () => {
       if (debounceTimerRef.current) {
@@ -189,7 +190,6 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     setCards(prevCards => 
       prevCards.map(card => card.id === updatedCard.id ? updatedCard : card)
     );
-    // Debounced save effect will pick this up
   }, []);
 
   const handleAddCard = useCallback(() => {
@@ -205,7 +205,6 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     console.log('[DEBUG] LiveEditorClientPage/handleAddCard: Adding new card ID:', newCardId);
     setCards(prevCards => [...prevCards, newCard]);
     setSelectedCardId(newCardId);
-    // Debounced save effect will pick this up
   }, []);
 
   const handleDeleteCard = useCallback((cardIdToDelete: string) => {
@@ -217,7 +216,6 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
       }
       return newCardsList;
     });
-    // Debounced save effect will pick this up
   }, [selectedCardId]);
   
   const handleGenerateName = useCallback(async (description: string): Promise<string> => {
@@ -248,12 +246,11 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
       ...card,
       templateId: associatedTemplateIds.includes(card.templateId as CardTemplateId) 
                     ? card.templateId as CardTemplateId
-                    : (associatedTemplateIds.length > 0 ? associatedTemplateIds[0] : 'generic')
+                    : (associatedTemplateIds.length > 0 ? associatedTemplateIds[0] : NEW_CARD_TEMPLATE_ID_PLACEHOLDER)
     }));
     setCards(validImportedCards);
     setSelectedCardId(validImportedCards.length > 0 ? validImportedCards[0].id : null);
     toast({ title: "Data Imported", description: `${validImportedCards.length} cards loaded.` });
-    // Debounced save effect will pick this up
   }, [toast, associatedTemplateIds]);
 
 
@@ -263,7 +260,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   }
 
   const selectedEditorCard = cards.find(card => card.id === selectedCardId);
-  // console.log('[DEBUG] LiveEditorClientPage: Rendering. Selected card ID:', selectedCardId, 'Found:', !!selectedEditorCard);
+  console.log('[DEBUG] LiveEditorClientPage: Rendering. Selected card ID:', selectedCardId, 'Found:', !!selectedEditorCard);
 
   return (
       <div className="flex h-full bg-muted/40">
@@ -271,12 +268,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
           <div className="p-4 border-b space-y-3">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">{projectName}</h2>
-              <Button variant="outline" size="sm" asChild>
-                <Link href={`/project/${editorProjectId}/deck-view`}>
-                  <LayoutGrid className="mr-2 h-4 w-4" />
-                  View Deck
-                </Link>
-              </Button>
+              {/* "View Deck" button removed */}
             </div>
              <DataControls cards={cards} onImport={handleImportData} />
           </div>
@@ -291,7 +283,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
             <Separator orientation="vertical" />
              {selectedEditorCard ? (
               <CardDetailPanel
-                key={selectedCardId} // Important: re-mounts CardDetailPanel when card selection changes
+                key={selectedCardId} 
                 card={selectedEditorCard}
                 onUpdateCard={handleUpdateCard} 
                 onGenerateName={handleGenerateName}
