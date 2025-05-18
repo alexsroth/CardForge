@@ -180,7 +180,7 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
           )}
 
           {(field.placeholder || String(field.defaultValue).trim() !== '' || field.type === 'boolean' || field.type === 'number') && field.type !== 'placeholderImage' && (
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2">
+             <div className={cn("grid grid-cols-1 gap-y-2", (field.type === 'text' || field.type === 'textarea') ? 'sm:grid-cols-1' : 'sm:grid-cols-2 gap-x-3')}>
                 {(field.type !== 'boolean' || field.placeholder) && (
                   <div className={cn(field.type === 'boolean' && String(field.defaultValue).trim() === '' && !field.placeholder && "hidden")}>
                     <Label htmlFor={`field-placeholder-${field._uiId}`} className="text-xs text-muted-foreground">Input Placeholder</Label>
@@ -194,7 +194,7 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
                     />
                   </div>
                 )}
-
+                
                 {field.type === 'boolean' ? (
                   <div className="flex items-center space-x-2 self-end pb-1 min-h-[2rem] mt-3 sm:mt-0">
                     <Input
