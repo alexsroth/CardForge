@@ -80,13 +80,11 @@ function generateSamplePlaceholderUrl(config: {
 
   if (cleanBgColor) {
     path += `/${cleanBgColor}`;
-    if (cleanTextColor) {
+    if (cleanTextColor) { 
       path += `/${cleanTextColor}`;
     }
   }
-  // Append .png format specifier *after* colors but *before* text query
-  path += `.png`;
-
+  
   let fullUrl = `https://placehold.co/${path}`;
   const cleanText = config.text?.trim();
   if (cleanText) {
@@ -120,7 +118,7 @@ function generateSampleCardDataForTemplate(template: CardTemplate): CardData {
       switch (field.type) {
         case 'text': sampleData[field.key] = `Sample ${field.label}`; break;
         case 'textarea': sampleData[field.key] = `Sample details for ${field.label}.`; break;
-        case 'number': sampleData[field.key] = Math.floor(Math.random() * 10); break; // Random small number for visual variety
+        case 'number': sampleData[field.key] = Math.floor(Math.random() * 10); break; 
         case 'boolean': sampleData[field.key] = Math.random() > 0.5; break;
         case 'select': sampleData[field.key] = field.options?.[0]?.value || 'Option1'; break;
         default: sampleData[field.key] = `Value for ${field.key}`;
@@ -128,14 +126,13 @@ function generateSampleCardDataForTemplate(template: CardTemplate): CardData {
     }
   });
 
-  // Ensure common fields used by default layouts have some data
   if (sampleData.name === undefined) sampleData.name = template.name || "Sample Card";
   if (sampleData.cost === undefined) sampleData.cost = Math.floor(Math.random() * 5);
   if (sampleData.imageUrl === undefined && !template.fields.some(f => f.key === 'imageUrl')) {
     sampleData.imageUrl = generateSamplePlaceholderUrl({ width: 250, height: 140, text: "Main Image" });
   }
   if (sampleData.artworkUrl === undefined && !template.fields.some(f => f.key === 'artworkUrl')) {
-    sampleData.artworkUrl = generateSamplePlaceholderUrl({ width: 280, height: 400, text: "Background" });
+    sampleData.artworkUrl = generateSamplePlaceholderUrl({ width: 280, height: 400, text: "Background Art" });
   }
   if (sampleData.description === undefined && !template.fields.some(f => f.key === 'description')) sampleData.description = "This is a sample card description shown in the library preview.";
   if (sampleData.cardType === undefined && !template.fields.some(f => f.key === 'cardType')) sampleData.cardType = "Type - Subtype";
@@ -159,8 +156,10 @@ export default function TemplateLibraryPage() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isTogglingAssociation, setIsTogglingAssociation] = useState<Record<string, boolean>>({});
 
+  console.log('[DEBUG] TemplateLibraryPage: Rendering. Templates loading:', templatesLoading, 'Projects loading:', projectsLoading);
 
   const handleDeleteTemplate = async (templateIdToDelete: CardTemplateId) => {
+    console.log('[DEBUG] TemplateLibraryPage/handleDeleteTemplate: Attempting to delete', templateIdToDelete);
     setIsDeleting(templateIdToDelete);
     const result = await deleteTemplate(templateIdToDelete);
     if (result.success) {
@@ -168,18 +167,21 @@ export default function TemplateLibraryPage() {
         title: "Template Deleted",
         description: result.message,
       });
+      console.log('[DEBUG] TemplateLibraryPage/handleDeleteTemplate: Success', templateIdToDelete);
     } else {
       toast({
         title: "Deletion Failed",
         description: result.message,
         variant: "destructive",
       });
+      console.error('[DEBUG] TemplateLibraryPage/handleDeleteTemplate: Failed', templateIdToDelete, result.message);
     }
     setIsDeleting(null);
   };
 
   const handleToggleAssociation = async (project: Project, templateIdToToggle: CardTemplateId, currentlyAssociated: boolean) => {
     const toggleKey = `${project.id}-${templateIdToToggle}`;
+    console.log(`[DEBUG] TemplateLibraryPage/handleToggleAssociation: Project ${project.id}, Template ${templateIdToToggle}, Currently Associated: ${currentlyAssociated}`);
     setIsTogglingAssociation(prev => ({ ...prev, [toggleKey]: true }));
 
     let newAssociatedIds: CardTemplateId[];
@@ -196,17 +198,20 @@ export default function TemplateLibraryPage() {
         title: "Association Updated",
         description: `Template ${currentlyAssociated ? 'disassociated from' : 'associated with'} project "${project.name}".`,
       });
+      console.log(`[DEBUG] TemplateLibraryPage/handleToggleAssociation: Success for project ${project.id}, template ${templateIdToToggle}`);
     } else {
       toast({
         title: "Update Failed",
         description: result.message || "Could not update template association.",
         variant: "destructive",
       });
+      console.error(`[DEBUG] TemplateLibraryPage/handleToggleAssociation: Failed for project ${project.id}, template ${templateIdToToggle}: ${result.message}`);
     }
     setIsTogglingAssociation(prev => ({ ...prev, [toggleKey]: false }));
   };
 
   const displayTemplates = useMemo(() => {
+    // console.log('[DEBUG] TemplateLibraryPage: Recalculating displayTemplates. Templates count:', templates.length);
     return templates;
   }, [templates]);
 
@@ -257,9 +262,9 @@ export default function TemplateLibraryPage() {
             
             return (
               <Card key={template.id} className="flex flex-col shadow-md w-[320px]">
-                <CardHeader>
-                  <CardTitle>{template.name}</CardTitle>
-                  <CardDescription>ID: <code>{template.id}</code></CardDescription>
+                <CardHeader className="p-3">
+                  <CardTitle className="text-lg">{template.name}</CardTitle>
+                  <CardDescription className="text-xs">ID: <code>{template.id}</code></CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow space-y-4">
                   <div className="flex justify-center items-center my-3 p-2 bg-muted/50 rounded-md border">
@@ -379,3 +384,4 @@ export default function TemplateLibraryPage() {
   );
 }
     
+
