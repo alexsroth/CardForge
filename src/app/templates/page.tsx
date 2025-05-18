@@ -6,7 +6,7 @@ import { useState, useMemo } from 'react';
 import type { CardTemplate, TemplateField } from '@/lib/card-templates';
 import { useTemplates, type CardTemplateId } from '@/contexts/TemplateContext'; 
 import { useProjects } from '@/contexts/ProjectContext'; 
-import type { Project } from '@/lib/types';
+import type { Project, CardData } from '@/lib/types'; // Import CardData
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -27,6 +27,7 @@ import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-renderer'; // Import the renderer
 
 function TemplateFieldDetail({ field }: { field: TemplateField }) {
   return (
@@ -57,6 +58,97 @@ function TemplateFieldDetail({ field }: { field: TemplateField }) {
       )}
     </div>
   );
+}
+
+// Helper to generate placeholder URLs (similar to template designer)
+function generateSamplePlaceholderUrl(config: {
+  width?: number;
+  height?: number;
+  bgColor?: string;
+  textColor?: string;
+  text?: string;
+}): string {
+  const numWidth = Number(config.width);
+  const numHeight = Number(config.height);
+
+  const w = (!isNaN(numWidth) && numWidth > 0) ? numWidth : 100;
+  const h = (!isNaN(numHeight) && numHeight > 0) ? numHeight : 100;
+  
+  let path = `${w}x${h}`;
+  const cleanBgColor = config.bgColor?.replace('#', '').trim();
+  const cleanTextColor = config.textColor?.replace('#', '').trim();
+
+  if (cleanBgColor) {
+    path += `/${cleanBgColor}`;
+    if (cleanTextColor) {
+      path += `/${cleanTextColor}`;
+    }
+  }
+  // Append .png format specifier *after* colors but *before* text query
+  path += `.png`;
+
+  let fullUrl = `https://placehold.co/${path}`;
+  const cleanText = config.text?.trim();
+  if (cleanText) {
+    fullUrl += `?text=${encodeURIComponent(cleanText)}`;
+  }
+  return fullUrl;
+}
+
+// Helper to generate sample CardData for preview
+function generateSampleCardDataForTemplate(template: CardTemplate): CardData {
+  const sampleData: Partial<CardData> & { [key: string]: any } = {
+    id: `library-preview-${template.id}`,
+    templateId: template.id as CardTemplateId,
+  };
+
+  template.fields.forEach(field => {
+    if (field.type === 'placeholderImage') {
+      sampleData[field.key] = generateSamplePlaceholderUrl({
+        width: field.placeholderConfigWidth,
+        height: field.placeholderConfigHeight,
+        bgColor: field.placeholderConfigBgColor,
+        textColor: field.placeholderConfigTextColor,
+        text: field.placeholderConfigText || field.label,
+      });
+    } else if (field.defaultValue !== undefined) {
+      if (field.type === 'number') sampleData[field.key] = Number(field.defaultValue) || 0;
+      else if (field.type === 'boolean') sampleData[field.key] = String(field.defaultValue).toLowerCase() === 'true';
+      else sampleData[field.key] = String(field.defaultValue);
+    } else {
+      // Generic fallbacks
+      switch (field.type) {
+        case 'text': sampleData[field.key] = `Sample ${field.label}`; break;
+        case 'textarea': sampleData[field.key] = `Sample details for ${field.label}.`; break;
+        case 'number': sampleData[field.key] = Math.floor(Math.random() * 10); break; // Random small number for visual variety
+        case 'boolean': sampleData[field.key] = Math.random() > 0.5; break;
+        case 'select': sampleData[field.key] = field.options?.[0]?.value || 'Option1'; break;
+        default: sampleData[field.key] = `Value for ${field.key}`;
+      }
+    }
+  });
+
+  // Ensure common fields used by default layouts have some data
+  if (sampleData.name === undefined) sampleData.name = template.name || "Sample Card";
+  if (sampleData.cost === undefined) sampleData.cost = Math.floor(Math.random() * 5);
+  if (sampleData.imageUrl === undefined && !template.fields.some(f => f.key === 'imageUrl')) {
+    sampleData.imageUrl = generateSamplePlaceholderUrl({ width: 250, height: 140, text: "Main Image" });
+  }
+  if (sampleData.artworkUrl === undefined && !template.fields.some(f => f.key === 'artworkUrl')) {
+    sampleData.artworkUrl = generateSamplePlaceholderUrl({ width: 280, height: 400, text: "Background" });
+  }
+  if (sampleData.description === undefined && !template.fields.some(f => f.key === 'description')) sampleData.description = "This is a sample card description shown in the library preview.";
+  if (sampleData.cardType === undefined && !template.fields.some(f => f.key === 'cardType')) sampleData.cardType = "Type - Subtype";
+  if (sampleData.effectText === undefined && !template.fields.some(f => f.key === 'effectText')) sampleData.effectText = "Sample effect text for the library preview. This demonstrates how text might flow.";
+  if (sampleData.flavorText === undefined && !template.fields.some(f => f.key === 'flavorText')) sampleData.flavorText = "An evocative piece of flavor text.";
+  if (sampleData.attack === undefined && !template.fields.some(f => f.key === 'attack')) sampleData.attack = Math.floor(Math.random() * 5) + 1;
+  if (sampleData.defense === undefined && !template.fields.some(f => f.key === 'defense')) sampleData.defense = Math.floor(Math.random() * 5) + 1;
+  if (sampleData.statusIcon === undefined && !template.fields.some(f => f.key === 'statusIcon')) sampleData.statusIcon = 'ShieldCheck';
+  if (sampleData.rarity === undefined && !template.fields.some(f => f.key === 'rarity')) sampleData.rarity = 'common';
+  if (sampleData.dataAiHint === undefined) sampleData.dataAiHint = "card game art";
+
+
+  return sampleData as CardData;
 }
 
 
@@ -92,9 +184,9 @@ export default function TemplateLibraryPage() {
 
     let newAssociatedIds: CardTemplateId[];
     if (currentlyAssociated) {
-      newAssociatedIds = project.associatedTemplateIds.filter(id => id !== templateIdToToggle);
+      newAssociatedIds = (project.associatedTemplateIds || []).filter(id => id !== templateIdToToggle);
     } else {
-      newAssociatedIds = [...project.associatedTemplateIds, templateIdToToggle];
+      newAssociatedIds = [...(project.associatedTemplateIds || []), templateIdToToggle];
     }
 
     const result = await updateProjectAssociatedTemplates(project.id, newAssociatedIds);
@@ -114,7 +206,6 @@ export default function TemplateLibraryPage() {
     setIsTogglingAssociation(prev => ({ ...prev, [toggleKey]: false }));
   };
 
-  // Filter out any potential seed templates if they were ever loaded into local storage
   const displayTemplates = useMemo(() => {
     return templates;
   }, [templates]);
@@ -162,6 +253,7 @@ export default function TemplateLibraryPage() {
           {displayTemplates.map((template: CardTemplate) => {
             const projectsUsingThisTemplate = projects.filter(p => p.associatedTemplateIds?.includes(template.id as CardTemplateId));
             const isTemplateInUse = projectsUsingThisTemplate.length > 0;
+            const sampleCardData = generateSampleCardDataForTemplate(template);
             
             return (
               <Card key={template.id} className="flex flex-col shadow-md w-[320px]">
@@ -170,6 +262,9 @@ export default function TemplateLibraryPage() {
                   <CardDescription>ID: <code>{template.id}</code></CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow space-y-4">
+                  <div className="flex justify-center items-center my-3 p-2 bg-muted/50 rounded-md border">
+                    <DynamicCardRenderer card={sampleCardData} template={template} />
+                  </div>
                   <div>
                     <h4 className="text-sm font-semibold mb-1 text-muted-foreground">Fields:</h4>
                     {template.fields.length > 0 ? (
@@ -199,7 +294,7 @@ export default function TemplateLibraryPage() {
                                   size="sm"
                                   variant={isAssociated ? "default" : "outline"}
                                   className={cn(
-                                    "px-2 py-0.5 h-auto text-xs min-w-[100px]", // Compact button with min-width
+                                    "px-2 py-0.5 h-auto text-xs min-w-[100px]", 
                                     isAssociated 
                                       ? "bg-green-500 hover:bg-green-600 text-white border-green-500" 
                                       : "border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive"
@@ -232,10 +327,10 @@ export default function TemplateLibraryPage() {
                       <Pencil className="mr-2 h-4 w-4" /> Edit Template
                     </Link>
                   </Button>
-                  {!isTemplateInUse && (
-                    <AlertDialog>
+                  
+                   <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" size="sm" className="w-full" disabled={isDeleting === template.id}>
+                        <Button variant="destructive" size="sm" className="w-full" disabled={isDeleting === template.id || isTemplateInUse} title={isTemplateInUse ? "Cannot delete: template is associated with one or more projects." : undefined}>
                           {isDeleting === template.id ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                           ) : (
@@ -260,13 +355,6 @@ export default function TemplateLibraryPage() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                  )}
-                   {isTemplateInUse && (
-                     <Button variant="outline" size="sm" className="w-full" disabled={true} title="Cannot delete: template is associated with one or more projects.">
-                        <Trash2 className="mr-2 h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">Delete Template</span>
-                     </Button>
-                   )}
                 </CardFooter>
               </Card>
             );
