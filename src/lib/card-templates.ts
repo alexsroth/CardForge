@@ -1,4 +1,3 @@
-
 import type { CardData } from './types';
 
 // Define the structure for a field within a card template
@@ -30,13 +29,16 @@ export interface LayoutElement {
 
 // Define the structure for a card template's layout
 export interface LayoutDefinition {
-  width?: string; // e.g., '280px'
-  height?: string; // e.g., '400px'
-  backgroundColor?: string;
-  borderColor?: string;
-  borderRadius?: string;
-  borderWidth?: string; // New
-  borderStyle?: string; // New
+  // Top-level canvas properties (direct CSS or Tailwind class name)
+  width?: string;
+  height?: string;
+  backgroundColor?: string; // Direct CSS, can be overridden by canvasClassName
+  borderColor?: string;     // Direct CSS
+  borderRadius?: string;    // Direct CSS
+  borderWidth?: string;     // Direct CSS
+  borderStyle?: string;     // Direct CSS (solid, dashed, etc.)
+  canvasClassName?: string; // For Tailwind bg, border radius, border color, border width
+
   elements: LayoutElement[];
 }
 
@@ -62,116 +64,12 @@ export const DEFAULT_CARD_LAYOUT_JSON_STRING = `{
   "borderRadius": "calc(var(--radius) - 2px)",
   "borderWidth": "1px",
   "borderStyle": "solid",
-  "elements": [
-    {
-      "fieldKey": "name",
-      "type": "text",
-      "style": {
-        "position": "absolute",
-        "top": "15px",
-        "left": "15px",
-        "right": "60px",
-        "fontSize": "1.1em",
-        "fontWeight": "bold",
-        "lineHeight": "1.2",
-        "maxHeight": "40px",
-        "overflow": "hidden",
-        "textOverflow": "ellipsis"
-      },
-      "className": "text-card-foreground"
-    },
-    {
-      "fieldKey": "cost",
-      "type": "iconValue",
-      "icon": "Coins",
-      "style": {
-        "position": "absolute",
-        "top": "15px",
-        "right": "15px",
-        "fontSize": "1.1em",
-        "fontWeight": "bold",
-        "padding": "5px",
-        "backgroundColor": "hsl(var(--muted))",
-        "borderRadius": "9999px",
-        "border": "1px solid hsl(var(--primary))"
-      },
-      "className": "text-primary"
-    },
-    {
-      "fieldKey": "imageUrl",
-      "type": "image",
-      "style": {
-        "position": "absolute",
-        "top": "60px",
-        "left": "15px",
-        "right": "15px",
-        "height": "140px",
-        "objectFit": "cover",
-        "borderRadius": "calc(var(--radius) - 4px)"
-      }
-    },
-    {
-      "fieldKey": "cardType",
-      "type": "text",
-      "style": {
-        "position": "absolute",
-        "top": "210px",
-        "left": "15px",
-        "right": "15px",
-        "fontSize": "0.8em",
-        "fontStyle": "italic",
-        "textAlign": "center",
-        "padding": "2px 0",
-        "borderTop": "1px solid hsl(var(--border))",
-        "borderBottom": "1px solid hsl(var(--border))"
-      },
-      "className": "text-muted-foreground"
-    },
-    {
-      "fieldKey": "effectText",
-      "type": "textarea",
-      "style": {
-        "position": "absolute",
-        "top": "240px",
-        "left": "15px",
-        "right": "15px",
-        "bottom": "55px",
-        "fontSize": "0.85em",
-        "lineHeight": "1.4"
-      },
-      "className": "text-card-foreground whitespace-pre-wrap"
-    },
-    {
-      "fieldKey": "attack",
-      "type": "iconValue",
-      "icon": "Sword",
-      "style": {
-        "position": "absolute",
-        "bottom": "15px",
-        "left": "15px",
-        "fontSize": "1em",
-        "fontWeight": "bold"
-      },
-      "className": "text-destructive"
-    },
-    {
-      "fieldKey": "defense",
-      "type": "iconValue",
-      "icon": "Shield",
-      "style": {
-        "position": "absolute",
-        "bottom": "15px",
-        "right": "15px",
-        "fontSize": "1em",
-        "fontWeight": "bold"
-      },
-      "className": "text-blue-500"
-    }
-  ]
+  "canvasClassName": "bg-card",
+  "elements": []
 }`;
 
 
 // Centralized array of all card template definitions - this is the initial SEED.
 // The TemplateContext will manage the runtime list, potentially loaded from localStorage.
-// If localStorage is empty, it seeds with this. Now it will seed with an empty array.
+// If localStorage is empty, it seeds with this.
 export const cardTemplates: CardTemplate[] = [];
