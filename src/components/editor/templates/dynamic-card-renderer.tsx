@@ -6,48 +6,18 @@ import type { CardTemplate, LayoutDefinition } from '@/lib/card-templates';
 import Image from 'next/image';
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { lucideIconsMap } from '@/lib/icons';
+import { lucideIconsMap } from '@/lib/icons'; // Use centralized map
 import { HelpCircle as FallbackIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-// Explicitly import commonly used icons and the fallback icon
-import {
-  Coins, Sword, Shield, Moon, Pencil, HelpCircle, // HelpCircle is already aliased
-  Zap, Brain, Heart, Skull, Star, Gem, Settings, PlusCircle, MinusCircle, XCircle, CheckCircle2,
-  AlertTriangle, Info, Wand2, Sparkles, Sun, Cloud, Flame, Leaf, Droplets, Feather, Eye, Swords, ShieldCheck,
-  ShieldAlert, Aperture, Book, Camera, Castle, Crown, Diamond, Dice5, Flag, Flower, Gift, Globe, KeyRound, Lightbulb, Lock,
-  MapPin, Medal, Mountain, Music, Package, Palette, PawPrint, Phone, Puzzle, Rocket, Save, Search, Ship, Sprout,
-  Ticket, Trash2, TreePine, Trophy, Umbrella, User, Video, Wallet, Watch, Wifi, Wrench
-} from 'lucide-react';
-import type * as LucideIconsAll from 'lucide-react'; // For general lookup
+import { DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT } from '@/lib/card-templates';
 
 
-// Create a registry for explicitly imported icons
-const iconRegistry: { [key: string]: React.ElementType<LucideIconsAll.LucideProps> } = {
-  "Coins": Coins, "Sword": Sword, "Shield": Shield, "Moon": Moon, "Pencil": Pencil, "HelpCircle": HelpCircle,
-  "Zap": Zap, "Brain": Brain, "Heart": Heart, "Skull": Skull, "Star": Star, "Gem": Gem, "Settings": Settings,
-  "PlusCircle": PlusCircle, "MinusCircle": MinusCircle, "XCircle": XCircle, "CheckCircle2": CheckCircle2,
-  "AlertTriangle": AlertTriangle, "Info": Info, "Wand2": Wand2, "Sparkles": Sparkles, "Sun": Sun,
-  "Cloud": Cloud, "Flame": Flame, "Leaf": Leaf, "Droplets": Droplets, "Feather": Feather, "Eye": Eye,
-  "Swords": Swords, "ShieldCheck": ShieldCheck, "ShieldAlert": ShieldAlert, "Aperture": Aperture,
-  "Book": Book, "Camera": Camera, "Castle": Castle, "Crown": Crown, "Diamond": Diamond, "Dice5": Dice5,
-  "Flag": Flag, // Flash was removed
-  "Flower": Flower, "Gift": Gift, "Globe": Globe, "KeyRound": KeyRound, "Lightbulb": Lightbulb,
-  "Lock": Lock, "MapPin": MapPin, "Medal": Medal, "Mountain": Mountain, "Music": Music,
-  "Package": Package, "Palette": Palette, "PawPrint": PawPrint, "Phone": Phone, "Puzzle": Puzzle,
-  "Rocket": Rocket, "Save": Save, "Search": Search, "Ship": Ship, "Sprout": Sprout,
-  "Ticket": Ticket, "Trash2": Trash2, "TreePine": TreePine, "Trophy": Trophy, "Umbrella": Umbrella,
-  "User": User, "Video": Video, "Wallet": Wallet, "Watch": Watch, "Wifi": Wifi, "Wrench": Wrench,
-};
-
-
-const IconComponent = ({ name, ...props }: { name: string } & LucideIconsAll.LucideProps) => {
-  const IconToRender = iconRegistry[name] || (LucideIconsAll as any)[name];
-  if (!IconToRender || typeof IconToRender !== 'function') {
-    console.warn(`[DynamicCardRenderer] Lucide icon "${name}" not found or not a function. Fallback 'HelpCircle' will be used.`);
-    return <FallbackIcon {...props} />;
+const IconComponent = ({ name, ...props }: { name: string } & React.ComponentProps<typeof FallbackIcon>) => {
+  const Icon = lucideIconsMap[name] || FallbackIcon;
+  if (Icon === FallbackIcon && name !== 'HelpCircle') { // Avoid warning for intentional fallback
+    console.warn(`[DynamicCardRenderer] Lucide icon "${name}" not found. Fallback 'HelpCircle' will be used.`);
   }
-  return <IconToRender {...props} />;
+  return <Icon {...props} />;
 };
 
 
@@ -56,7 +26,7 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
   template: CardTemplate;
   showPixelGrid?: boolean;
 }) {
-  console.log('[DEBUG] DynamicCardRenderer: Rendering card', card?.id, 'with template', template?.id, 'Show Grid:', showPixelGrid);
+  // console.log('[DEBUG] DynamicCardRenderer: Rendering card', card?.id, 'with template', template?.id, 'Show Grid:', showPixelGrid);
   let layout: LayoutDefinition | null = null;
 
   if (template.layoutDefinition) {
@@ -83,11 +53,22 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
     );
   }
 
+  // Check if canvasClassName contains a Tailwind background utility
+  const hasTailwindBgClass = layout.canvasClassName && /\bbg-\S+/.test(layout.canvasClassName);
+
   const cardStyle: React.CSSProperties = {
-    width: layout.width || '280px',
-    height: layout.height || '400px',
-    backgroundColor: layout.backgroundColor || "hsl(var(--card))", // Ensure this is active
+    width: layout.width || `${DEFAULT_CANVAS_WIDTH}px`,
+    height: layout.height || `${DEFAULT_CANVAS_HEIGHT}px`,
+    ...(hasTailwindBgClass
+      ? {} // If a bg- class exists in canvasClassName, let Tailwind handle it
+      : { backgroundColor: layout.backgroundColor || "hsl(var(--card))" }), // Else, use direct CSS or default theme
     borderStyle: layout.borderStyle || 'solid',
+    // For border color, radius, and width, Tailwind classes in canvasClassName will usually take precedence
+    // over these direct styles if both are applied, due to specificity.
+    // However, it's good to keep them as fallbacks if no Tailwind border classes are in canvasClassName.
+    borderColor: layout.borderColor || 'hsl(var(--border))',
+    borderRadius: layout.borderRadius || 'calc(var(--radius) - 2px)',
+    borderWidth: layout.borderWidth || '1px',
     position: 'relative',
     overflow: 'hidden',
     boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
@@ -98,7 +79,7 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
     position: 'absolute',
     inset: 0,
     pointerEvents: 'none',
-    zIndex: 1,
+    zIndex: 1, // Ensure grid is behind elements
     backgroundImage: `
       linear-gradient(rgba(128, 128, 128, 0.15) 1px, transparent 1px),
       linear-gradient(90deg, rgba(128, 128, 128, 0.15) 1px, transparent 1px),
@@ -110,20 +91,28 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
 
 
  return (
-    <div style={cardStyle} className={cn("select-none", layout.canvasClassName)} title={`Card ID: ${card.id} | Template: ${template.name} (${template.id})`}>
+    <div
+      style={cardStyle}
+      className={cn("select-none", layout.canvasClassName)}
+      title={`Card ID: ${card.id} | Template: ${template.name} (${template.id})`}
+    >
         {showPixelGrid && <div style={gridOverlayStyle} />}
         {layout.elements.map((element, index) => {
             try {
                 const rawValue = card[element.fieldKey as keyof CardData];
                 let valueForDisplay: any;
 
-                if ( (element.type === 'text' || element.type === 'textarea' || element.type === 'iconValue') && typeof rawValue === 'object' && rawValue !== null ) {
+                if (
+                  (element.type === 'text' || element.type === 'textarea' || element.type === 'iconValue') &&
+                  typeof rawValue === 'object' &&
+                  rawValue !== null
+                ) {
                   try {
-                    console.warn(`[DynamicCardRenderer] fieldKey "${element.fieldKey}" (type: "${element.type}") received an object value. Stringifying for display. Value:`, rawValue);
+                    // console.warn(`[DynamicCardRenderer] fieldKey "${element.fieldKey}" (type: "${element.type}") received an object. Stringifying. Value:`, rawValue);
                     valueForDisplay = JSON.stringify(rawValue, null, 2);
                   } catch (stringifyError) {
-                     console.error(`[DynamicCardRenderer] Error stringifying object for fieldKey "${element.fieldKey}":`, stringifyError);
-                    valueForDisplay = "[Error: Unstringifiable Object]";
+                    // console.error(`[DynamicCardRenderer] Error stringifying object for fieldKey "${element.fieldKey}":`, stringifyError);
+                    valueForDisplay = "[Unstringifiable Object]";
                   }
                 } else if (rawValue === undefined || rawValue === null) {
                   if (element.type === 'number') valueForDisplay = '';
@@ -132,16 +121,16 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
                 } else {
                   valueForDisplay = rawValue;
                 }
-                
+
                 let textualContent: string = String(valueForDisplay ?? '');
                 let processedText = textualContent;
 
                 if (element.prefix) processedText = String(element.prefix || '') + textualContent;
-                if (element.suffix) processedText = processedText + String(element.suffix || ''); // Corrected order for suffix
+                if (element.suffix) processedText = processedText + String(element.suffix || '');
                 
-                const finalContentNode: string = processedText; 
+                const finalContentNode: string = processedText;
 
-                const elementStyle = { ...(element.style || {}), zIndex: index + 2 };
+                const elementStyle: React.CSSProperties = { ...(element.style || {}), zIndex: index + 2 };
                 if (showPixelGrid) {
                   elementStyle.outline = '1px dashed rgba(255,0,0,0.7)';
                 }
@@ -164,7 +153,7 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
                             imageUrl = valueForDisplay as string;
                         } else {
                             const imgStyle = element.style || {};
-                            const widthStr = String(imgStyle.width || '100').replace(/px|%|em|rem|vw|vh/gi, '');
+                            const widthStr = String(imgStyle.width || String(DEFAULT_CANVAS_WIDTH)).replace(/px|%|em|rem|vw|vh/gi, '');
                             const heightStr = String(imgStyle.height || '100').replace(/px|%|em|rem|vw|vh/gi, '');
                             const widthNum = parseInt(widthStr, 10);
                             const heightNum = parseInt(heightStr, 10);
@@ -172,7 +161,7 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
                             const placeholderHeight = isNaN(heightNum) || heightNum <= 0 ? 100 : heightNum;
                             
                             if (typeof valueForDisplay === 'string' && valueForDisplay.trim() !== '') {
-                                console.warn(`[DynamicCardRenderer] fieldKey "${element.fieldKey}" (value: "${valueForDisplay}") used as image type but is not a valid URL. Using placeholder.`);
+                                // console.warn(`[DynamicCardRenderer] fieldKey "${element.fieldKey}" (value: "${valueForDisplay}") used as image type but is not a valid URL. Using placeholder.`);
                             }
                             imageUrl = `https://placehold.co/${placeholderWidth}x${placeholderHeight}.png/E8E8E8/AAAAAA?text=Invalid+Src`;
                         }
@@ -204,15 +193,15 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
                         elementContent = <>{iconNameFromData.trim() && <IconComponent name={iconNameFromData.trim()} className="h-[1em] w-[1em] shrink-0" />}</>;
                         break;
                     default:
-                        console.warn(`[DynamicCardRenderer] Unknown element type "${(element as any).type}" for fieldKey "${element.fieldKey}"`);
+                        // console.warn(`[DynamicCardRenderer] Unknown element type "${(element as any).type}" for fieldKey "${element.fieldKey}"`);
                         return null;
                 }
 
                 const wrapperClasses = cn(
                     element.className,
                     (element.type === 'iconValue' || element.type === 'iconFromData') && 'flex items-center',
-                    element.type === 'iconValue' && 'gap-1',
-                    element.type === 'iconFromData' && 'justify-center' 
+                    element.type === 'iconValue' && 'gap-1', // Add gap for iconValue
+                    element.type === 'iconFromData' && 'justify-center' // Example: center iconFromData if it's standalone
                 );
 
                 const finalElement = element.type === 'textarea' ? (
@@ -231,18 +220,18 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
                         {showPixelGrid && (
                            <div style={{
                             position: 'absolute', 
-                            top: typeof elementStyle.top === 'string' ? elementStyle.top : '0px', // Use parsed top
-                            left: typeof elementStyle.left === 'string' ? elementStyle.left : '0px', // Use parsed left
+                            top: typeof elementStyle.top === 'string' ? elementStyle.top : '0px',
+                            left: typeof elementStyle.left === 'string' ? elementStyle.left : '0px',
                             backgroundColor: 'rgba(0, 0, 0, 0.7)',
                             color: 'white',
-                            padding: '1px 3px',
-                            fontSize: '8px',
-                            borderRadius: '2px',
-                            zIndex: (index + 2) + 100, // Ensure label is above its element
+                            padding: '1px 4px',
+                            fontSize: '9px',
+                            borderRadius: '3px',
+                            zIndex: (index + 2) + 100, 
                             pointerEvents: 'none',
                             lineHeight: '1',
                             whiteSpace: 'nowrap',
-                            transform: 'translateY(-100%)', // Position label above element
+                            transform: 'translateY(-100%)', 
                           }}>
                             {element.fieldKey}
                           </div>
@@ -270,5 +259,3 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
     </div>
  );
 }
-
-    
