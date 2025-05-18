@@ -1,7 +1,6 @@
 // src/lib/card-designer/utils.ts
 import * as LucideIcons from 'lucide-react';
 import { HelpCircle } from 'lucide-react'; // Explicit import for fallback
-// Other imports (constants)
 import { NONE_VALUE } from './constants';
 
 console.log('[DEBUG] card-designer/utils.ts: Module loaded, attempting to define helpers.');
@@ -51,53 +50,78 @@ export const generateSamplePlaceholderUrl = (config: {
       path += `/${cleanTextColor}`;
     }
   }
-  // Append .png to specify format, especially when colors are used
-  path += `.png`;
+  
+  // Always append .png after dimensions and colors, before text query
+  path += '.png';
 
   let fullUrl = `https://placehold.co/${path}`;
   const cleanText = config.text?.trim();
   if (cleanText && cleanText.length > 0) {
     fullUrl += `?text=${encodeURIComponent(cleanText)}`;
   }
+  // console.log('[DEBUG] card-designer/utils.ts: Generated placeholder URL:', fullUrl);
   return fullUrl;
 };
 
 export const getSideBorderWidthClass = (
-    side: 't' | 'r' | 'b' | 'l',
-    value: string | undefined,
-    widthOptions: ReadonlyArray<{ value: string; tailwindClass: string }> // Assuming tailwindClass has '?'
+  side: 't' | 'r' | 'b' | 'l',
+  value: string | undefined,
+  options: ReadonlyArray<{ value: string; class: string; label?: string }> // class is the full Tailwind class e.g. "border-t-2"
 ): string => {
-  // console.log('[DEBUG] card-designer/utils.ts: getSideBorderWidthClass called for side:', side, 'value:', value);
+  // console.log('[DEBUG] card-designer/utils.ts: getSideBorderWidthClass for side:', side, 'value:', value);
   if (!value || value === NONE_VALUE) return '';
-  const option = widthOptions.find(opt => opt.value === value);
-  // Replace '?' with the actual side character (t, r, b, l)
-  return option ? option.tailwindClass.replace('?', side) : '';
+  // The 'value' from the dropdown is now the direct Tailwind class or "NONE_VALUE"
+  // For example, if user selects "2px" for top, 'value' will be "border-t-2"
+  // This function might simplify to just returning `value` if `value` is the class itself.
+  // Or, if `value` is still like "2", "4", "default", it needs to map to the class.
+  // Let's assume 'value' is the intended class suffix like '2', '4', or 'default' for 1px
+  
+  // The BORDER_SIDE_WIDTH_OPTIONS in constants.ts should be like:
+  // { value: "NONE_VALUE", label: "None (No Border)", class: "" },
+  // { value: "default", label: "Default (1px)", class: `border-${side}` },
+  // { value: "0", label: "0px", class: `border-${side}-0` },
+  // { value: "2", label: "2px", class: `border-${side}-2` },
+  // So, this function might not be strictly needed if the 'value' stored in GUI config IS the class itself.
+  // For now, assuming the options structure is consistent and 'value' is the key.
+  const option = options.find(opt => opt.value === value);
+  if (option && option.class) { // Check if option.class exists
+    return option.class.replace('?', side); // Assuming BORDER_SIDE_WIDTH_OPTIONS in constants uses '?'
+  }
+  // Fallback if direct mapping is done in GUI:
+  if (value && value !== NONE_VALUE && value.startsWith(`border-${side}`)) {
+    return value; // Value might already be the full class
+  }
+  if (value === "default") return `border-${side}`;
+  if (value && value !== NONE_VALUE) return `border-${side}-${value}`;
+  return '';
 };
 
+
 export const getSideBorderColorClass = (
-    side: 't' | 'r' | 'b' | 'l',
-    value: string | undefined,
-    colorOptions: ReadonlyArray<{value: string, label: string}> // These are just color names/values like "primary" or "red-500"
+  side: 't' | 'r' | 'b' | 'l',
+  colorValue: string | undefined, // e.g., "primary", "red-500"
+  colorOptions: ReadonlyArray<{value: string, label: string}>
 ): string => {
-  // console.log('[DEBUG] card-designer/utils.ts: getSideBorderColorClass called for side:', side, 'value:', value);
-  if (!value || value === NONE_VALUE) return '';
-  const colorOption = colorOptions.find(opt => opt.value === value);
+  // console.log('[DEBUG] card-designer/utils.ts: getSideBorderColorClass for side:', side, 'value:', colorValue);
+  if (!colorValue || colorValue === NONE_VALUE) return '';
+  const colorOption = colorOptions.find(opt => opt.value === colorValue);
   if (colorOption) {
-    return `border-${side}-${value}`; // Constructs e.g., border-t-primary, border-r-red-500
+    return `border-${side}-${colorValue}`;
   }
   return '';
 };
 
+
 export const findTailwindClassValue = (
-    classNameString: string | undefined,
-    options: ReadonlyArray<{value: string, label?: string}>,
-    defaultValue: string = NONE_VALUE
-  ): string => {
+  classNameString: string | undefined,
+  options: ReadonlyArray<{value: string, label?: string}>,
+  defaultValue: string = NONE_VALUE
+): string => {
   // console.log('[DEBUG] card-designer/utils.ts: findTailwindClassValue searching in:', classNameString);
   if (!classNameString) return defaultValue;
   const classes = classNameString.split(' ');
   for (const opt of options) {
-    if (opt.value === NONE_VALUE || !opt.value) continue; // Skip the "None" option placeholder
+    if (opt.value === NONE_VALUE || !opt.value) continue;
     if (classes.includes(opt.value)) {
       return opt.value;
     }
@@ -105,13 +129,12 @@ export const findTailwindClassValue = (
   return defaultValue;
 };
 
-// Helper to find a specific side's border width or color class from a className string
 export const findSideBorderClassValue = (
   classNameString: string | undefined,
   side: 't' | 'r' | 'b' | 'l',
-  type: 'width' | 'color', // 'width' for classes like 'border-t-2', 'color' for 'border-t-red-500'
-  widthOptions: ReadonlyArray<{value: string, tailwindClass: string, label: string}>, // e.g. value: '2', tailwindClass: 'border-?-2'
-  colorOptions: ReadonlyArray<{value: string, label: string}>, // e.g. value: 'red-500'
+  type: 'width' | 'color',
+  widthOptions: ReadonlyArray<{value: string; class?: string; classPrefix?: string; label: string}>,
+  colorOptions: ReadonlyArray<{value: string; label: string}>,
   defaultValue: string = NONE_VALUE
 ): string => {
   // console.log('[DEBUG] card-designer/utils.ts: findSideBorderClassValue for side:', side, 'type:', type, 'in:', classNameString);
@@ -119,18 +142,30 @@ export const findSideBorderClassValue = (
   const classes = classNameString.split(' ');
 
   if (type === 'width') {
-    for (const opt of widthOptions) {
-      if (opt.value === NONE_VALUE) continue;
-      const expectedClass = opt.tailwindClass.replace('?', side); // e.g. 'border-t-2'
-      if (classes.includes(expectedClass)) {
-        return opt.value; // Return the abstract value like '2', not the full class
+    // Match specific width classes e.g., border-t-2, border-r
+    // Order of check might matter if 'border-t' and 'border-t-2' are both present, match more specific first.
+    const widthClassPattern = new RegExp(`^border-${side}-(\\d+)$`); // e.g. border-t-2
+    const defaultWidthClass = `border-${side}`; // e.g. border-t
+
+    for (const cls of classes) {
+      const match = cls.match(widthClassPattern);
+      if (match) {
+        const widthValue = match[1]; // "2", "4", etc.
+        if (widthOptions.some(opt => opt.value === widthValue)) {
+          return widthValue;
+        }
       }
     }
+    // Check for default width (e.g., 'border-t')
+    if (classes.includes(defaultWidthClass) && widthOptions.some(opt => opt.value === 'default')) {
+      return 'default';
+    }
   } else if (type === 'color') {
-    const colorClassPrefix = `border-${side}-`; // e.g. 'border-t-'
+    const colorClassPattern = new RegExp(`^border-${side}-(.+)`); // e.g. border-t-red-500
     for (const cls of classes) {
-      if (cls.startsWith(colorClassPrefix)) {
-        const colorSuffix = cls.substring(colorClassPrefix.length); // e.g. 'red-500'
+      const match = cls.match(colorClassPattern);
+      if (match) {
+        const colorSuffix = match[1]; // "red-500", "primary", etc.
         if (colorOptions.some(opt => opt.value === colorSuffix && opt.value !== NONE_VALUE)) {
           return colorSuffix;
         }
@@ -140,23 +175,24 @@ export const findSideBorderClassValue = (
   return defaultValue;
 };
 
+
 interface IconComponentActualProps extends LucideIcons.LucideProps {
   name: string;
 }
 
 export const IconComponent = (props: IconComponentActualProps) => {
-  const { name, className, ...restOfProps } = props; // Destructure className specifically
+  const { name, className, ...restOfProps } = props;
 
   // console.log('[DEBUG] card-designer/utils.ts: IconComponent rendering icon:', name);
   const IconToRender = (LucideIcons as any)[name];
 
   if (!IconToRender || typeof IconToRender !== 'function') {
     console.warn(`[IconComponent] Lucide icon "${name}" not found or not a function. Rendering fallback HelpCircle.`);
-    // Drastically simplify fallback props to diagnose parser issue
+    // Extremely simplified fallback to avoid JSX parsing issues on props
     if (className) {
-      return <HelpCircle className={className} />;
+       return <span className={className}>?</span>;
     }
-    return <HelpCircle />; // Render with no props if className is also undefined
+    return <span>?</span>;
   }
   // For the actual icon, continue attempting to spread other props
   return <IconToRender className={className} {...restOfProps} />;
