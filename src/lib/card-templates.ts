@@ -1,3 +1,4 @@
+
 import type { CardData } from './types';
 
 // Define the structure for a field within a card template
@@ -20,8 +21,8 @@ export interface TemplateField {
 export interface LayoutElement {
   fieldKey: string; // Key from CardData
   type: 'text' | 'textarea' | 'image' | 'iconValue' | 'iconFromData'; // Type of element to render
-  style?: React.CSSProperties; // Inline styles
-  className?: string; // Tailwind classes
+  style?: React.CSSProperties; // Inline styles for properties not covered by Tailwind or for overrides
+  className?: string; // Tailwind classes for common styling
   prefix?: string; // For text elements, e.g., "Cost: "
   suffix?: string; // For text elements
   icon?: string; // Lucide icon name for iconValue type
@@ -32,12 +33,14 @@ export interface LayoutDefinition {
   // Top-level canvas properties (direct CSS or Tailwind class name)
   width?: string;
   height?: string;
-  backgroundColor?: string; // Direct CSS, can be overridden by canvasClassName
-  borderColor?: string;     // Direct CSS
-  borderRadius?: string;    // Direct CSS
-  borderWidth?: string;     // Direct CSS
+  // Direct CSS properties for canvas (can be overridden by canvasClassName if it includes bg-*, border-*, etc.)
+  backgroundColor?: string;
+  borderColor?: string;
+  borderRadius?: string;
+  borderWidth?: string;
   borderStyle?: string;     // Direct CSS (solid, dashed, etc.)
-  canvasClassName?: string; // For Tailwind bg, border radius, border color, border width
+  // Tailwind classes for canvas styling (e.g. "bg-primary rounded-lg border-2 border-secondary")
+  canvasClassName?: string;
 
   elements: LayoutElement[];
 }
@@ -56,6 +59,7 @@ export type CardTemplateId = string;
 export const DEFAULT_CANVAS_WIDTH = 280;
 export const DEFAULT_CANVAS_HEIGHT = 400;
 
+// Minimal default layout - users build elements via GUI
 export const DEFAULT_CARD_LAYOUT_JSON_STRING = `{
   "width": "${DEFAULT_CANVAS_WIDTH}px",
   "height": "${DEFAULT_CANVAS_HEIGHT}px",
