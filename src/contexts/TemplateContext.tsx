@@ -30,6 +30,7 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     console.log('[DEBUG] TemplateContext: Initializing - loading templates from localStorage or seed.');
+    
     let loadedTemplates: CardTemplate[];
     try {
       const storedTemplates = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -45,7 +46,8 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to load templates from localStorage, using initial seed:", error);
       loadedTemplates = initialSeedTemplates;
     }
-    
+    console.log('[DEBUG] TemplateContext: loadedTemplates', loadedTemplates);
+
     const validatedTemplates = loadedTemplates.map(t => ({
       ...t,
       fields: Array.isArray(t.fields) ? t.fields : [],
@@ -53,6 +55,7 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
                           ? t.layoutDefinition 
                           : DEFAULT_CARD_LAYOUT_JSON_STRING,
     }));
+    console.log('[DEBUG] TemplateContext: validatedTemplates', validatedTemplates);
 
     setTemplates(validatedTemplates);
     setIsLoading(false);

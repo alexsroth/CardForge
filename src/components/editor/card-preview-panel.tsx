@@ -13,7 +13,6 @@ interface CardPreviewPanelProps {
 export default function CardPreviewPanel({ card }: CardPreviewPanelProps) {
   const { getTemplateById } = useTemplates();
   const [template, setTemplate] = useState(null);
-  return (
 
   useEffect(() => {
     if (card && card.templateId) {
@@ -28,7 +27,6 @@ export default function CardPreviewPanel({ card }: CardPreviewPanelProps) {
     }
   }, [card, getTemplateById]);
 
-
   return (
     <ScrollArea className="flex-grow bg-muted/20">
       <div className="flex flex-col items-center justify-center p-4 md:p-8 min-h-full">
@@ -38,6 +36,11 @@ export default function CardPreviewPanel({ card }: CardPreviewPanelProps) {
           <div className="text-center text-muted-foreground">
             <p className="text-lg">No card selected</p>
             <p>Select a card from the list or add a new one to see its preview.</p>
+          </div>
+        ) : (
+          <div className="text-center text-muted-foreground">
+             <p className="text-lg">No card selected</p>
+             <p>Select a card from the list or add a new one to see its preview.</p>
           </div>
         )}
       </div>
