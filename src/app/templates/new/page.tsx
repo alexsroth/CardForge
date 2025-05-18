@@ -18,7 +18,9 @@ export default function NewTemplatePage() {
   const [isSaving, setIsSaving] = useState(false);
 
   const handleCreateTemplate = useCallback(async (
-    newTemplateData: CardTemplate
+    newTemplateData: CardTemplate,
+    // existingTemplateId is not used in create mode for onSave from TemplateDesigner
+    _existingTemplateId?: CardTemplateId 
   ): Promise<{ success: boolean, message?: string }> => {
     console.log('[DEBUG] NewTemplatePage: handleCreateTemplate called for', newTemplateData.name);
     setIsSaving(true);
@@ -40,7 +42,7 @@ export default function NewTemplatePage() {
     return result;
   }, [addTemplate, router, toast]);
 
-  if (templatesLoading) {
+  if (templatesLoading && !isSaving) {
     return (
       <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -55,7 +57,4 @@ export default function NewTemplatePage() {
       onSave={handleCreateTemplate}
       isSavingTemplate={isSaving}
       isLoadingContexts={templatesLoading}
-      existingTemplateIds={templates.map(t => t.id)}
-    />
-  );
-}
+      existingTemplateIds={templates.map(t => t.id
