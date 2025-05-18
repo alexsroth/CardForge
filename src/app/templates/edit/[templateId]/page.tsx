@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Save, AlertTriangle, Loader2, ArrowLeft, Eye, Palette, HelpCircle, Copy, ChevronDown, ChevronRight, EllipsisVertical, Settings } from 'lucide-react';
+import { PlusCircle, Save, AlertTriangle, Loader2, Eye, Palette, HelpCircle, Copy, ChevronDown, ChevronRight, EllipsisVertical, Settings } from 'lucide-react';
 import FieldRow, { type TemplateFieldDefinition } from '@/components/template-designer/field-row';
 import { useToast } from '@/hooks/use-toast';
 import { useTemplates, type CardTemplateId as ContextCardTemplateId } from '@/contexts/TemplateContext';
@@ -105,22 +105,16 @@ const toCamelCase = (str: string): string => {
     .replace(/[^a-zA-Z0-9\s_-]/g, '') // Remove special characters except space, underscore, hyphen
     .replace(/\s+/g, ' '); // Collapse multiple spaces to one
 
-  // Split by space, underscore, or hyphen
   const words = cleaned.split(/[\s_-]+/).filter(Boolean);
   if (words.length === 0) return 'untitledField'; // Default if no valid words found
 
-  // First word to lowercase, subsequent words to TitleCase
   const firstWord = words[0].toLowerCase();
   const restWords = words.slice(1).map(word =>
     word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
   );
 
   let result = [firstWord, ...restWords].join('');
-
-  // If result is empty (e.g., input was just "_-_"), use a default
   if (!result) result = 'untitledField';
-
-  // If starts with a number, prepend an underscore
   if (/^[0-9]/.test(result)) {
     result = '_' + result;
   }
@@ -151,7 +145,7 @@ const generateSamplePlaceholderUrl = (config: {
       path += `/${cleanTextColor}`;
     }
   }
-  path += `.png`; // Add .png for consistency
+  path += `.png`; 
 
   let fullUrl = `https://placehold.co/${path}`;
   const cleanText = config.text?.trim();
@@ -161,14 +155,8 @@ const generateSamplePlaceholderUrl = (config: {
   return fullUrl;
 };
 
-// const IconComponent = ({ name, className, ...props }: { name: string } & LucideIcons.LucideProps) => {
-//   const Icon = (LucideIcons as keyof typeof LucideIcons)[name as keyof typeof LucideIcons];
-//   if (!Icon) {
-//     console.warn(`[DEBUG] IconComponent (EditTemplatePage): Lucide icon "${name}" not found or not a function. Fallback HelpCircle will be used.`);
-//  return <LucideIcons.HelpCircle className={cn("h-4 w-4", className)} {...props} />;
-//   }
-//   return <Icon className={cn("h-4 w-4", className)} {...props} />;
-// };
+
+const defaultLayoutParsed = JSON.parse(DEFAULT_CARD_LAYOUT_JSON_STRING) as LayoutDefinition;
 
 const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
   "Coins", "Sword", "Shield", "Zap", "Brain", "Heart", "Skull", "Star", "Gem",
@@ -182,7 +170,7 @@ const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
   "TreePine", "Trophy", "Umbrella", "User", "Video", "Wallet", "Watch", "Wifi", "Wrench"
 ];
 
-const NONE_VALUE = "_none_"; // Represents no specific Tailwind class selection
+const NONE_VALUE = "_none_"; 
 
 const COMMON_CARD_SIZES = [
   { label: `Default (${DEFAULT_CANVAS_WIDTH}x${DEFAULT_CANVAS_HEIGHT} px)`, width: `${DEFAULT_CANVAS_WIDTH}px`, height: `${DEFAULT_CANVAS_HEIGHT}px`, value: `${DEFAULT_CANVAS_WIDTH}x${DEFAULT_CANVAS_HEIGHT}` },
@@ -197,8 +185,7 @@ const COMMON_CARD_SIZES = [
 
 const TAILWIND_TEXT_COLORS: Array<{value: string, label: string}> = [
     { value: NONE_VALUE, label: "None (Theme Default)" },
-    { value: "text-black", label: "Black" },
-    { value: "text-white", label: "White" },
+    { value: "text-black", label: "Black" }, { value: "text-white", label: "White" },
     { value: "text-slate-500", label: "Slate 500" }, { value: "text-red-500", label: "Red 500" },
     { value: "text-orange-500", label: "Orange 500" }, { value: "text-amber-500", label: "Amber 500" },
     { value: "text-yellow-500", label: "Yellow 500" }, { value: "text-lime-500", label: "Lime 500" },
@@ -213,36 +200,26 @@ const TAILWIND_FONT_SIZES: Array<{value: string, label: string}> = [
     { value: NONE_VALUE, label: "None (Default)" },
     { value: "text-xs", label: "XS" }, { value: "text-sm", label: "Small" }, { value: "text-base", label: "Base" },
     { value: "text-lg", label: "Large" }, { value: "text-xl", label: "XL" }, { value: "text-2xl", label: "2XL" },
-    { value: "text-3xl", label: "3XL" }, { value: "text-4xl", label: "4XL" },
 ];
 const TAILWIND_FONT_WEIGHTS: Array<{value: string, label: string}> = [
     { value: NONE_VALUE, label: "None (Default)" },
-    { value: "font-thin", label: "Thin (100)" }, { value: "font-extralight", label: "Extra Light (200)" },
     { value: "font-light", label: "Light (300)" }, { value: "font-normal", label: "Normal (400)" },
     { value: "font-medium", label: "Medium (500)" }, { value: "font-semibold", label: "Semi-Bold (600)" },
     { value: "font-bold", label: "Bold (700)" }, { value: "font-extrabold", label: "Extra Bold (800)" },
-    { value: "font-black", label: "Black (900)" },
 ];
 const TAILWIND_LINE_HEIGHTS: Array<{value: string, label: string}> = [
     { value: NONE_VALUE, label: "None (Default)" },
-    { value: "leading-3", label: "0.75rem (12px)" }, { value: "leading-4", label: "1rem (16px)" },
-    { value: "leading-5", label: "1.25rem (20px)" }, { value: "leading-6", label: "1.5rem (24px)" },
-    { value: "leading-7", label: "1.75rem (28px)" }, { value: "leading-8", label: "2rem (32px)" },
-    { value: "leading-9", label: "2.25rem (36px)" }, { value: "leading-10", label: "2.5rem (40px)" },
-    { value: "leading-none", label: "None (1)" }, { value: "leading-tight", label: "Tight (1.25)" },
-    { value: "leading-snug", label: "Snug (1.375)" }, { value: "leading-normal", label: "Normal (1.5)" },
-    { value: "leading-relaxed", label: "Relaxed (1.625)" }, { value: "leading-loose", label: "Loose (2)" },
+    { value: "leading-tight", label: "Tight (1.25)" }, { value: "leading-snug", label: "Snug (1.375)" },
+    { value: "leading-normal", label: "Normal (1.5)" }, { value: "leading-relaxed", label: "Relaxed (1.625)" }, { value: "leading-loose", label: "Loose (2)" },
 ];
 const TAILWIND_OVERFLOW: Array<{value: string, label: string}> = [
     { value: NONE_VALUE, label: "None (Default)" },
     { value: "overflow-auto", label: "Auto" }, { value: "overflow-hidden", label: "Hidden" },
     { value: "overflow-clip", label: "Clip" }, { value: "overflow-visible", label: "Visible" },
-    { value: "overflow-scroll", label: "Scroll" },
 ];
 const TAILWIND_TEXT_OVERFLOW: Array<{value: string, label: string}> = [
     { value: NONE_VALUE, label: "None (Default)" },
-    { value: "truncate", label: "Truncate (Ellipsis + Hidden)" }, { value: "text-ellipsis", label: "Ellipsis" },
-    { value: "text-clip", label: "Clip" },
+    { value: "truncate", label: "Truncate" }, { value: "text-ellipsis", label: "Ellipsis" }, { value: "text-clip", label: "Clip" },
 ];
 const TAILWIND_BORDER_RADIUS_OPTIONS: Array<{value: string, label: string}> = [
   { value: NONE_VALUE, label: "None (Default)" }, { value: "rounded-none", label: "None (Explicit)"},
@@ -267,10 +244,9 @@ const TAILWIND_BORDER_COLOR_OPTIONS: Array<{value: string, label: string}> = [
   { value: "border-purple-500", label: "Purple 500" }, { value: "border-fuchsia-500", label: "Fuchsia 500" },
   { value: "border-pink-500", label: "Pink 500" }, { value: "border-rose-500", label: "Rose 500" },
 ];
-
 const BORDER_SIDE_WIDTH_OPTIONS: { value: string; label: string; }[] = [
   { value: NONE_VALUE, label: "None (No Border)"},
-  { value: 'default', label: "Default (1px)"}, // Represents 'border-t', 'border-r', etc.
+  { value: 'default', label: "Default (1px)"},
   { value: '0', label: "0px"},
   { value: '2', label: "2px"},
   { value: '4', label: "4px"},
@@ -287,16 +263,14 @@ const getSideBorderWidthClass = (side: 't' | 'r' | 'b' | 'l', value: string | un
   return `${baseClass}-${side}-${option.value}`;
 };
 
-// Helper function to find a Tailwind class from a list of options within a className string
 const findTailwindClass = (classNameString: string | undefined, options: Array<{value: string}>): string | undefined => {
   if (!classNameString) return undefined;
   const classes = classNameString.split(' ');
   return classes.find(cls => options.some(opt => opt.value === cls && opt.value !== NONE_VALUE));
 };
 
-// Helper function to find a side border width class value (e.g., '2', 'default')
 const findSideBorderWidthClassValue = (classNameString: string | undefined, side: 't' | 'r' | 'b' | 'l'): string | undefined => {
-  if (!classNameString) return undefined;
+  if (!classNameString) return NONE_VALUE;
   const classes = classNameString.split(' ');
   for (const option of BORDER_SIDE_WIDTH_OPTIONS) {
     if (option.value === NONE_VALUE) continue;
@@ -305,9 +279,8 @@ const findSideBorderWidthClassValue = (classNameString: string | undefined, side
       return option.value;
     }
   }
-  return undefined;
+  return NONE_VALUE; 
 };
-
 
 export interface LayoutElementGuiConfig {
   _uiId: string;
@@ -318,7 +291,7 @@ export interface LayoutElementGuiConfig {
   isExpandedInGui: boolean;
 
   elementType: 'text' | 'textarea' | 'image' | 'iconValue' | 'iconFromData';
-  iconName?: string;
+  iconName?: string; 
 
   styleTop: string;
   styleLeft: string;
@@ -326,19 +299,15 @@ export interface LayoutElementGuiConfig {
   styleBottom?: string;
   styleMaxHeight?: string;
   stylePadding?: string;
-  styleFontStyle?: string;
-  styleTextAlign?: string;
-
+  styleFontStyle?: string; 
+  styleTextAlign?: string; 
+  
   tailwindTextColor?: string;
-  // styleFontSize removed, use tailwindFontSize
   tailwindFontSize?: string;
-  // styleFontWeight removed, use tailwindFontWeight
   tailwindFontWeight?: string;
-
   tailwindLineHeight?: string;
   tailwindOverflow?: string;
   tailwindTextOverflow?: string;
-
   tailwindBorderRadius?: string;
   tailwindBorderColor?: string;
   tailwindBorderTopW?: string;
@@ -356,7 +325,6 @@ export default function EditTemplatePage() {
 
   const templateIdToEdit = typeof params.templateId === 'string' ? params.templateId as CardTemplateId : undefined;
 
-  const [originalTemplateId, setOriginalTemplateId] = useState<CardTemplateId | undefined>(templateIdToEdit);
   const [templateName, setTemplateName] = useState('');
   const [fields, setFields] = useState<TemplateFieldDefinition[]>([]);
   const [initialFieldsLoaded, setInitialFieldsLoaded] = useState(false);
@@ -364,28 +332,15 @@ export default function EditTemplatePage() {
   const [layoutDefinition, setLayoutDefinition] = useState<string>('');
   const [layoutJsonError, setLayoutJsonError] = useState<string | null>(null);
 
-  // State for Canvas Setup GUI
-  const defaultLayoutParsed = useMemo(() => {
-    try {
-      return JSON.parse(DEFAULT_CARD_LAYOUT_JSON_STRING) as LayoutDefinition;
-    } catch {
-      // Fallback if default JSON string is somehow malformed
-      return { width: `${DEFAULT_CANVAS_WIDTH}px`, height: `${DEFAULT_CANVAS_HEIGHT}px`, backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "calc(var(--radius) - 2px)", borderWidth: "1px", borderStyle: "solid", elements: [] } as LayoutDefinition;
-    }
-  }, []);
-
   const [selectedSizePreset, setSelectedSizePreset] = useState<string>(COMMON_CARD_SIZES[0].value);
   const [canvasWidthSetting, setCanvasWidthSetting] = useState<string>(defaultLayoutParsed.width || `${DEFAULT_CANVAS_WIDTH}px`);
   const [canvasHeightSetting, setCanvasHeightSetting] = useState<string>(defaultLayoutParsed.height || `${DEFAULT_CANVAS_HEIGHT}px`);
-  
   const [canvasBackgroundColor, setCanvasBackgroundColor] = useState<string>(defaultLayoutParsed.backgroundColor || "hsl(var(--card))");
   const [canvasBorderColor, setCanvasBorderColor] = useState<string>(defaultLayoutParsed.borderColor || "hsl(var(--border))");
   const [canvasBorderRadius, setCanvasBorderRadius] = useState<string>(defaultLayoutParsed.borderRadius || "calc(var(--radius) - 2px)");
   const [canvasBorderWidth, setCanvasBorderWidth] = useState<string>(defaultLayoutParsed.borderWidth || "1px");
   const [canvasBorderStyle, setCanvasBorderStyle] = useState<string>(defaultLayoutParsed.borderStyle || "solid");
 
-
-  // State for Layout Element GUI configurations
   const [layoutElementGuiConfigs, setLayoutElementGuiConfigs] = useState<LayoutElementGuiConfig[]>([]);
 
   const [isSaving, setIsSaving] = useState(false);
@@ -410,7 +365,6 @@ export default function EditTemplatePage() {
 
     if (foundTemplate) {
       console.log('[DEBUG] EditTemplatePage: Found template:', foundTemplate.name);
-      setOriginalTemplateId(foundTemplate.id as CardTemplateId);
       setTemplateName(foundTemplate.name);
 
       const initialFieldDefs = foundTemplate.fields.map((field, index) => {
@@ -421,7 +375,7 @@ export default function EditTemplatePage() {
         return mapped;
       });
       setFields(initialFieldDefs);
-      setInitialFieldsLoaded(true);
+      setInitialFieldsLoaded(true); 
 
       const initialLayoutDefString = foundTemplate.layoutDefinition?.trim() ? foundTemplate.layoutDefinition : DEFAULT_CARD_LAYOUT_JSON_STRING;
       setLayoutDefinition(initialLayoutDefString);
@@ -434,15 +388,13 @@ export default function EditTemplatePage() {
   }, [templateIdToEdit, getTemplateById, templatesLoading]);
 
 
-  // Effect to parse layoutDefinition and populate GUI states (Canvas Setup & Layout Elements)
   useEffect(() => {
-    console.log('[DEBUG] EditTemplatePage: useEffect [layoutDefinition, fields, initialFieldsLoaded, defaultLayoutParsed]');
-    if (!initialFieldsLoaded || !layoutDefinition || !templateToEdit) {
-      console.log('[DEBUG] EditTemplatePage: GUI config init skipped. initialFieldsLoaded:', initialFieldsLoaded, 'layoutDefinition empty:', !layoutDefinition, 'templateToEdit empty:', !templateToEdit);
+    console.log('[DEBUG] EditTemplatePage: useEffect [layoutDefinition, fields, initialFieldsLoaded, templateToEdit] for GUI sync.');
+    if (!initialFieldsLoaded || !templateToEdit) {
+      console.log('[DEBUG] EditTemplatePage: GUI config init skipped. initialFieldsLoaded:', initialFieldsLoaded, 'templateToEdit empty:', !templateToEdit);
       return;
     }
-    console.log('[DEBUG] EditTemplatePage: Initializing GUI controls from layoutDefinition string.');
-
+    
     let parsedLayout: LayoutDefinition;
     try {
       parsedLayout = JSON.parse(layoutDefinition.trim() || DEFAULT_CARD_LAYOUT_JSON_STRING);
@@ -450,10 +402,9 @@ export default function EditTemplatePage() {
     } catch (e) {
       console.error("[DEBUG] EditTemplatePage: Could not parse layout definition for GUI config init:", e);
       setLayoutJsonError(`Failed to parse Layout JSON: ${String(e)}`);
-      parsedLayout = JSON.parse(DEFAULT_CARD_LAYOUT_JSON_STRING); // Use the actual default for fallback
+      parsedLayout = JSON.parse(DEFAULT_CARD_LAYOUT_JSON_STRING);
     }
 
-    // Canvas Setup from parsedLayout
     setCanvasWidthSetting(parsedLayout.width || defaultLayoutParsed.width || `${DEFAULT_CANVAS_WIDTH}px`);
     setCanvasHeightSetting(parsedLayout.height || defaultLayoutParsed.height || `${DEFAULT_CANVAS_HEIGHT}px`);
     const matchingPreset = COMMON_CARD_SIZES.find(s => s.width === (parsedLayout.width || defaultLayoutParsed.width) && s.height === (parsedLayout.height || defaultLayoutParsed.height));
@@ -465,65 +416,87 @@ export default function EditTemplatePage() {
     setCanvasBorderWidth(parsedLayout.borderWidth || defaultLayoutParsed.borderWidth || "1px");
     setCanvasBorderStyle(parsedLayout.borderStyle || defaultLayoutParsed.borderStyle || "solid");
 
-
     const elementsFromJson = Array.isArray(parsedLayout.elements) ? parsedLayout.elements : [];
     const elementsFromJsonMap = new Map(elementsFromJson.map(el => [el.fieldKey, el]));
 
-    const newGuiConfigs = fields.map((field, index) => {
-      const existingLayoutElement = elementsFromJsonMap.get(field.key);
-      const isEnabled = !!existingLayoutElement;
-      const styleFromElement = existingLayoutElement?.style || {};
-      const classStringFromElement = existingLayoutElement?.className || '';
-      const defaultTopValue = `${10 + (index % 8) * 35}px`; // Cascaded default
+    const newGuiConfigs = fields.map((fieldDef, index) => {
+      const existingJsonElement = elementsFromJsonMap.get(fieldDef.key);
+      const defaultTopValue = `${10 + (index % 8) * 35}px`;
+      const defaultLeftValue = '10px';
 
-      return {
-        _uiId: field._uiId!,
-        fieldKey: field.key,
-        label: field.label,
-        originalType: field.type,
-        isEnabledOnCanvas: isEnabled,
-        isExpandedInGui: layoutElementGuiConfigs.find(c => c._uiId === field._uiId)?.isExpandedInGui || false, // Preserve expansion
-
-        elementType: existingLayoutElement?.type || (field.type === 'textarea' ? 'textarea' : (field.type === 'placeholderImage' ? 'image' : 'text')),
-        iconName: existingLayoutElement?.icon ?? (field.type === 'number' ? 'Coins' : ''),
-
-        styleTop: existingLayoutElement ? (styleFromElement.top ?? '') : defaultTopValue,
-        styleLeft: existingLayoutElement ? (styleFromElement.left ?? '') : '10px',
-        styleRight: styleFromElement.right ?? '',
-        styleBottom: styleFromElement.bottom ?? '',
-        styleMaxHeight: styleFromElement.maxHeight ?? (field.type === 'textarea' ? '80px' : (field.type === 'placeholderImage' ? '140px' : 'auto')),
-        stylePadding: styleFromElement.padding ?? '',
-        styleFontStyle: styleFromElement.fontStyle ?? 'normal',
-        styleTextAlign: styleFromElement.textAlign ?? 'left',
-        // Removed styleFontSize and styleFontWeight here, will be handled by Tailwind classes
-
-        tailwindTextColor: findTailwindClass(classStringFromElement, TAILWIND_TEXT_COLORS) || NONE_VALUE,
-        tailwindFontSize: findTailwindClass(classStringFromElement, TAILWIND_FONT_SIZES) || NONE_VALUE,
-        tailwindFontWeight: findTailwindClass(classStringFromElement, TAILWIND_FONT_WEIGHTS) || NONE_VALUE,
-        tailwindLineHeight: findTailwindClass(classStringFromElement, TAILWIND_LINE_HEIGHTS) || NONE_VALUE,
-        tailwindOverflow: findTailwindClass(classStringFromElement, TAILWIND_OVERFLOW) || NONE_VALUE,
-        tailwindTextOverflow: findTailwindClass(classStringFromElement, TAILWIND_TEXT_OVERFLOW) || NONE_VALUE,
-
-        tailwindBorderRadius: findTailwindClass(classStringFromElement, TAILWIND_BORDER_RADIUS_OPTIONS) || NONE_VALUE,
-        tailwindBorderColor: findTailwindClass(classStringFromElement, TAILWIND_BORDER_COLOR_OPTIONS) || NONE_VALUE,
-
-        tailwindBorderTopW: findSideBorderWidthClassValue(classStringFromElement, 't') || NONE_VALUE,
-        tailwindBorderRightW: findSideBorderWidthClassValue(classStringFromElement, 'r') || NONE_VALUE,
-        tailwindBorderBottomW: findSideBorderWidthClassValue(classStringFromElement, 'b') || NONE_VALUE,
-        tailwindBorderLeftW: findSideBorderWidthClassValue(classStringFromElement, 'l') || NONE_VALUE,
+      let config: LayoutElementGuiConfig = {
+        _uiId: fieldDef._uiId!,
+        fieldKey: fieldDef.key,
+        label: fieldDef.label,
+        originalType: fieldDef.type,
+        isEnabledOnCanvas: false,
+        isExpandedInGui: layoutElementGuiConfigs.find(c => c._uiId === fieldDef._uiId)?.isExpandedInGui || false,
+        elementType: fieldDef.type === 'textarea' ? 'textarea' : (fieldDef.type === 'placeholderImage' ? 'image' : 'text'),
+        iconName: fieldDef.type === 'number' ? 'Coins' : '',
+        styleTop: defaultTopValue,
+        styleLeft: defaultLeftValue,
+        styleRight: '',
+        styleBottom: '',
+        styleMaxHeight: fieldDef.type === 'textarea' ? '80px' : (fieldDef.type === 'placeholderImage' ? '140px' : 'auto'),
+        stylePadding: '',
+        styleFontStyle: 'normal',
+        styleTextAlign: 'left',
+        tailwindTextColor: 'text-black',
+        tailwindFontSize: 'text-base',
+        tailwindFontWeight: 'font-normal',
+        tailwindLineHeight: 'leading-normal',
+        tailwindOverflow: 'overflow-visible',
+        tailwindTextOverflow: NONE_VALUE,
+        tailwindBorderRadius: NONE_VALUE,
+        tailwindBorderColor: NONE_VALUE,
+        tailwindBorderTopW: NONE_VALUE,
+        tailwindBorderRightW: NONE_VALUE,
+        tailwindBorderBottomW: NONE_VALUE,
+        tailwindBorderLeftW: NONE_VALUE,
       };
+
+      if (existingJsonElement) {
+        const style = existingJsonElement.style || {};
+        const classString = existingJsonElement.className || '';
+        config = {
+          ...config,
+          isEnabledOnCanvas: true,
+          elementType: existingJsonElement.type || config.elementType,
+          iconName: existingJsonElement.icon || config.iconName,
+          styleTop: String(style.top ?? ''),
+          styleLeft: String(style.left ?? ''),
+          styleRight: String(style.right ?? ''),
+          styleBottom: String(style.bottom ?? ''),
+          styleMaxHeight: String(style.maxHeight ?? config.styleMaxHeight),
+          stylePadding: String(style.padding ?? ''),
+          styleFontStyle: String(style.fontStyle ?? 'normal'),
+          styleTextAlign: String(style.textAlign ?? 'left'),
+          tailwindTextColor: findTailwindClass(classString, TAILWIND_TEXT_COLORS) || 'text-black',
+          tailwindFontSize: findTailwindClass(classString, TAILWIND_FONT_SIZES) || 'text-base',
+          tailwindFontWeight: findTailwindClass(classString, TAILWIND_FONT_WEIGHTS) || 'font-normal',
+          tailwindLineHeight: findTailwindClass(classString, TAILWIND_LINE_HEIGHTS) || 'leading-normal',
+          tailwindOverflow: findTailwindClass(classString, TAILWIND_OVERFLOW) || 'overflow-visible',
+          tailwindTextOverflow: findTailwindClass(classString, TAILWIND_TEXT_OVERFLOW) || NONE_VALUE,
+          tailwindBorderRadius: findTailwindClass(classString, TAILWIND_BORDER_RADIUS_OPTIONS) || NONE_VALUE,
+          tailwindBorderColor: findTailwindClass(classString, TAILWIND_BORDER_COLOR_OPTIONS) || NONE_VALUE,
+          tailwindBorderTopW: findSideBorderWidthClassValue(classString, 't') || NONE_VALUE,
+          tailwindBorderRightW: findSideBorderWidthClassValue(classString, 'r') || NONE_VALUE,
+          tailwindBorderBottomW: findSideBorderWidthClassValue(classString, 'b') || NONE_VALUE,
+          tailwindBorderLeftW: findSideBorderWidthClassValue(classString, 'l') || NONE_VALUE,
+        };
+      }
+      return config;
     });
     setLayoutElementGuiConfigs(newGuiConfigs);
-    console.log('[DEBUG] EditTemplatePage: GUI controls populated from JSON.', newGuiConfigs.length, 'configs created.');
+    console.log('[DEBUG] EditTemplatePage: GUI controls populated from JSON.', newGuiConfigs.length, 'configs updated/created.');
 
-  }, [layoutDefinition, fields, initialFieldsLoaded, templateToEdit, defaultLayoutParsed]); // Removed layoutElementGuiConfigs
+  }, [layoutDefinition, fields, initialFieldsLoaded, templateToEdit]);
 
 
- // Effect to sync layoutElementGuiConfigs when fields change (add/remove/reorder)
   useEffect(() => {
-    console.log('[DEBUG] EditTemplatePage: useEffect [fields, initialFieldsLoaded] for layoutElementGuiConfigs sync');
+    console.log('[DEBUG] EditTemplatePage: useEffect [fields, initialFieldsLoaded] for layoutElementGuiConfigs sync from data fields.');
     if (!initialFieldsLoaded) return;
-    console.log('[DEBUG] EditTemplatePage: Fields array changed, syncing layoutElementGuiConfigs.');
+    console.log('[DEBUG] EditTemplatePage: Data fields array changed, syncing layoutElementGuiConfigs structure.');
 
     setLayoutElementGuiConfigs(prevConfigs => {
       const existingConfigsByUiIdMap = new Map(prevConfigs.map(c => [c._uiId, c]));
@@ -536,28 +509,27 @@ export default function EditTemplatePage() {
         if (config) {
           newConfigs.push({
             ...config,
-            _uiId: field._uiId!,
-            fieldKey: field.key,
-            label: field.label,
-            originalType: field.type,
+            _uiId: field._uiId!, 
+            fieldKey: field.key, 
+            label: field.label,   
+            originalType: field.type, 
           });
         } else {
           console.log('[DEBUG] EditTemplatePage: New data field added, creating default GUI config for:', field.label);
-          const defaultElementType = field.type === 'textarea' ? 'textarea' : (field.type === 'placeholderImage' ? 'image' : 'text');
           newConfigs.push({
             _uiId: field._uiId || `gui-cfg-edit-newly-added-${field.key}-${Date.now()}-${index}`,
             fieldKey: field.key,
             label: field.label,
             originalType: field.type,
-            isEnabledOnCanvas: false,
+            isEnabledOnCanvas: false, 
             isExpandedInGui: false,
-            elementType: defaultElementType,
+            elementType: field.type === 'textarea' ? 'textarea' : (field.type === 'placeholderImage' ? 'image' : 'text'),
             iconName: field.type === 'number' ? 'Coins' : '',
             styleTop: defaultTopValue, styleLeft: '10px', styleRight: '', styleBottom: '',
             styleMaxHeight: field.type === 'textarea' ? '80px' : (field.type === 'placeholderImage' ? '140px' : 'auto'),
             stylePadding: '', styleFontStyle: 'normal', styleTextAlign: 'left',
-            tailwindTextColor: NONE_VALUE, tailwindFontSize: NONE_VALUE, tailwindFontWeight: NONE_VALUE,
-            tailwindLineHeight: NONE_VALUE, tailwindOverflow: NONE_VALUE, tailwindTextOverflow: NONE_VALUE,
+            tailwindTextColor: 'text-black', tailwindFontSize: 'text-base', tailwindFontWeight: 'font-normal',
+            tailwindLineHeight: 'leading-normal', tailwindOverflow: 'overflow-visible', tailwindTextOverflow: NONE_VALUE,
             tailwindBorderRadius: NONE_VALUE, tailwindBorderColor: NONE_VALUE,
             tailwindBorderTopW: NONE_VALUE, tailwindBorderRightW: NONE_VALUE, tailwindBorderBottomW: NONE_VALUE, tailwindBorderLeftW: NONE_VALUE,
           });
@@ -569,39 +541,37 @@ export default function EditTemplatePage() {
   }, [fields, initialFieldsLoaded]);
 
 
-  // Effect to generate JSON from GUI when in GUI mode and GUI state changes (debounced)
   useEffect(() => {
-    console.log('[DEBUG] EditTemplatePage: useEffect [layoutElementGuiConfigs, canvas settings, activeEditorView, initialFieldsLoaded] for debounced JSON generation.');
+    console.log('[DEBUG] EditTemplatePage: useEffect for debounced JSON generation. Active view:', activeEditorView, 'Initial fields loaded:', initialFieldsLoaded);
     if (activeEditorView === 'gui' && initialFieldsLoaded) {
       if (guiBuilderLastUpdateRef.current) {
         clearTimeout(guiBuilderLastUpdateRef.current);
       }
       guiBuilderLastUpdateRef.current = window.setTimeout(() => {
         console.log('[DEBUG] EditTemplatePage: GUI state changed, auto-generating JSON for preview (debounced).');
-        handleGenerateJsonFromBuilder(false);
-      }, 700);
+        handleGenerateJsonFromBuilder(false); 
+      }, 700); 
     }
     return () => {
       if (guiBuilderLastUpdateRef.current) {
         clearTimeout(guiBuilderLastUpdateRef.current);
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
+  }, [ 
     layoutElementGuiConfigs,
     canvasWidthSetting, canvasHeightSetting,
     canvasBackgroundColor, canvasBorderColor, canvasBorderRadius, canvasBorderWidth, canvasBorderStyle,
     activeEditorView, initialFieldsLoaded,
-    // handleGenerateJsonFromBuilder is memoized by useCallback, but not listed here for simplicity in this effect's purpose
+    // handleGenerateJsonFromBuilder is memoized
   ]);
 
 
   useEffect(() => {
-    console.log('[DEBUG] EditTemplatePage: useEffect [fields, originalTemplateId, templateName, canvasWidthSetting, canvasHeightSetting, initialFieldsLoaded, templateToEdit] for sampleCardForPreview');
-    if (!initialFieldsLoaded && !templateToEdit) return; // Ensure initialFieldsLoaded is true OR templateToEdit exists (for edit scenario)
+    console.log('[DEBUG] EditTemplatePage: useEffect for sampleCardForPreview update.');
+    if (!initialFieldsLoaded && !templateToEdit) return;
     console.log('[DEBUG] EditTemplatePage: Generating sample card for preview.');
 
-    const currentTemplateIdForPreview = originalTemplateId || 'previewTemplateId';
+    const currentTemplateIdForPreview = templateIdToEdit || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> & { [key: string]: any } = {
       id: 'preview-card',
       templateId: currentTemplateIdForPreview as CardTemplateId,
@@ -674,18 +644,18 @@ export default function EditTemplatePage() {
 
     setSampleCardForPreview(generatedSampleCard as CardData);
     console.log('[DEBUG] EditTemplatePage: Sample card for preview updated.');
-  }, [fields, originalTemplateId, templateName, canvasWidthSetting, canvasHeightSetting, initialFieldsLoaded, templateToEdit]);
+  }, [fields, templateIdToEdit, templateName, canvasWidthSetting, canvasHeightSetting, initialFieldsLoaded, templateToEdit]);
 
   const templateForPreview = useMemo((): CardTemplate | null => {
-    console.log('[DEBUG] EditTemplatePage: useMemo [originalTemplateId, templateName, fields, layoutDefinition, templateToEdit] for templateForPreview');
-    if (!templateToEdit && !originalTemplateId) return null;
+    console.log('[DEBUG] EditTemplatePage: useMemo for templateForPreview update.');
+    if (!templateToEdit && !templateIdToEdit) return null; 
     return {
-        id: (originalTemplateId || 'previewTemplateId') as CardTemplateId,
+        id: (templateIdToEdit || 'previewTemplateId') as CardTemplateId,
         name: templateName || 'Preview Template Name',
         fields: fields.map(mapFieldDefinitionToTemplateField),
         layoutDefinition: layoutDefinition,
     };
-  }, [originalTemplateId, templateName, fields, layoutDefinition, templateToEdit]);
+  }, [templateIdToEdit, templateName, fields, layoutDefinition, templateToEdit]);
 
   const handleAddField = useCallback(() => {
     console.log('[DEBUG] EditTemplatePage/handleAddField: Adding new field.');
@@ -741,7 +711,7 @@ export default function EditTemplatePage() {
 
           if (updatedFieldDefinition.label !== undefined && updatedFieldDefinition.label !== oldField.label) {
             let baseKey = toCamelCase(updatedFieldDefinition.label);
-             if (!baseKey) {
+             if (!baseKey) { 
               const prefix = 'field';
               let fallbackCounter = 1;
               let potentialKey = `${prefix}${fallbackCounter}`;
@@ -781,14 +751,14 @@ export default function EditTemplatePage() {
     const newLayoutDef = e.target.value;
     console.log('[DEBUG] EditTemplatePage/handleLayoutDefinitionChangeFromTextarea: Layout string changed by user in textarea.');
     setLayoutDefinition(newLayoutDef);
-    if (layoutJsonError) setLayoutJsonError(null);
+    if (layoutJsonError) setLayoutJsonError(null); 
   };
 
   const validateAndFormatLayoutJson = useCallback(() => {
     console.log('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: Validating and formatting JSON from textarea.');
     try {
       const parsed = JSON.parse(layoutDefinition);
-      setLayoutDefinition(JSON.stringify(parsed, null, 2)); // Prettify
+      setLayoutDefinition(JSON.stringify(parsed, null, 2)); 
       setLayoutJsonError(null);
       console.log('[DEBUG] EditTemplatePage/validateAndFormatLayoutJson: JSON is valid and formatted.');
       return true;
@@ -831,7 +801,7 @@ export default function EditTemplatePage() {
       if (config.stylePadding?.trim()) style.padding = config.stylePadding.trim();
       if (config.styleFontStyle?.trim() && config.styleFontStyle !== 'normal') style.fontStyle = config.styleFontStyle.trim();
       if (config.styleTextAlign?.trim() && config.styleTextAlign !== 'left') style.textAlign = config.styleTextAlign.trim();
-
+      
       const classNames = [];
       if (config.originalType === 'textarea' || config.elementType === 'textarea') classNames.push('whitespace-pre-wrap');
 
@@ -839,7 +809,7 @@ export default function EditTemplatePage() {
       else if ((config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') && !classNames.some(c => c.startsWith('text-'))) classNames.push('text-black');
 
       if (config.tailwindFontSize && config.tailwindFontSize !== NONE_VALUE) classNames.push(config.tailwindFontSize);
-      else if ((config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') && !classNames.some(c => c.startsWith('text-'))) classNames.push('text-base');
+      else if ((config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') && !classNames.some(c => c.startsWith('text-sm') || c.startsWith('text-xs') || c.startsWith('text-lg') || c.startsWith('text-xl') || c.startsWith('text-2xl'))) classNames.push('text-base');
 
       if (config.tailwindFontWeight && config.tailwindFontWeight !== NONE_VALUE) classNames.push(config.tailwindFontWeight);
       else if ((config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') && !classNames.some(c => c.startsWith('font-'))) classNames.push('font-normal');
@@ -851,9 +821,9 @@ export default function EditTemplatePage() {
       else if ((config.elementType === 'text' || config.elementType === 'textarea') && !classNames.some(c => c.startsWith('overflow-'))) classNames.push('overflow-visible');
 
       if (config.tailwindTextOverflow && config.tailwindTextOverflow !== NONE_VALUE) classNames.push(config.tailwindTextOverflow);
-
+      
       if (config.tailwindBorderRadius && config.tailwindBorderRadius !== NONE_VALUE) classNames.push(config.tailwindBorderRadius);
-
+      
       const sideBorderClasses = [
         getSideBorderWidthClass('t', config.tailwindBorderTopW),
         getSideBorderWidthClass('r', config.tailwindBorderRightW),
@@ -866,14 +836,17 @@ export default function EditTemplatePage() {
         if (config.tailwindBorderColor && config.tailwindBorderColor !== NONE_VALUE) {
           classNames.push(config.tailwindBorderColor);
         } else {
-          classNames.push('border-border'); // Default border color if sides have width but no color selected
+          classNames.push('border-border'); 
         }
       }
 
       const element: LayoutElement = { fieldKey: config.fieldKey, type: config.elementType };
-      if (Object.keys(style).length > 1 || (Object.keys(style).length === 1 && !style.position)) {
-           element.style = style; // Only add style if more than just position:absolute or if position is absolute but other styles exist
-      } else if (Object.keys(style).length === 1 && style.position !== "absolute") { // if only position exists and it's not absolute
+      if (Object.keys(style).length > 1 || (Object.keys(style).length === 1 && style.position !== "absolute")) {
+           element.style = style;
+      } else if (Object.keys(style).length === 1 && style.position === "absolute" && (Object.keys(style).length > 1)) { 
+           element.style = style;
+      } else if (Object.keys(style).length === 0 && element.type !== 'image' && element.type !== 'textarea') { 
+      } else if (Object.keys(style).length > 0) { 
           element.style = style;
       }
 
@@ -897,22 +870,21 @@ export default function EditTemplatePage() {
 
     const newLayoutJsonString = JSON.stringify(newLayout, null, 2);
     setLayoutDefinition(newLayoutJsonString);
-    setLayoutJsonError(null); // Assume valid if generated by builder
-    guiBuilderLastUpdateRef.current = Date.now();
+    setLayoutJsonError(null); 
+    guiBuilderLastUpdateRef.current = Date.now(); 
     if (showSuccessToast) {
       toast({ title: "Layout JSON Updated", description: "JSON generated from GUI builder and updated in the textarea and preview."});
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
+  }, [ 
       layoutElementGuiConfigs, canvasWidthSetting, canvasHeightSetting,
       canvasBackgroundColor, canvasBorderColor, canvasBorderRadius, canvasBorderWidth, canvasBorderStyle,
-      toast, defaultLayoutParsed // defaultLayoutParsed is memoized, safe to include
+      toast, defaultLayoutParsed 
   ]);
 
 
   const handleSaveTemplate = useCallback(async () => {
     console.log('[DEBUG] EditTemplatePage/handleSaveTemplate: Attempting to save changes.');
-     if (!originalTemplateId) {
+     if (!templateIdToEdit) {
       toast({ title: "Error", description: "Original template ID is missing. Cannot save.", variant: "destructive" });
       return;
     }
@@ -940,7 +912,7 @@ export default function EditTemplatePage() {
        finalLayoutDefToSave = DEFAULT_CARD_LAYOUT_JSON_STRING;
     } else {
       try {
-        JSON.parse(finalLayoutDefToSave);
+        JSON.parse(finalLayoutDefToSave); 
       } catch (e: any) {
         setLayoutJsonError(`Invalid JSON: ${e.message}`);
         toast({
@@ -949,14 +921,14 @@ export default function EditTemplatePage() {
           variant: "destructive",
           duration: 7000,
         });
-        setActiveEditorView('json');
+        setActiveEditorView('json'); 
         return;
       }
     }
 
     setIsSaving(true);
     const updatedTemplate: CardTemplate = {
-      id: originalTemplateId,
+      id: templateIdToEdit,
       name: templateName.trim(),
       fields: fields.map(mapFieldDefinitionToTemplateField),
       layoutDefinition: finalLayoutDefToSave,
@@ -977,8 +949,7 @@ export default function EditTemplatePage() {
       });
     }
     setIsSaving(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [originalTemplateId, templateName, fields, layoutDefinition, updateTemplate, router, toast, DEFAULT_CARD_LAYOUT_JSON_STRING]); // Added DEFAULT_CARD_LAYOUT_JSON_STRING
+  }, [templateIdToEdit, templateName, fields, layoutDefinition, updateTemplate, router, toast, DEFAULT_CARD_LAYOUT_JSON_STRING]);
 
   const handleCopyIconName = useCallback(async (iconName: string) => {
     try {
@@ -1002,7 +973,6 @@ export default function EditTemplatePage() {
   const handleSizePresetChange = (value: string) => {
     setSelectedSizePreset(value);
     if (value === "custom") {
-      // No change if custom, user will edit inputs
     } else {
       const preset = COMMON_CARD_SIZES.find(s => s.value === value);
       if (preset) {
@@ -1018,7 +988,6 @@ export default function EditTemplatePage() {
     } else {
       setCanvasHeightSetting(value);
     }
-    // If user types into custom dimension fields, switch preset to "custom"
     if (selectedSizePreset !== "custom") {
       setSelectedSizePreset("custom");
     }
@@ -1091,7 +1060,7 @@ export default function EditTemplatePage() {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={handleSaveTemplate}
-                    disabled={isSaving || !originalTemplateId || !templateName.trim() || fields.length === 0 || (activeEditorView === 'json' && !!layoutJsonError)}
+                    disabled={isSaving || !templateIdToEdit || !templateName.trim() || fields.length === 0 || (activeEditorView === 'json' && !!layoutJsonError)}
                   >
                      {isSaving ? ( <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving... </> ) : ( <> <Save className="mr-2 h-4 w-4" /> Save Changes </>)}
                   </DropdownMenuItem>
@@ -1100,7 +1069,7 @@ export default function EditTemplatePage() {
             </div>
           </div>
           <CardDescription className="text-sm pt-4">
-            Template ID (<code className="bg-muted px-1 rounded-sm">{originalTemplateId}</code>) is auto-generated and cannot be changed.
+            Template ID (<code className="bg-muted px-1 rounded-sm">{templateIdToEdit}</code>) is auto-generated and cannot be changed.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6 space-y-6">
@@ -1120,7 +1089,7 @@ export default function EditTemplatePage() {
               <Label htmlFor="templateIdDisplay" className="font-semibold">Template ID (Auto-generated, Read-only)</Label>
               <Input
                 id="templateIdDisplay"
-                value={originalTemplateId || ''}
+                value={templateIdToEdit || ''}
                 readOnly
                 disabled
                 className="mt-1 bg-muted/50"
@@ -1129,11 +1098,11 @@ export default function EditTemplatePage() {
           </div>
            <div>
             <h3 className="text-lg font-semibold mb-3">Data Fields</h3>
-            <ScrollArea className="pr-3">
+            <ScrollArea className="pr-3"> 
                 <div className="space-y-2">
                     {fields.map((field) => (
                     <FieldRow
-                        key={field._uiId}
+                        key={field._uiId} 
                         field={field}
                         onChange={(updatedField) => handleFieldChange(field._uiId!, updatedField)}
                         onRemove={() => handleRemoveField(field._uiId!)}
@@ -1161,9 +1130,7 @@ export default function EditTemplatePage() {
         </CardContent>
       </Card>
 
-      {/* Bottom Section: Layout Builder & Preview */}
       <div className="md:flex md:flex-row md:gap-6 items-start">
-        {/* Left Column: Visual Layout Builder / JSON Editor */}
         <Card className="md:w-[65%] flex flex-col shadow-md mb-6 md:mb-0">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -1175,7 +1142,15 @@ export default function EditTemplatePage() {
                     <Switch
                         id="editor-view-toggle-edit"
                         checked={activeEditorView === 'gui'}
-                        onCheckedChange={(checked) => setActiveEditorView(checked ? 'gui' : 'json')}
+                        onCheckedChange={(checked) => {
+                            const newView = checked ? 'gui' : 'json';
+                            console.log(`[DEBUG] EditTemplatePage: Switching editor view to: ${newView}`);
+                            if (newView === 'json' && activeEditorView === 'gui') {
+                                console.log('[DEBUG] EditTemplatePage: Switching GUI -> JSON, regenerating JSON from GUI state.');
+                                handleGenerateJsonFromBuilder(false); 
+                            }
+                            setActiveEditorView(newView);
+                        }}
                         aria-label="Toggle editor view"
                     />
                 </div>
@@ -1186,7 +1161,7 @@ export default function EditTemplatePage() {
                 : "Directly edit the Layout Definition JSON. Changes here will update the preview. GUI controls will update to match if you switch back to GUI mode. 'Generate/Update JSON' action uses GUI state."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex-grow space-y-4 flex flex-col">
+          <CardContent className="flex-grow space-y-4 flex flex-col min-h-0">
             {activeEditorView === 'gui' && (
               <>
                 <div className="space-y-3 p-3 border rounded-md bg-muted/30">
@@ -1241,7 +1216,7 @@ export default function EditTemplatePage() {
 
                 <div className="space-y-3 p-3 border rounded-md bg-muted/30">
                   <h4 className="text-base font-semibold mb-1">Layout Elements (Toggle to Include & Configure)</h4>
-                  <ScrollArea className="pr-2">
+                  <ScrollArea className="pr-2"> 
                       <div className="space-y-2">
                         {layoutElementGuiConfigs.map((config) => (
                           <div key={config._uiId} className="p-2.5 border rounded-md bg-card/80 hover:bg-card transition-colors">
@@ -1314,7 +1289,7 @@ export default function EditTemplatePage() {
                                 <details className="space-y-2 group" open>
                                   <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5"><Settings className="mr-1 h-3 w-3"/>Position & Sizing (CSS) <ChevronRight className="ml-auto h-3 w-3 group-open:rotate-90 transition-transform" /></summary>
                                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pl-1">
-                                      {['styleTop', 'styleLeft', 'styleRight', 'styleBottom'].map(prop => (<div key={prop}><Label htmlFor={`el-${prop}-edit-${config._uiId}`} className="text-xs capitalize">{prop.replace('style', '').replace(/([A-Z])/g, ' $1').trim()} (CSS)</Label><Input id={`el-${prop}-edit-${config._uiId}`} value={(config as any)[prop] || ''} onChange={(e) => handleGuiConfigChange(config._uiId, prop as keyof LayoutElementGuiConfig, e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 10px or auto" disabled={isSaving}/></div>))}
+                                      {(['styleTop', 'styleLeft', 'styleRight', 'styleBottom'] as const).map(prop => (<div key={prop}><Label htmlFor={`el-${prop}-edit-${config._uiId}`} className="text-xs capitalize">{prop.replace('style', '').replace(/([A-Z])/g, ' $1').trim()} (CSS)</Label><Input id={`el-${prop}-edit-${config._uiId}`} value={(config as any)[prop] || ''} onChange={(e) => handleGuiConfigChange(config._uiId, prop, e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 10px or auto" disabled={isSaving}/></div>))}
                                       <div><Label htmlFor={`el-styleMaxHeight-edit-${config._uiId}`} className="text-xs">Max Height (CSS)</Label><Input id={`el-styleMaxHeight-edit-${config._uiId}`} value={config.styleMaxHeight || ''} onChange={(e) => handleGuiConfigChange(config._uiId, 'styleMaxHeight', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 80px or auto" disabled={isSaving}/></div>
                                       <div><Label htmlFor={`el-stylePadding-edit-${config._uiId}`} className="text-xs">Padding (CSS)</Label><Input id={`el-stylePadding-edit-${config._uiId}`} value={config.stylePadding || ''} onChange={(e) => handleGuiConfigChange(config._uiId, 'stylePadding', e.target.value)} className="h-8 text-xs mt-0.5" placeholder="e.g., 5px or 2px 4px" disabled={isSaving}/></div>
                                   </div>
@@ -1333,6 +1308,7 @@ export default function EditTemplatePage() {
                                     </div>
                                   </details>
                                 )}
+
                                 {(config.elementType === 'text' || config.elementType === 'textarea') && (
                                     <details className="space-y-2 group" open>
                                     <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5"><Settings className="mr-1 h-3 w-3"/>Overflow & Display (Text - Tailwind) <ChevronRight className="ml-auto h-3 w-3 group-open:rotate-90 transition-transform" /></summary>
@@ -1342,6 +1318,7 @@ export default function EditTemplatePage() {
                                     </div>
                                     </details>
                                 )}
+
                                 <details className="space-y-2 group" open>
                                 <summary className="text-xs text-muted-foreground font-semibold cursor-pointer list-none flex items-center gap-1 group-open:mb-1.5"><Settings className="mr-1 h-3 w-3"/>Borders <ChevronRight className="ml-auto h-3 w-3 group-open:rotate-90 transition-transform" /></summary>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pl-1">
@@ -1349,7 +1326,18 @@ export default function EditTemplatePage() {
                                     <div><Label htmlFor={`el-twBorderColor-edit-${config._uiId}`} className="text-xs">Border Color (Tailwind)</Label><Select value={config.tailwindBorderColor || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, 'tailwindBorderColor', value)} disabled={isSaving}><SelectTrigger id={`el-twBorderColor-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger><SelectContent>{TAILWIND_BORDER_COLOR_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent></Select></div>
                                   </div>
                                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pl-1 mt-2">
-                                      {(['t', 'r', 'b', 'l'] as const).map(side => { const propKey = `tailwindBorder${side.toUpperCase()}W` as keyof LayoutElementGuiConfig; return (<div key={side}><Label htmlFor={`el-twBorder${side}W-edit-${config._uiId}`} className="text-xs capitalize">Border {side === 't' ? 'Top' : side === 'r' ? 'Right' : side === 'b' ? 'Bottom' : 'Left'} W</Label><Select value={(config as any)[propKey] || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, propKey, value)} disabled={isSaving}><SelectTrigger id={`el-twBorder${side}W-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger><SelectContent>{BORDER_SIDE_WIDTH_OPTIONS.map(opt => (<SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>))}</SelectContent></Select></div>); })}
+                                      {(['t', 'r', 'b', 'l'] as const).map(side => { 
+                                        const propKey = `tailwindBorder${side.toUpperCase()}W` as keyof LayoutElementGuiConfig; 
+                                        return (
+                                        <div key={side}>
+                                            <Label htmlFor={`el-twBorder${side}W-edit-${config._uiId}`} className="text-xs capitalize">Border {side === 't' ? 'Top' : side === 'r' ? 'Right' : side === 'b' ? 'Bottom' : 'Left'} W</Label>
+                                            <Select value={(config as any)[propKey] || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId, propKey, value)} disabled={isSaving}>
+                                                <SelectTrigger id={`el-twBorder${side}W-edit-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
+                                                <SelectContent>{BORDER_SIDE_WIDTH_OPTIONS.map(opt => (<SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>))}</SelectContent>
+                                            </Select>
+                                        </div>
+                                        );
+                                      })}
                                   </div>
                                 </details>
                               </div>
@@ -1385,33 +1373,6 @@ export default function EditTemplatePage() {
                   {layoutJsonError && ( <Alert variant="destructive" className="mt-2"><AlertTriangle className="h-4 w-4 !text-destructive-foreground" /><AlertTitle>JSON Error</AlertTitle><AlertDescription className="text-xs">{layoutJsonError}</AlertDescription></Alert> )}
               </div>
             )}
-            
-            <Accordion type="single" collapsible className="w-full mt-2" defaultValue="">
-              <AccordionItem value="lucide-icon-explorer-edit" className="border-b-0">
-                <AccordionTrigger className="text-xs font-medium text-muted-foreground hover:text-foreground [&_svg]:size-3.5 py-1.5">
-                  <Copy className="mr-1.5 h-3 w-3" /> Browse Lucide Icons
-                </AccordionTrigger>
-                <AccordionContent className="text-xs p-2 border rounded-md bg-muted/30">
-                  <p className="text-xs font-semibold mb-1.5 text-foreground">Click icon to Copy Name:</p>
-                  <ScrollArea className="max-h-[120px] bg-background/50 p-1 rounded border overflow-y-auto">
-                      <div className={cn("grid gap-0.5", "grid-cols-10 sm:grid-cols-12 md:grid-cols-14 lg:grid-cols-16")}>
-                      {commonLucideIconsForGuide.map(iconKey => (
-                          <TooltipProvider key={`${iconKey}-edit`} delayDuration={100}>
-                          <Tooltip>
-                              <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" onClick={() => handleCopyIconName(iconKey as string)} className="h-7 w-7 p-1" >
-                                  <IconComponent name={iconKey as string} className="h-4 w-4" />
-                              </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom"><p>{iconKey}</p></TooltipContent>
-                          </Tooltip>
-                          </TooltipProvider>
-                      ))}
-                      </div>
-                  </ScrollArea>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
           </CardContent>
         </Card>
 
@@ -1446,4 +1407,3 @@ export default function EditTemplatePage() {
     </div>
   );
 }
-
