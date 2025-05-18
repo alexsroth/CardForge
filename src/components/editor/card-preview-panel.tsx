@@ -11,9 +11,9 @@ interface CardPreviewPanelProps {
 }
 
 export default function CardPreviewPanel({ card }: CardPreviewPanelProps) {
-  return (
   const { getTemplateById } = useTemplates();
   const [template, setTemplate] = useState(null);
+  return (
 
   useEffect(() => {
     if (card && card.templateId) {
@@ -27,6 +27,7 @@ export default function CardPreviewPanel({ card }: CardPreviewPanelProps) {
       setTemplate(null); // No card or templateId
     }
   }, [card, getTemplateById]);
+
 
   return (
     <ScrollArea className="flex-grow bg-muted/20">
