@@ -10,8 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { Textarea } from '../ui/textarea';
 import { cn } from '@/lib/utils';
-import { generateSamplePlaceholderUrl } from '@/lib/card-designer'; // Import from new location
-import type { TemplateFieldDefinition } from '@/lib/card-designer'; // Import from new location
+import { generateSamplePlaceholderUrl, type TemplateFieldDefinition } from '@/lib/card-designer';
 
 interface FieldRowProps {
   field: TemplateFieldDefinition;
@@ -24,7 +23,7 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
   const [isSecondaryVisible, setIsSecondaryVisible] = useState(false);
   const [generatedPlaceholderUrl, setGeneratedPlaceholderUrl] = useState('');
 
-  console.log('[DEBUG] FieldRow rendering for field:', field.label, field._uiId);
+  // console.log('[DEBUG] FieldRow rendering for field:', field.label, field._uiId);
 
   useEffect(() => {
     // console.log('[DEBUG] FieldRow useEffect for placeholder URL, field type:', field.type);
@@ -71,8 +70,8 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
     const newFieldData: Partial<TemplateFieldDefinition> = { [name]: value };
     if (name === 'type') {
         if (value === 'placeholderImage') {
-            newFieldData.placeholderConfigWidth = field.placeholderConfigWidth || 250;
-            newFieldData.placeholderConfigHeight = field.placeholderConfigHeight || 140;
+            newFieldData.placeholderConfigWidth = field.placeholderConfigWidth || 280; // Default width
+            newFieldData.placeholderConfigHeight = field.placeholderConfigHeight || 140; // Default height
         } else {
             newFieldData.placeholderConfigWidth = undefined;
             newFieldData.placeholderConfigHeight = undefined;
@@ -84,13 +83,13 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
     onChange({ ...field, ...newFieldData });
   };
 
-  const hasSecondaryContentInput = field.placeholder || String(field.defaultValue).trim() !== '' || field.type === 'select' || (field.previewValue !== undefined && String(field.previewValue).trim() !== '');
-  const hasAnySecondaryContent = hasSecondaryContentInput || field.type === 'placeholderImage';
+  // The chevron for expanding secondary options should always be visible.
+  const alwaysShowExpandToggle = true; 
 
   return (
     <div className="p-3 border rounded-md bg-card shadow-sm space-y-2">
       <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
-        {hasAnySecondaryContent ? (
+        {alwaysShowExpandToggle ? (
           <Button
             variant="ghost"
             size="icon"
@@ -102,7 +101,7 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
             {isSecondaryVisible ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </Button>
         ) : (
-          <div className="w-9 shrink-0"></div> // Placeholder for alignment
+          <div className="w-9 shrink-0"></div> 
         )}
          <div className="flex-grow min-w-[180px] basis-full sm:basis-auto">
           <Label htmlFor={`field-label-${field._uiId}`} className="text-sm font-medium">Field Label</Label>
@@ -162,27 +161,29 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
 
       {isSecondaryVisible && (
         <div className="pt-2 mt-1 border-t border-dashed space-y-3 pl-9"> {/* Added pl-9 to align with inputs above toggle */}
-          {field.type !== 'placeholderImage' && (
-            <div>
-              <Label htmlFor={`field-previewValue-${field._uiId}`} className="text-xs text-muted-foreground">
-                Preview Value (for live layout preview)
-              </Label>
-              <Input
-                id={`field-previewValue-${field._uiId}`}
-                name="previewValue"
-                value={field.previewValue || ''}
-                onChange={handleInputChange}
-                placeholder={field.type === 'boolean' ? 'true or false' : (field.type === 'number' ? 'e.g., 10' : 'Enter text for preview')}
-                className="h-8 text-xs"
-                disabled={isSaving}
-              />
-            </div>
-          )}
+          
+          {/* Preview Value - Always available */}
+          <div>
+            <Label htmlFor={`field-previewValue-${field._uiId}`} className="text-xs text-muted-foreground">
+              Preview Value (for live layout preview)
+            </Label>
+            <Input
+              id={`field-previewValue-${field._uiId}`}
+              name="previewValue"
+              value={field.previewValue || ''}
+              onChange={handleInputChange}
+              placeholder={field.type === 'boolean' ? 'true or false' : (field.type === 'number' ? 'e.g., 10' : 'Enter text for preview')}
+              className="h-8 text-xs"
+              disabled={isSaving}
+            />
+          </div>
 
-          {(field.placeholder || String(field.defaultValue).trim() !== '' || field.type === 'boolean' || field.type === 'number') && field.type !== 'placeholderImage' && (
+          {/* Placeholder and Default Value - Grouped and conditional on type */}
+          {field.type !== 'placeholderImage' && (
              <div className={cn("grid grid-cols-1 gap-y-2", (field.type === 'text' || field.type === 'textarea') ? 'sm:grid-cols-1' : 'sm:grid-cols-2 gap-x-3')}>
-                {(field.type !== 'boolean' || field.placeholder) && (
-                  <div className={cn(field.type === 'boolean' && String(field.defaultValue).trim() === '' && !field.placeholder && "hidden")}>
+                {/* Input Placeholder - Not for boolean unless it specifically has a placeholder prop in future */}
+                {(field.type !== 'boolean') && (
+                  <div>
                     <Label htmlFor={`field-placeholder-${field._uiId}`} className="text-xs text-muted-foreground">Input Placeholder</Label>
                     <Input
                       id={`field-placeholder-${field._uiId}`}
@@ -195,6 +196,7 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
                   </div>
                 )}
                 
+                {/* Default Value */}
                 {field.type === 'boolean' ? (
                   <div className="flex items-center space-x-2 self-end pb-1 min-h-[2rem] mt-3 sm:mt-0">
                     <Input
@@ -211,7 +213,7 @@ export default function FieldRow({ field, onChange, onRemove, isSaving }: FieldR
                     </Label>
                   </div>
                 ) : (
-                  <div className={cn((field.type === 'boolean' && !field.placeholder) && "hidden")}>
+                  <div>
                     <Label htmlFor={`field-defaultValue-${field._uiId}`} className="text-xs text-muted-foreground">Default Value</Label>
                     <Input
                       id={`field-defaultValue-${field._uiId}`}
