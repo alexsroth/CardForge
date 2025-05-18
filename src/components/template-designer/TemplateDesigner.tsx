@@ -23,6 +23,7 @@ import type { CardData } from '@/lib/types';
 import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-renderer';
 import FieldRow from '@/components/template-designer/field-row';
 
+import IconComponent from '../IconComponent';
 import {
   NONE_VALUE,
   COMMON_CARD_SIZES,
@@ -40,8 +41,7 @@ import {
   toCamelCase,
   generateSamplePlaceholderUrl,
   findTailwindClassValue,
-  findSideBorderClassValue,
-  IconComponent
+  findSideBorderClassValue
 } from '@/lib/card-designer';
 
 import type { TemplateFieldDefinition, LayoutElementGuiConfig } from '@/lib/card-designer';

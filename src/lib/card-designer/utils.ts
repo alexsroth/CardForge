@@ -175,27 +175,4 @@ export const findSideBorderClassValue = (
   return defaultValue;
 };
 
-
-interface IconComponentActualProps extends LucideIcons.LucideProps {
-  name: string;
-}
-
-export const IconComponent = (props: IconComponentActualProps) => {
-  const { name, className, ...restOfProps } = props;
-
-  // console.log('[DEBUG] card-designer/utils.ts: IconComponent rendering icon:', name);
-  const IconToRender = (LucideIcons as any)[name];
-
-  if (!IconToRender || typeof IconToRender !== 'function') {
-    console.warn(`[IconComponent] Lucide icon "${name}" not found or not a function. Rendering fallback HelpCircle.`);
-    // Extremely simplified fallback to avoid JSX parsing issues on props
-    if (className) {
-       return <span className={className}>?</span>;
-    }
-    return <span>?</span>;
-  }
-  // For the actual icon, continue attempting to spread other props
-  return <IconToRender className={className} {...restOfProps} />;
-};
-
 console.log('[DEBUG] card-designer/utils.ts: Module fully loaded and helpers defined.');
