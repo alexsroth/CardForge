@@ -21,6 +21,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import * as LucideIcons from 'lucide-react';
+import IconComponent from '@/components/IconComponent';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -136,14 +137,14 @@ const generateSamplePlaceholderUrl = (config: {
 };
 
 
-const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
-  const Icon = (LucideIcons as any)[name];
-  if (!Icon || typeof Icon !== 'function') {
-    console.warn(`[TemplateDesignerPage] Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
-    return <LucideIcons.HelpCircle {...props} />;
-  }
-  return <Icon {...props} />;
-};
+// const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
+//   const Icon = (LucideIcons as any)[name];
+//   if (!Icon || typeof Icon !== 'function') {
+//     console.warn(`[TemplateDesignerPage] Lucide icon "${name}" not found. Fallback HelpCircle will be used.`);
+//     return <LucideIcons.HelpCircle {...props} />;
+//   }
+//   return <Icon {...props} />;
+// };
 
 const COMMON_CARD_SIZES = [
   { label: `Default (${DEFAULT_CANVAS_WIDTH}x${DEFAULT_CANVAS_HEIGHT} px)`, width: `${DEFAULT_CANVAS_WIDTH}px`, height: `${DEFAULT_CANVAS_HEIGHT}px`, value: `${DEFAULT_CANVAS_WIDTH}x${DEFAULT_CANVAS_HEIGHT}` },

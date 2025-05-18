@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useProjects } from '@/contexts/ProjectContext';
 import type { Project } from '@/lib/types';
-import CardRenderer from '@/components/editor/card-renderer';
 import { Button } from '@/components/ui/button';
+import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-renderer';
 import { ArrowLeft, Loader2, AlertTriangle, LayoutGrid } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -30,7 +30,7 @@ function DeckViewLoadingSkeleton() {
 export default function DeckViewPage() {
   const params = useParams();
   const router = useRouter();
-  const { getProjectById, isLoading: projectsLoading } = useProjects();
+  const { getProjectById, isLoading: projectsLoading, templatesLoading, getTemplateById } = useProjects();
   const [project, setProject] = useState<Project | undefined | null>(undefined); // null for not found, undefined for loading
 
   const projectId = typeof params.projectId === 'string' ? params.projectId : undefined;
@@ -48,7 +48,7 @@ export default function DeckViewPage() {
     }
   }, [projectId, getProjectById, projectsLoading]);
 
-  if (project === undefined || projectsLoading) {
+  if (project === undefined || projectsLoading || templatesLoading) {
     return <DeckViewLoadingSkeleton />;
   }
 
@@ -99,7 +99,17 @@ export default function DeckViewPage() {
               key={card.id} 
               className="relative transform hover:scale-105 hover:z-10 transition-transform duration-200"
             >
-              <CardRenderer card={card} />
+              {(() => {
+                const template = getTemplateById(card.templateId);
+                if (!template) {
+                  return (
+                    <div className="w-[280px] h-[400px] border border-destructive bg-destructive/10 flex items-center justify-center p-4 text-center rounded-lg shadow-md">
+                      Template "{card.templateId}" not found.
+                    </div>
+                  );
+                }
+                return <DynamicCardRenderer card={card} template={template} />;
+              })()}
             </div>
           ))}
         </div>

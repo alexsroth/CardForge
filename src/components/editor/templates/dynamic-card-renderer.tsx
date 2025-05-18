@@ -6,19 +6,18 @@ import type { CardTemplate, LayoutDefinition } from '@/lib/card-templates';
 import Image from 'next/image';
 import React from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { lucideIconsMap } from '@/lib/icons'; // Use centralized map
-import { HelpCircle as FallbackIcon } from 'lucide-react';
+import IconComponent from '@/components/IconComponent';
 import { cn } from '@/lib/utils';
 import { DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT } from '@/lib/card-templates';
 
 
-const IconComponent = ({ name, ...props }: { name: string } & React.ComponentProps<typeof FallbackIcon>) => {
-  const Icon = lucideIconsMap[name] || FallbackIcon;
-  if (Icon === FallbackIcon && name !== 'HelpCircle') { // Avoid warning for intentional fallback
-    console.warn(`[DynamicCardRenderer] Lucide icon "${name}" not found. Fallback 'HelpCircle' will be used.`);
-  }
-  return <Icon {...props} />;
-};
+// const IconComponent = ({ name, ...props }: { name: string } & React.ComponentProps<typeof FallbackIcon>) => {
+//   const Icon = lucideIconsMap[name] || FallbackIcon;
+//   if (Icon === FallbackIcon && name !== 'HelpCircle') { // Avoid warning for intentional fallback
+//     console.warn(`[DynamicCardRenderer] Lucide icon "${name}" not found. Fallback 'HelpCircle' will be used.`);
+//   }
+//   return <Icon {...props} />;
+// };
 
 
 export default function DynamicCardRenderer({ card, template, showPixelGrid = false }: {
