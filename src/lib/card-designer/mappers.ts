@@ -1,3 +1,4 @@
+
 // src/lib/card-designer/mappers.ts
 import type { TemplateField } from '@/lib/card-templates';
 import type { TemplateFieldDefinition } from './types';
@@ -10,15 +11,20 @@ export const mapFieldDefinitionToTemplateField = (def: TemplateFieldDefinition):
     type: def.type,
   };
   if (def.placeholder) field.placeholder = def.placeholder;
-  if (def.defaultValue !== undefined && String(def.defaultValue).trim() !== '') {
-    if (def.type === 'number') {
-      field.defaultValue = Number(def.defaultValue) || 0;
-    } else if (def.type === 'boolean') {
-      field.defaultValue = def.defaultValue === true || String(def.defaultValue).toLowerCase() === 'true';
-    } else {
-      field.defaultValue = String(def.defaultValue);
+  
+  // Handle defaultValue
+  if (def.defaultValue !== undefined) { // Check for undefined explicitly
+    if (String(def.defaultValue).trim() !== '' || def.type === 'boolean') { // Allow empty string for non-booleans if that's intended, but usually we want to omit if empty
+        if (def.type === 'number') {
+            field.defaultValue = Number(def.defaultValue) || 0; // Ensure it's a number, or 0 if NaN
+        } else if (def.type === 'boolean') {
+            field.defaultValue = def.defaultValue === true || String(def.defaultValue).toLowerCase() === 'true';
+        } else {
+            field.defaultValue = String(def.defaultValue);
+        }
     }
   }
+
   if (def.type === 'select' && def.optionsString) {
     field.options = def.optionsString.split(',').map(pair => {
       const parts = pair.split(':');
@@ -38,15 +44,16 @@ export const mapFieldDefinitionToTemplateField = (def: TemplateFieldDefinition):
   return field;
 };
 
-export const mapTemplateFieldToFieldDefinition = (field: TemplateField, index: number): TemplateFieldDefinition => {
+export const mapTemplateFieldToFieldDefinition = (field: TemplateField, uiIdPrefix: string = 'field'): TemplateFieldDefinition => {
   console.log('[DEBUG] card-designer/mappers.ts: mapTemplateFieldToFieldDefinition called for:', field.label);
+  const uniqueUiId = `${uiIdPrefix}-${field.key}-${Date.now()}-${Math.random().toString(36).substring(2,7)}`;
   return {
-    _uiId: `field-edit-${field.key}-${Date.now()}-${index}-${Math.random().toString(36).substring(2,7)}`,
+    _uiId: uniqueUiId,
     key: field.key,
     label: field.label,
     type: field.type,
     placeholder: field.placeholder,
-    defaultValue: field.defaultValue !== undefined ? String(field.defaultValue) : '', // Ensure string for input
+    defaultValue: field.defaultValue !== undefined ? String(field.defaultValue) : '',
     previewValue: field.defaultValue !== undefined ? String(field.defaultValue) : (field.placeholder || ''),
     optionsString: field.options?.map(opt => `${opt.value}:${opt.label}`).join(','),
     placeholderConfigWidth: field.placeholderConfigWidth,
@@ -58,3 +65,5 @@ export const mapTemplateFieldToFieldDefinition = (field: TemplateField, index: n
 };
 
 console.log('[DEBUG] card-designer/mappers.ts: Module loaded');
+
+    

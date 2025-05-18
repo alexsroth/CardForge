@@ -33,8 +33,8 @@ export function useTemplateDesigner({
   /* ------------------------------------------------------------------ */
 
   // Basic meta
-  const [templateName, setTemplateName]   = useState(initialTemplate?.name ?? '');
-  const [templateId,   setTemplateId]     = useState(initialTemplate?.id   ?? '');
+  const [templateName, setTemplateName] = useState(initialTemplate?.name ?? '');
+  const [templateId, setTemplateId] = useState(initialTemplate?.id ?? '');
 
   // Field definitions
   const [fields, setFields] = useState<TemplateFieldDefinition[]>(
@@ -104,6 +104,43 @@ export function useTemplateDesigner({
   }, []);
 
   /* ------------------------------------------------------------- */
+  /* Save template logic                                           */
+  /* ------------------------------------------------------------- */
+  const saveTemplate = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      const templateData: CardTemplate = {
+        id: templateId as CardTemplateId, // Cast as CardTemplateId
+        name: templateName,
+        fields: fields.map(mapFieldDefinitionToTemplateField),
+        layoutDefinition,
+      };
+
+      // TODO: Add your actual save logic here.
+      // This could involve making an API call to save the template data
+      // or interacting with your chosen data storage mechanism.
+      console.log('Saving template:', templateData); // Placeholder log
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate save time
+
+      toast({
+        title: "Template saved!",
+        description: `Template "${templateName}" has been saved.`,
+      });
+
+    } catch (error) {
+      console.error('Error saving template:', error);
+      toast({
+        title: "Error saving template",
+        description: "There was a problem saving the template. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [templateId, templateName, fields, layoutDefinition, toast]);
+
+
+  /* ------------------------------------------------------------- */
   /* Memo – build CardTemplate for preview                         */
   /* ------------------------------------------------------------- */
   const templateForPreview = useMemo<CardTemplate>(() => ({
@@ -130,6 +167,7 @@ export function useTemplateDesigner({
     /* helpers */
     addField,
     removeField,
+    saveTemplate,
 
     /* misc */
     isSaving, setIsSaving,

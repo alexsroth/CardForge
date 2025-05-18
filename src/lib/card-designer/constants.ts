@@ -1,10 +1,10 @@
+
 // src/lib/card-designer/constants.ts
-import type { DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT } from '@/lib/card-templates';
 
 export const NONE_VALUE = "_none_"; // Represents no selection or default theme value
 
 export const COMMON_CARD_SIZES = [
-  { label: `Default (Set by Template)`, width: ``, height: ``, value: `defaultFromLayout` }, // Updated label
+  { label: "Default (280x400 px)", width: "280px", height: "400px", value: "280x400" },
   { label: "Poker (250x350 px)", width: "250px", height: "350px", value: "250x350" },
   { label: "Bridge (225x350 px)", width: "225px", height: "350px", value: "225x350" },
   { label: "Tarot (275x475 px)", width: "275px", height: "475px", value: "275x475" },
@@ -26,11 +26,6 @@ export const TAILWIND_TEXT_COLORS: Array<{value: string, label: string}> = [
     { value: "text-indigo-500", label: "Indigo 500" }, { value: "text-violet-500", label: "Violet 500" },
     { value: "text-purple-500", label: "Purple 500" }, { value: "text-fuchsia-500", label: "Fuchsia 500" },
     { value: "text-pink-500", label: "Pink 500" }, { value: "text-rose-500", label: "Rose 500" },
-    { value: "text-card-foreground", label: "Card Foreground (Theme)"},
-    { value: "text-primary", label: "Primary (Theme)"},
-    { value: "text-secondary", label: "Secondary (Theme)"},
-    { value: "text-muted-foreground", label: "Muted Foreground (Theme)"},
-    { value: "text-destructive", label: "Destructive (Theme)"},
 ];
 
 export const TAILWIND_FONT_SIZES: Array<{value: string, label: string}> = [
@@ -78,14 +73,16 @@ export const TAILWIND_BORDER_RADIUS_OPTIONS: Array<{value: string, label: string
   { value: "rounded-3xl", label: "3XL"}, { value: "rounded-full", label: "Full"},
 ];
 
-export const BORDER_SIDE_WIDTH_OPTIONS: { value: string; label: string; }[] = [
-  { value: NONE_VALUE, label: "None (No Border)"},
-  { value: 'default', label: "Default (1px)"},
-  { value: '0', label: "0px"},
-  { value: '2', label: "2px"},
-  { value: '4', label: "4px"},
-  { value: '8', label: "8px"},
+// For individual side border widths
+export const BORDER_SIDE_WIDTH_OPTIONS: { value: string; label: string; classPrefix: string }[] = [
+  { value: NONE_VALUE, label: "None (No Border)", classPrefix: ''}, // No class for no border
+  { value: 'default', label: "Default (1px)", classPrefix: 'border-'}, // e.g., border-t
+  { value: '0', label: "0px", classPrefix: 'border-?-0'}, // e.g., border-t-0
+  { value: '2', label: "2px", classPrefix: 'border-?-2'}, // e.g., border-t-2
+  { value: '4', label: "4px", classPrefix: 'border-?-4'},
+  { value: '8', label: "8px", classPrefix: 'border-?-8'},
 ];
+
 
 export const TAILWIND_BORDER_PALETTE_OPTIONS: Array<{value: string, label: string}> = [
   { value: NONE_VALUE, label: "None (Theme Default)" }, { value: "transparent", label: "Transparent" },
@@ -129,7 +126,8 @@ export const commonLucideIconsForGuide = [
   "MapPin", "Medal", "Mountain", "Music", "Package", "Palette", "PawPrint", "Pencil",
   "Phone", "Puzzle", "Rocket", "Save", "Search", "Ship", "Sprout", "Ticket", "Trash2",
   "TreePine", "Trophy", "Umbrella", "User", "Video", "Wallet", "Watch", "Wifi", "Wrench"
-] as const; // Use 'as const' for better type inference if used as discriminated union keys
-
+] as const;
 
 console.log('[DEBUG] card-designer/constants.ts: Module loaded');
+
+    

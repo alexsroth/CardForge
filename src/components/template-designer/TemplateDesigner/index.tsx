@@ -22,8 +22,8 @@ export const TemplateDesigner: React.FC<TemplateDesignerProps> = (props) => {
       {/* Toolbar */}
       <TopToolbar
         mode={props.mode}
-        onGenerateJson={() => {/* TODO connect */}}
-        onSave={() => {/* TODO connect */}}
+        onGenerateJson={() => {/* TODO connect */ }}
+        onSave={designer.saveTemplate}
         isSaving={designer.isSaving}
       />
 
