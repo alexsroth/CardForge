@@ -160,12 +160,13 @@ const generateSamplePlaceholderUrl = (config: {
   return fullUrl;
 };
 
-const IconComponent = ({ name, ...props }: { name: string } & LucideIcons.LucideProps) => {
-  const Icon = (LucideIcons as any)[name];
-   if (!Icon || typeof Icon !== 'function') {
-    return <LucideIcons.HelpCircle {...props} />;
+const IconComponent = ({ name, className, ...props }: { name: string } & LucideIcons.LucideProps) => {
+  const Icon = (LucideIcons as keyof typeof LucideIcons)[name as keyof typeof LucideIcons];
+  if (!Icon) {
+    console.warn(`[DEBUG] IconComponent (EditTemplatePage): Lucide icon "${name}" not found or not a function. Fallback HelpCircle will be used.`);
+ return <LucideIcons.HelpCircle className={cn("h-4 w-4", className)} {...props} />;
   }
-  return <Icon {...props} />;
+  return <Icon className={cn("h-4 w-4", className)} {...props} />;
 };
 
 const commonLucideIconsForGuide: (keyof typeof LucideIcons)[] = [
