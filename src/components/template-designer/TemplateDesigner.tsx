@@ -23,7 +23,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import * as LucideIcons from 'lucide-react'; // Wildcard import for icon browser
+
+import IconComponent from '@/components/IconComponent';
 
 import {
   NONE_VALUE,
@@ -45,12 +46,13 @@ import {
   // getSideBorderColorClass, // Not directly used by GUI, but by builder fn
   findTailwindClassValue,
   findSideBorderClassValue,
-  IconComponent,
   mapFieldDefinitionToTemplateField,
   mapTemplateFieldToFieldDefinition,
   type TemplateFieldDefinition,
   type LayoutElementGuiConfig,
 } from '@/lib/card-designer';
+
+
 
 console.log('[DEBUG] TemplateDesigner.tsx: Module loaded');
 
