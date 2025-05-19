@@ -1,4 +1,5 @@
 
+// src/components/template-designer/TemplateDesigner.tsx
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -7,10 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Save, Loader2, Eye, Palette, HelpCircle, Copy, ChevronDown, ChevronRight, Settings, AlertTriangle, EllipsisVertical } from 'lucide-react';
-import FieldRow from '@/components/template-designer/field-row';
+import { PlusCircle, Palette, HelpCircle, Copy, ChevronDown, ChevronRight, Settings } from 'lucide-react';
+import FieldRow from '@/components/template-designer/field-row'; // Corrected path if it was wrong before
 import { useToast } from '@/hooks/use-toast';
-import type { CardTemplate, CardTemplateId, TemplateField, LayoutDefinition } from '@/lib/card-templates';
+import type { CardTemplate, CardTemplateId, LayoutElement as CardLayoutElement, LayoutDefinition } from '@/lib/card-templates';
 import { DEFAULT_CARD_LAYOUT_JSON_STRING, DEFAULT_CANVAS_WIDTH, DEFAULT_CANVAS_HEIGHT } from '@/lib/card-templates';
 import type { CardData } from '@/lib/types';
 import DynamicCardRenderer from '@/components/editor/templates/dynamic-card-renderer';
@@ -22,6 +23,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import * as LucideIcons from 'lucide-react'; // Wildcard import for icon browser
 
 import {
   NONE_VALUE,
@@ -35,11 +37,11 @@ import {
   TAILWIND_BORDER_RADIUS_OPTIONS,
   BORDER_SIDE_WIDTH_OPTIONS,
   TAILWIND_BORDER_PALETTE_OPTIONS,
-  TAILWIND_BACKGROUND_COLORS,
+  // TAILWIND_BACKGROUND_COLORS, // No longer used for canvas setup GUI
   commonLucideIconsForGuide,
   toCamelCase,
   generateSamplePlaceholderUrl,
-  getSideBorderWidthClass, // Not directly used by GUI, but by builder fn
+  // getSideBorderWidthClass, // Not directly used by GUI, but by builder fn
   // getSideBorderColorClass, // Not directly used by GUI, but by builder fn
   findTailwindClassValue,
   findSideBorderClassValue,
@@ -67,7 +69,7 @@ export function TemplateDesigner({
   isLoadingContexts = false,
   existingTemplateIds = [],
 }: TemplateDesignerProps) {
-  console.log('[DEBUG] TemplateDesigner: Rendering. Mode:', mode, 'Initial Template Name:', initialTemplate?.name, 'isLoadingContexts:', isLoadingContexts);
+  console.log('[DEBUG] TemplateDesigner: Rendering. Mode:', mode, 'Initial Template Name:', initialTemplate?.name);
 
   const { toast } = useToast();
 
@@ -80,12 +82,14 @@ export function TemplateDesigner({
   const [layoutDefinition, setLayoutDefinition] = useState<string>(DEFAULT_CARD_LAYOUT_JSON_STRING);
   const [layoutJsonError, setLayoutJsonError] = useState<string | null>(null);
 
-  // GUI Builder State
+  // GUI Builder State for Canvas
   const [canvasWidthSetting, setCanvasWidthSetting] = useState<string>(`${DEFAULT_CANVAS_WIDTH}px`);
   const [canvasHeightSetting, setCanvasHeightSetting] = useState<string>(`${DEFAULT_CANVAS_HEIGHT}px`);
   const [selectedSizePreset, setSelectedSizePreset] = useState<string>(
     COMMON_CARD_SIZES.find(s => s.width === `${DEFAULT_CANVAS_WIDTH}px` && s.height === `${DEFAULT_CANVAS_HEIGHT}px`)?.value || COMMON_CARD_SIZES[0].value
   );
+  
+  // Direct CSS for canvas - reverted
   const [canvasBackgroundColor, setCanvasBackgroundColor] = useState<string>('hsl(var(--card))');
   const [canvasBorderColor, setCanvasBorderColor] = useState<string>('hsl(var(--border))');
   const [canvasBorderRadius, setCanvasBorderRadius] = useState<string>('calc(var(--radius) - 2px)');
@@ -102,49 +106,55 @@ export function TemplateDesigner({
   // Editor View Toggle State
   const [activeEditorView, setActiveEditorView] = useState<'gui' | 'json'>('gui');
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const lastSyncedJsonFromGui = useRef<string | null>(null);
+  const jsonEditedManuallyRef = useRef(false);
 
 
-  const parseLayoutDefinitionToGuiState = useCallback((jsonString: string) => {
-    console.log('[DEBUG] TemplateDesigner: Parsing layoutDefinition to update GUI state.');
+  const parseLayoutDefinitionToGuiState = useCallback((jsonStringToParse: string) => {
+    console.log('[DEBUG] TemplateDesigner: parseLayoutDefinitionToGuiState called.');
     let parsedLayout: Partial<LayoutDefinition> = {};
+    const defaultParsedLayout = JSON.parse(DEFAULT_CARD_LAYOUT_JSON_STRING);
+
     try {
-      parsedLayout = JSON.parse(jsonString || '{}');
-      if (typeof parsedLayout !== 'object' || parsedLayout === null) parsedLayout = {};
+      if (jsonStringToParse.trim() === '') {
+        parsedLayout = defaultParsedLayout;
+      } else {
+        parsedLayout = JSON.parse(jsonStringToParse);
+      }
+      if (typeof parsedLayout !== 'object' || parsedLayout === null) {
+        parsedLayout = defaultParsedLayout;
+      }
       setLayoutJsonError(null);
     } catch (e: any) {
       console.error("[DEBUG] TemplateDesigner: Error parsing layoutDefinition for GUI state:", e);
-      setLayoutJsonError(`Invalid JSON for GUI: ${e.message}`);
-      // Don't update GUI state if JSON is invalid
-      return;
+      setLayoutJsonError(`Invalid JSON for GUI: ${e.message}. Using default canvas settings.`);
+      parsedLayout = defaultParsedLayout; // Use default if parsing fails
     }
-
-    const defaultParsedLayout = JSON.parse(DEFAULT_CARD_LAYOUT_JSON_STRING);
 
     setCanvasWidthSetting(String(parsedLayout.width || defaultParsedLayout.width));
     setCanvasHeightSetting(String(parsedLayout.height || defaultParsedLayout.height));
     const matchingPreset = COMMON_CARD_SIZES.find(s => String(s.width) === String(parsedLayout.width) && String(s.height) === String(parsedLayout.height));
     setSelectedSizePreset(matchingPreset ? matchingPreset.value : "custom");
+
+    // Direct CSS canvas properties
     setCanvasBackgroundColor(String(parsedLayout.backgroundColor || defaultParsedLayout.backgroundColor));
     setCanvasBorderColor(String(parsedLayout.borderColor || defaultParsedLayout.borderColor));
     setCanvasBorderRadius(String(parsedLayout.borderRadius || defaultParsedLayout.borderRadius));
     setCanvasBorderWidth(String(parsedLayout.borderWidth || defaultParsedLayout.borderWidth));
     setCanvasBorderStyle(String(parsedLayout.borderStyle || defaultParsedLayout.borderStyle));
-
+    
     const elementsFromJson = Array.isArray(parsedLayout.elements) ? parsedLayout.elements : [];
-    const elementsFromJsonMap = new Map(elementsFromJson.map((el: LayoutElement) => [el.fieldKey, el]));
-
+    
     setLayoutElementGuiConfigs(currentFields => currentFields.map((fieldDef, index) => {
-      const existingLayoutElement = elementsFromJsonMap.get(fieldDef.key);
-      const defaultTopValue = `${10 + (index % 8) * 35}px`;
-
-      const config: LayoutElementGuiConfig = {
-        _uiId: fieldDef._uiId || `gui-${fieldDef.key}-${index}`,
+      const existingLayoutElement = elementsFromJson.find((el: CardLayoutElement) => el.fieldKey === fieldDef.key);
+      const defaultTopValue = `${10 + (index % 8) * 35}px`; // Basic cascade for new items
+      
+      return {
+        _uiId: fieldDef._uiId || `gui-${fieldDef.key}-${Date.now()}-${index}`,
         fieldKey: fieldDef.key,
         label: fieldDef.label,
         originalType: fieldDef.type,
         isEnabledOnCanvas: !!existingLayoutElement,
-        isExpandedInGui: false, // Default to collapsed when parsing
+        isExpandedInGui: false, // Always start collapsed when parsing JSON
 
         elementType: existingLayoutElement?.type || (fieldDef.type === 'textarea' ? 'textarea' : (fieldDef.type === 'placeholderImage' ? 'image' : 'text')),
         iconName: existingLayoutElement?.icon || (fieldDef.type === 'number' ? 'Coins' : ''),
@@ -153,29 +163,35 @@ export function TemplateDesigner({
         styleLeft: existingLayoutElement?.style?.left ?? (existingLayoutElement ? '' : '10px'),
         styleRight: existingLayoutElement?.style?.right ?? '',
         styleBottom: existingLayoutElement?.style?.bottom ?? '',
-        styleMaxHeight: existingLayoutElement?.style?.maxHeight ?? (fieldDef.type === 'textarea' ? 'auto' : ''),
+        
+        styleMaxHeight: existingLayoutElement?.style?.maxHeight ?? (existingLayoutElement ? '' : (fieldDef.type === 'textarea' ? 'auto' : '')),
         stylePadding: existingLayoutElement?.style?.padding ?? '',
-        styleFontStyle: existingLayoutElement?.style?.fontStyle ?? 'normal',
-        styleTextAlign: existingLayoutElement?.style?.textAlign ?? 'left',
+        styleFontStyle: existingLayoutElement?.style?.fontStyle ?? (existingLayoutElement ? '' : 'normal'),
+        styleTextAlign: existingLayoutElement?.style?.textAlign ?? (existingLayoutElement ? '' : 'left'),
         
-        tailwindTextColor: existingLayoutElement ? findTailwindClassValue(existingLayoutElement.className, TAILWIND_TEXT_COLORS, 'text-black') : 'text-black',
-        tailwindFontSize: existingLayoutElement ? findTailwindClassValue(existingLayoutElement.className, TAILWIND_FONT_SIZES) : 'text-base',
-        tailwindFontWeight: existingLayoutElement ? findTailwindClassValue(existingLayoutElement.className, TAILWIND_FONT_WEIGHTS) : 'font-normal',
-        tailwindLineHeight: existingLayoutElement ? findTailwindClassValue(existingLayoutElement.className, TAILWIND_LINE_HEIGHTS) : 'leading-normal',
-        tailwindOverflow: existingLayoutElement ? findTailwindClassValue(existingLayoutElement.className, TAILWIND_OVERFLOW) : 'overflow-visible',
-        tailwindTextOverflow: existingLayoutElement ? findTailwindClassValue(existingLayoutElement.className, TAILWIND_TEXT_OVERFLOW) : NONE_VALUE,
+        tailwindTextColor: findTailwindClassValue(existingLayoutElement?.className, TAILWIND_TEXT_COLORS, 'text-black'),
+        tailwindFontSize: findTailwindClassValue(existingLayoutElement?.className, TAILWIND_FONT_SIZES, 'text-base'),
+        tailwindFontWeight: findTailwindClassValue(existingLayoutElement?.className, TAILWIND_FONT_WEIGHTS, 'font-normal'),
+        tailwindLineHeight: findTailwindClassValue(existingLayoutElement?.className, TAILWIND_LINE_HEIGHTS, 'leading-normal'),
+        tailwindOverflow: findTailwindClassValue(existingLayoutElement?.className, TAILWIND_OVERFLOW, 'overflow-visible'),
+        tailwindTextOverflow: findTailwindClassValue(existingLayoutElement?.className, TAILWIND_TEXT_OVERFLOW),
         
-        tailwindBorderRadius: existingLayoutElement ? findTailwindClassValue(existingLayoutElement.className, TAILWIND_BORDER_RADIUS_OPTIONS) : NONE_VALUE,
-        tailwindBorderTopW: existingLayoutElement ? findSideBorderClassValue(existingLayoutElement.className, 't', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) : NONE_VALUE,
-        tailwindBorderTopColor: existingLayoutElement ? findSideBorderClassValue(existingLayoutElement.className, 't', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) : NONE_VALUE,
-        tailwindBorderRightW: existingLayoutElement ? findSideBorderClassValue(existingLayoutElement.className, 'r', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) : NONE_VALUE,
-        tailwindBorderRightColor: existingLayoutElement ? findSideBorderClassValue(existingLayoutElement.className, 'r', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) : NONE_VALUE,
-        tailwindBorderBottomW: existingLayoutElement ? findSideBorderClassValue(existingLayoutElement.className, 'b', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) : NONE_VALUE,
-        tailwindBorderBottomColor: existingLayoutElement ? findSideBorderClassValue(existingLayoutElement.className, 'b', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) : NONE_VALUE,
-        tailwindBorderLeftW: existingLayoutElement ? findSideBorderClassValue(existingLayoutElement.className, 'l', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) : NONE_VALUE,
-        tailwindBorderLeftColor: existingLayoutElement ? findSideBorderClassValue(existingLayoutElement.className, 'l', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) : NONE_VALUE,
+        tailwindBorderRadius: findTailwindClassValue(existingLayoutElement?.className, TAILWIND_BORDER_RADIUS_OPTIONS),
+        
+        tailwindBorderTopW: findSideBorderClassValue(existingLayoutElement?.className, 't', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS),
+        tailwindBorderRightW: findSideBorderClassValue(existingLayoutElement?.className, 'r', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS),
+        tailwindBorderBottomW: findSideBorderClassValue(existingLayoutElement?.className, 'b', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS),
+        tailwindBorderLeftW: findSideBorderClassValue(existingLayoutElement?.className, 'l', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS),
+        
+        tailwindBorderTopColor: findSideBorderClassValue(existingLayoutElement?.className, 't', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS),
+        tailwindBorderRightColor: findSideBorderClassValue(existingLayoutElement?.className, 'r', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS),
+        tailwindBorderBottomColor: findSideBorderClassValue(existingLayoutElement?.className, 'b', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS),
+        tailwindBorderLeftColor: findSideBorderClassValue(existingLayoutElement?.className, 'l', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS),
+
+        styleBorderTop: existingLayoutElement?.style?.borderTop ?? '',
+        styleBorderBottom: existingLayoutElement?.style?.borderBottom ?? '',
+
       };
-      return config;
     }));
     console.log('[DEBUG] TemplateDesigner: GUI state updated from parsed JSON.');
   }, [ /* fields dependency is managed by the effect below for sync */ ]);
@@ -183,7 +199,7 @@ export function TemplateDesigner({
 
   // Initialization effect
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesigner: Initialization effect running. Mode:', mode, 'isLoadingContexts:', isLoadingContexts);
+    console.log('[DEBUG] TemplateDesigner: Initialization effect. Mode:', mode, 'isLoadingContexts:', isLoadingContexts, 'Initial Template ID:', initialTemplate?.id);
     if (isLoadingContexts && mode === 'edit' && !initialTemplate) {
       console.log('[DEBUG] TemplateDesigner: Contexts loading for edit mode, initialTemplate not yet ready. Deferring setup.');
       return;
@@ -204,17 +220,20 @@ export function TemplateDesigner({
       setTemplateName('');
       setTemplateId('');
       setTemplateIdToEdit(undefined);
-      newFields = [];
-      newLayoutDef = DEFAULT_CARD_LAYOUT_JSON_STRING; // Minimal default
+      newFields = []; // Start with no fields for new template
+      newLayoutDef = DEFAULT_CARD_LAYOUT_JSON_STRING; // Minimal default (empty elements array)
     }
     
-    setFields(newFields); // Set fields first
-    setLayoutDefinition(newLayoutDef); // Set layout definition
-    parseLayoutDefinitionToGuiState(newLayoutDef); // Then parse to GUI
-    setActiveEditorView('gui'); // Default to GUI view
+    setFields(newFields);
+    setLayoutDefinition(newLayoutDef); // Set this first
+    // This will trigger the JSON -> GUI sync effect if view is 'gui'
+    if (activeEditorView === 'gui') {
+      parseLayoutDefinitionToGuiState(newLayoutDef);
+    }
+    jsonEditedManuallyRef.current = false; // Reset manual edit flag
 
     console.log('[DEBUG] TemplateDesigner: Initialization complete.');
-  }, [mode, initialTemplate, isLoadingContexts, parseLayoutDefinitionToGuiState]);
+  }, [mode, initialTemplate, isLoadingContexts]); // parseLayoutDefinitionToGuiState removed from deps to avoid loop on its own recreation
 
 
   // Auto-generate templateId from templateName for CREATE mode
@@ -233,14 +252,12 @@ export function TemplateDesigner({
         const newUiConfigs = fields.map((fieldDef, index) => {
             const existingConfig = existingConfigsMap.get(fieldDef.key);
             if (existingConfig) {
-                // If config exists, update its label and originalType if they changed, preserve other settings
                 return { 
                     ...existingConfig, 
                     label: fieldDef.label, 
                     originalType: fieldDef.type 
                 };
             }
-            // New field, create default config
             const defaultTopValue = `${10 + (index % 8) * 35}px`;
             return {
                 _uiId: fieldDef._uiId || `gui-new-${fieldDef.key}-${Date.now()}-${index}`,
@@ -252,8 +269,7 @@ export function TemplateDesigner({
                 elementType: fieldDef.type === 'textarea' ? 'textarea' : (fieldDef.type === 'placeholderImage' ? 'image' : 'text'),
                 iconName: fieldDef.type === 'number' ? 'Coins' : '',
                 styleTop: defaultTopValue, styleLeft: '10px', styleRight: '', styleBottom: '',
-                styleMaxHeight: fieldDef.type === 'textarea' ? 'auto' : '',
-                stylePadding: '', styleFontStyle: 'normal', styleTextAlign: 'left',
+                styleMaxHeight: '', stylePadding: '', styleFontStyle: 'normal', styleTextAlign: 'left',
                 tailwindTextColor: 'text-black', tailwindFontSize: 'text-base',
                 tailwindFontWeight: 'font-normal', tailwindLineHeight: 'leading-normal',
                 tailwindOverflow: 'overflow-visible', tailwindTextOverflow: NONE_VALUE,
@@ -262,10 +278,10 @@ export function TemplateDesigner({
                 tailwindBorderBottomW: NONE_VALUE, tailwindBorderLeftW: NONE_VALUE,
                 tailwindBorderTopColor: NONE_VALUE, tailwindBorderRightColor: NONE_VALUE,
                 tailwindBorderBottomColor: NONE_VALUE, tailwindBorderLeftColor: NONE_VALUE,
+                styleBorderTop: '', styleBorderBottom: '',
             };
         });
 
-        // Filter out configs for fields that no longer exist
         const currentFieldKeys = new Set(fields.map(f => f.key));
         const filteredConfigs = newUiConfigs.filter(config => currentFieldKeys.has(config.fieldKey));
         
@@ -277,7 +293,6 @@ export function TemplateDesigner({
     });
   }, [fields]);
 
-
   const handleGenerateJsonFromBuilder = useCallback((showToastMessage = true) => {
     console.log('[DEBUG] TemplateDesigner: handleGenerateJsonFromBuilder called.');
     const elementsToInclude = layoutElementGuiConfigs.filter(config => config.isEnabledOnCanvas);
@@ -286,72 +301,55 @@ export function TemplateDesigner({
       const style: any = { position: "absolute" };
       const classNames: string[] = [];
 
-      if (config.originalType === 'textarea' || config.elementType === 'textarea') {
-        classNames.push('whitespace-pre-wrap');
-      }
-
-      const addStyleIfPresent = (key: string, value: string | undefined) => {
-        if (value?.trim()) style[key] = value.trim();
-      };
-
-      addStyleIfPresent('top', config.styleTop);
-      addStyleIfPresent('left', config.styleLeft);
-      addStyleIfPresent('right', config.styleRight);
-      addStyleIfPresent('bottom', config.styleBottom);
-      addStyleIfPresent('maxHeight', config.styleMaxHeight);
-      addStyleIfPresent('padding', config.stylePadding);
+      // Add direct CSS styles from GUI config
+      if (config.styleTop?.trim()) style.top = config.styleTop.trim();
+      if (config.styleLeft?.trim()) style.left = config.styleLeft.trim();
+      if (config.styleRight?.trim()) style.right = config.styleRight.trim();
+      if (config.styleBottom?.trim()) style.bottom = config.styleBottom.trim();
+      if (config.styleMaxHeight?.trim()) style.maxHeight = config.styleMaxHeight.trim();
+      if (config.stylePadding?.trim()) style.padding = config.stylePadding.trim();
       if (config.styleFontStyle?.trim() && config.styleFontStyle !== 'normal') style.fontStyle = config.styleFontStyle.trim();
       if (config.styleTextAlign?.trim() && config.styleTextAlign !== 'left') style.textAlign = config.styleTextAlign.trim();
-      
-      // Tailwind classes
-      if (config.tailwindTextColor && config.tailwindTextColor !== NONE_VALUE) classNames.push(config.tailwindTextColor);
-      else if (config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') classNames.push('text-black');
-      
-      if (config.tailwindFontSize && config.tailwindFontSize !== NONE_VALUE) classNames.push(config.tailwindFontSize);
-      else if (config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') classNames.push('text-base');
-      
-      if (config.tailwindFontWeight && config.tailwindFontWeight !== NONE_VALUE) classNames.push(config.tailwindFontWeight);
-      else if (config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue') classNames.push('font-normal');
+      if (config.styleBorderTop?.trim()) style.borderTop = config.styleBorderTop.trim();
+      if (config.styleBorderBottom?.trim()) style.borderBottom = config.styleBorderBottom.trim();
 
-      if (config.tailwindLineHeight && config.tailwindLineHeight !== NONE_VALUE) classNames.push(config.tailwindLineHeight);
-      else if (config.elementType === 'text' || config.elementType === 'textarea') classNames.push('leading-normal');
+      // Add Tailwind classes from GUI config
+      if (config.originalType === 'textarea' || config.elementType === 'textarea') classNames.push('whitespace-pre-wrap');
       
-      if (config.tailwindOverflow && config.tailwindOverflow !== NONE_VALUE) classNames.push(config.tailwindOverflow);
-      else if (config.elementType === 'text' || config.elementType === 'textarea') classNames.push('overflow-visible');
+      const twClasses = [
+        config.tailwindTextColor, config.tailwindFontSize, config.tailwindFontWeight,
+        config.tailwindLineHeight, config.tailwindOverflow, config.tailwindTextOverflow,
+        config.tailwindBorderRadius,
+        config.tailwindBorderTopW, config.tailwindBorderRightW,
+        config.tailwindBorderBottomW, config.tailwindBorderLeftW,
+      ];
 
-      if (config.tailwindTextOverflow && config.tailwindTextOverflow !== NONE_VALUE) classNames.push(config.tailwindTextOverflow);
-      
-      // Borders via Tailwind
-      if (config.tailwindBorderRadius && config.tailwindBorderRadius !== NONE_VALUE) classNames.push(config.tailwindBorderRadius);
-      
-      let hasAnySideBorder = false;
-      (['Top', 'Right', 'Bottom', 'Left'] as const).forEach(side => {
-        const widthKey = `tailwindBorder${side}W` as keyof LayoutElementGuiConfig;
-        const colorKey = `tailwindBorder${side}Color` as keyof LayoutElementGuiConfig;
-        const widthValue = config[widthKey] as string | undefined;
-        const colorValue = config[colorKey] as string | undefined;
+      let hasAnySideBorderWidth = [
+        config.tailwindBorderTopW, config.tailwindBorderRightW,
+        config.tailwindBorderBottomW, config.tailwindBorderLeftW,
+      ].some(w => w && w !== NONE_VALUE);
 
-        if (widthValue && widthValue !== NONE_VALUE) {
-          hasAnySideBorder = true;
-          classNames.push(widthValue); // e.g., border-t-2
-          if (colorValue && colorValue !== NONE_VALUE) {
-            classNames.push(`border-${side.toLowerCase()}-${colorValue}`);
-          }
-        }
-      });
-      // If any side has width, and no specific colors were set per side, apply global border color from canvas setting if appropriate (This part is tricky if canvas also has per-side...)
-      // For now, if a border width is set, a color must be set for it to show, or it uses theme default if only e.g. 'border-t' is specified.
-      // Let's ensure a default border color is applied if any width is set but no specific color chosen for the element via GUI
-      if (hasAnySideBorder && !classNames.some(cls => cls.startsWith('border-') && TAILWIND_BORDER_PALETTE_OPTIONS.some(p => cls.endsWith(p.value)) && cls !== 'border-border')) {
-          // This logic might need to check against tailwindCanvasBorderColor (global one)
-          // For simplicity, if any border side is on, and no specific color class is present for that side,
-          // Tailwind will default to the border color inherited or from 'border-border' if widths are set.
-          // If a global border color (like border-primary) was intended, it should be part of TailwindBorderColor options
+      const sideBorderColorClasses = [
+        config.tailwindBorderTopColor && config.tailwindBorderTopW !== NONE_VALUE ? `border-t-${config.tailwindBorderTopColor}` : '',
+        config.tailwindBorderRightColor && config.tailwindBorderRightW !== NONE_VALUE ? `border-r-${config.tailwindBorderRightColor}` : '',
+        config.tailwindBorderBottomColor && config.tailwindBorderBottomW !== NONE_VALUE ? `border-b-${config.tailwindBorderBottomColor}` : '',
+        config.tailwindBorderLeftColor && config.tailwindBorderLeftW !== NONE_VALUE ? `border-l-${config.tailwindBorderLeftColor}` : '',
+      ].filter(c => c && c !== NONE_VALUE && !c.endsWith(NONE_VALUE));
+
+      twClasses.push(...sideBorderColorClasses);
+      
+      if (hasAnySideBorderWidth && sideBorderColorClasses.length === 0) {
+        // Apply a default overall border color if widths are set but no specific side colors
+        // This part is tricky because global border color also needs to be defined.
+        // For now, let's assume if a width is set, it might get a default theme color from Tailwind if `border-t` etc. are applied
       }
 
-
-      const element: Partial<LayoutElement> = { fieldKey: config.fieldKey, type: config.elementType };
-      if (Object.keys(style).length > 0) element.style = style as LayoutElementStyle;
+      twClasses.forEach(cls => {
+        if (cls && cls !== NONE_VALUE) classNames.push(cls);
+      });
+      
+      const element: Partial<CardLayoutElement> = { fieldKey: config.fieldKey, type: config.elementType };
+      if (Object.keys(style).length > 0) element.style = style;
       const finalClassName = classNames.filter(Boolean).join(' ').trim();
       if (finalClassName) element.className = finalClassName;
       if ((config.elementType === 'iconValue') && config.iconName?.trim()) element.icon = config.iconName.trim();
@@ -367,7 +365,7 @@ export function TemplateDesigner({
       borderRadius: canvasBorderRadius,
       borderWidth: canvasBorderWidth,
       borderStyle: canvasBorderStyle,
-      elements: generatedElements as LayoutElement[]
+      elements: generatedElements as CardLayoutElement[]
     };
 
     const newLayoutJsonString = JSON.stringify(newLayoutData, null, 2);
@@ -375,14 +373,14 @@ export function TemplateDesigner({
     if (showToastMessage) {
       toast({ title: "Layout JSON Updated", description: "JSON generated from GUI builder and updated." });
     }
-    lastSyncedJsonFromGui.current = newLayoutJsonString;
+    jsonEditedManuallyRef.current = false; // GUI has updated the JSON
   }, [
     layoutElementGuiConfigs, canvasWidthSetting, canvasHeightSetting,
     canvasBackgroundColor, canvasBorderColor, canvasBorderRadius, canvasBorderWidth, canvasBorderStyle,
     toast
   ]);
 
-  // Debounced GUI -> JSON sync
+  // Debounced GUI -> JSON sync (for live preview)
   useEffect(() => {
     if (activeEditorView === 'gui') {
       if (debounceTimerRef.current) {
@@ -399,42 +397,50 @@ export function TemplateDesigner({
       }
     };
   }, [
-    activeEditorView, handleGenerateJsonFromBuilder, // Core dependencies
-    // All GUI state variables that should trigger a JSON regeneration
-    canvasWidthSetting, canvasHeightSetting, selectedSizePreset, canvasBackgroundColor, 
-    canvasBorderColor, canvasBorderRadius, canvasBorderWidth, canvasBorderStyle, 
-    layoutElementGuiConfigs
+    activeEditorView, handleGenerateJsonFromBuilder, 
+    canvasWidthSetting, canvasHeightSetting, selectedSizePreset, 
+    canvasBackgroundColor, canvasBorderColor, canvasBorderRadius, canvasBorderWidth, canvasBorderStyle,
+    layoutElementGuiConfigs 
   ]);
 
-  // JSON -> GUI Sync when switching to GUI view or if layoutDefinition changes externally
+  // JSON -> GUI Sync (on view switch or external JSON change)
   useEffect(() => {
-    if (activeEditorView === 'gui') {
-      // Only re-parse and update GUI if the JSON string is different from what GUI last generated
-      // or if it's the first time (lastSyncedJsonFromGui.current is null)
-      if (layoutDefinition !== lastSyncedJsonFromGui.current) {
-        console.log('[DEBUG] TemplateDesigner: layoutDefinition changed or view switched to GUI, re-parsing JSON to GUI state.');
-        parseLayoutDefinitionToGuiState(layoutDefinition);
-        lastSyncedJsonFromGui.current = layoutDefinition; // Mark as synced
-      }
+    if (activeEditorView === 'gui' && jsonEditedManuallyRef.current) {
+      console.log('[DEBUG] TemplateDesigner: Switched to GUI view after manual JSON edit, re-parsing JSON to GUI state.');
+      parseLayoutDefinitionToGuiState(layoutDefinition);
+      jsonEditedManuallyRef.current = false; // GUI is now synced
+    } else if (activeEditorView === 'gui' && !jsonEditedManuallyRef.current && mode === 'edit') {
+      // This case handles the initial load for edit mode, or if layoutDefinition changes programmatically
+      // while GUI is active (though this shouldn't happen if GUI is the source of truth)
+      // console.log('[DEBUG] TemplateDesigner: GUI active, layoutDefinition might have changed externally or initial load.');
+      // To avoid re-parsing if the change was due to the GUI's own debounced update:
+      // We need a more robust way than just comparing strings, but for now, let's rely on parseLayoutDefinitionToGuiState
+      // to be idempotent if the data hasn't *actually* changed the GUI representation.
+      // The core issue is `layoutDefinition` is state, and its change triggers this.
+      // If `handleGenerateJsonFromBuilder` sets `layoutDefinition`, this effect runs.
+      // `parseLayoutDefinitionToGuiState` then reads it and sets GUI state. This could loop if not careful.
+      // The `jsonEditedManuallyRef` helps here.
     }
-  }, [activeEditorView, layoutDefinition, parseLayoutDefinitionToGuiState]);
+  }, [activeEditorView, layoutDefinition, mode, parseLayoutDefinitionToGuiState]);
 
 
   const validateAndFormatLayoutJsonOnBlur = useCallback(() => {
     console.log('[DEBUG] TemplateDesigner: Validating and formatting JSON from textarea on blur.');
+    if (activeEditorView !== 'json') return true; // Only validate if JSON editor is active
+
     try {
       const parsed = JSON.parse(layoutDefinition);
       const formattedJson = JSON.stringify(parsed, null, 2);
-      setLayoutDefinition(formattedJson); // Update state with formatted JSON
+      setLayoutDefinition(formattedJson);
       setLayoutJsonError(null);
-      lastSyncedJsonFromGui.current = formattedJson; // Consider this an update from JSON editor
+      jsonEditedManuallyRef.current = true; // Mark that JSON was edited for GUI sync later
       return true;
     } catch (e: any) {
       setLayoutJsonError(`Invalid JSON: ${e.message}`);
       console.warn('[DEBUG] TemplateDesigner: Invalid JSON from textarea on blur', e.message);
       return false;
     }
-  }, [layoutDefinition]);
+  }, [layoutDefinition, activeEditorView]);
 
 
   // Generate sample card data for live preview
@@ -549,6 +555,7 @@ export function TemplateDesigner({
   const handleRemoveField = useCallback((uiIdToRemove: string) => {
     console.log('[DEBUG] TemplateDesigner: handleRemoveField called for _uiId:', uiIdToRemove);
     setFields(prevFields => prevFields.filter(f => f._uiId !== uiIdToRemove));
+    setLayoutElementGuiConfigs(prevConfigs => prevConfigs.filter(c => c._uiId !== uiIdToRemove));
   }, []);
 
   const handleFieldChange = useCallback((uiIdToUpdate: string, updatedFieldDefinition: Partial<TemplateFieldDefinition>) => {
@@ -573,6 +580,11 @@ export function TemplateDesigner({
               newKey = `${baseKey}${keyCounter}`; keyCounter++;
             }
             modifiedField.key = newKey;
+
+            // Update corresponding LayoutElementGuiConfig key and label
+            setLayoutElementGuiConfigs(prevConfigs => prevConfigs.map(config =>
+              config._uiId === uiIdToUpdate ? { ...config, fieldKey: newKey, label: modifiedField.label } : config
+            ));
           }
           if (updatedFieldDefinition.type === 'placeholderImage' && oldField.type !== 'placeholderImage') {
             modifiedField.placeholderConfigWidth = modifiedField.placeholderConfigWidth ?? (parseInt(canvasWidthSetting.replace('px','')) || DEFAULT_CANVAS_WIDTH);
@@ -581,6 +593,12 @@ export function TemplateDesigner({
             modifiedField.placeholderConfigWidth = undefined; modifiedField.placeholderConfigHeight = undefined;
             modifiedField.placeholderConfigBgColor = undefined; modifiedField.placeholderConfigTextColor = undefined;
             modifiedField.placeholderConfigText = undefined;
+          }
+          // If type changed, update originalType in GUI config
+          if (updatedFieldDefinition.type && updatedFieldDefinition.type !== oldField.type) {
+             setLayoutElementGuiConfigs(prevConfigs => prevConfigs.map(config =>
+              config._uiId === uiIdToUpdate ? { ...config, originalType: modifiedField.type } : config
+            ));
           }
           return modifiedField;
         }
@@ -632,7 +650,7 @@ export function TemplateDesigner({
   }, []);
 
   const handleSave = async () => {
-    console.log('[DEBUG] TemplateDesigner: handleSave called.');
+    console.log('[DEBUG] TemplateDesigner: handleSave called. Active view:', activeEditorView);
     setIsSaving(true);
 
     let currentIdForSave = mode === 'edit' ? templateIdToEdit : templateId;
@@ -676,32 +694,26 @@ export function TemplateDesigner({
       setIsSaving(false); return;
     }
 
-    // Ensure final layoutDefinition is valid if user was in JSON mode
-    if (activeEditorView === 'json') {
-        if (!validateAndFormatLayoutJsonOnBlur()) { // This also updates layoutDefinition state if valid
-            toast({ title: "Invalid Layout JSON", description: `JSON is invalid: ${layoutJsonError || 'Unknown error'}. Correct before saving.`, variant: "destructive", duration: 7000 });
-            setIsSaving(false);
-            return;
-        }
-    }
-    // If GUI was active, layoutDefinition state should already be up-to-date via debounced effect or explicit generation.
-    // For safety, one final generation from GUI could be done if GUI is active, but current flow should suffice.
-    if (activeEditorView === 'gui' && layoutDefinition !== lastSyncedJsonFromGui.current) {
-        console.warn("[DEBUG] TemplateDesigner: GUI active but layoutDefinition seems out of sync with last GUI generation. Forcing regeneration before save.");
-        handleGenerateJsonFromBuilder(false); // Force sync
-    }
-
-
     let finalLayoutDefToSave = layoutDefinition;
+    if (activeEditorView === 'gui') {
+      // If GUI is active, force one final generation to ensure layoutDefinition state is up-to-date
+      // This call will update layoutDefinition state via its internal setLayoutDefinition
+      handleGenerateJsonFromBuilder(false); 
+      // Since handleGenerateJsonFromBuilder updates state, we might need to use a ref or wait
+      // For simplicity, we'll assume layoutDefinition is updated for the next step.
+      // A more robust way might be to have handleGenerateJsonFromBuilder return the string.
+      // For now, this should mostly work due to React's batching.
+    }
+
     if (!finalLayoutDefToSave.trim()) {
       finalLayoutDefToSave = DEFAULT_CARD_LAYOUT_JSON_STRING;
     } else {
       try {
-        JSON.parse(finalLayoutDefToSave); // Final validation
+        JSON.parse(finalLayoutDefToSave);
       } catch (e: any) {
         setLayoutJsonError(`Invalid JSON: ${e.message}`);
         toast({ title: "Invalid Layout JSON", description: `JSON is invalid: ${e.message}. Correct before saving.`, variant: "destructive", duration: 7000 });
-        if (activeEditorView === 'gui') setActiveEditorView('json'); // Switch to JSON view to show error
+        if (activeEditorView === 'gui') setActiveEditorView('json');
         setIsSaving(false); return;
       }
     }
@@ -713,10 +725,13 @@ export function TemplateDesigner({
       layoutDefinition: finalLayoutDefToSave,
     };
 
-    console.log('[DEBUG] TemplateDesigner: Calling props.onSave with ID:', currentIdForSave);
+    console.log('[DEBUG] TemplateDesigner: Calling props.onSave for ID:', currentIdForSave);
     try {
-      await onSave(templateToSave, mode === 'edit' ? templateIdToEdit : undefined);
-      // Success toast and navigation are handled by the parent page (new/edit routes)
+      const result = await onSave(templateToSave, mode === 'edit' ? templateIdToEdit : undefined);
+      // Parent (NewTemplatePage/EditTemplatePage) will handle toast and navigation
+      if (!result.success) {
+        console.warn('[DEBUG] TemplateDesigner: props.onSave reported failure from parent:', result.message);
+      }
     } catch (err) {
       console.error('[DEBUG] TemplateDesigner: props.onSave promise rejected', err);
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred during save.";
@@ -742,14 +757,11 @@ export function TemplateDesigner({
     }
   }, [toast]);
 
-  const isGenerateJsonDisabled = isSaving || isLoadingContexts || layoutElementGuiConfigs.filter(c => c.isEnabledOnCanvas).length === 0;
-  const isSaveButtonDisabled = isSaving || isLoadingContexts || !templateName.trim() || fields.length === 0 || (activeEditorView === 'json' && !!layoutJsonError);
-
   const pageTitle = mode === 'create' ? "Create New Template" : `Edit Template: ${initialTemplate?.name || '...'}`;
   const saveButtonText = mode === 'create' ? "Save Template" : "Save Changes";
-  const currentLayoutJsonLabel = activeEditorView === 'gui' 
-    ? "Layout Definition JSON (Live Updates from GUI Builder)"
-    : "Layout Definition JSON (Editable)";
+  
+  const isGenerateJsonDisabled = isSaving || isLoadingContexts || layoutElementGuiConfigs.filter(c => c.isEnabledOnCanvas).length === 0;
+  const isSaveButtonDisabled = isSaving || isLoadingContexts || !templateName.trim() || fields.length === 0 || (activeEditorView === 'json' && !!layoutJsonError);
 
   if (isLoadingContexts && mode === 'edit' && !initialTemplate) {
     return (
@@ -759,11 +771,11 @@ export function TemplateDesigner({
       </div>
     );
   }
-
+  
   return (
-    <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-6">
+    <>
       {/* Top Section: Template Info & Data Fields */}
-      <Card className="shadow-lg">
+      <Card className="shadow-lg mb-6">
          <CardHeader>
            <div className="sticky top-[calc(var(--header-height,56px)+1px)] md:top-[calc(var(--header-height,56px)+1px)] z-30 bg-background/95 backdrop-blur-sm -mx-6 -mt-6 px-6 pt-6 pb-4 border-b shadow-sm flex justify-between items-center">
             <div>
@@ -776,12 +788,12 @@ export function TemplateDesigner({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon" className="h-9 w-9" disabled={isLoadingContexts || isSaving}>
-                    <EllipsisVertical className="h-4 w-4" /> <span className="sr-only">Page Actions</span>
+                    <Settings className="h-4 w-4" /> <span className="sr-only">Page Actions</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={() => handleGenerateJsonFromBuilder(true)} // true to show toast
+                    onClick={() => handleGenerateJsonFromBuilder(true)}
                     disabled={isGenerateJsonDisabled}
                     title={layoutElementGuiConfigs.filter(c => c.isEnabledOnCanvas).length === 0 ? "Enable at least one element in GUI builder first" : undefined}
                   >
@@ -791,7 +803,7 @@ export function TemplateDesigner({
                     onClick={handleSave}
                     disabled={isSaveButtonDisabled}
                   >
-                    {isSaving ? (<> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving... </>) : (<> <Save className="mr-2 h-4 w-4" /> {saveButtonText} </>)}
+                    {isSaving ? ( <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving... </>) : ( <> <Save className="mr-2 h-4 w-4" /> {saveButtonText} </>)}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -830,24 +842,22 @@ export function TemplateDesigner({
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-3">Data Fields</h3>
-            <ScrollArea className="pr-3"> {/* No max-h, allow full scroll */}
-              <div className="space-y-2">
-                {fields.map((field) => (
-                  <FieldRow
-                    key={field._uiId}
-                    field={field}
-                    onChange={(updatedField) => handleFieldChange(field._uiId!, updatedField)}
-                    onRemove={() => handleRemoveField(field._uiId!)}
-                    isSaving={isSaving || isLoadingContexts}
-                  />
-                ))}
-                {fields.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4 border rounded-md">
-                    No fields added yet. Click "Add Field" to begin.
-                  </p>
-                )}
-              </div>
-            </ScrollArea>
+            <div className="space-y-2">
+              {fields.map((field) => (
+                <FieldRow
+                  key={field._uiId}
+                  field={field}
+                  onChange={(updatedField) => handleFieldChange(field._uiId!, updatedField)}
+                  onRemove={() => handleRemoveField(field._uiId!)}
+                  isSaving={isSaving || isLoadingContexts}
+                />
+              ))}
+              {fields.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4 border rounded-md">
+                  No fields added yet. Click "Add Field" to begin.
+                </p>
+              )}
+            </div>
             <Button
               onClick={handleAddField}
               variant="outline"
@@ -863,8 +873,8 @@ export function TemplateDesigner({
       </Card>
 
       {/* Bottom Section: Layout Builder & Preview */}
-      <div className="md:flex md:gap-6 items-start"> {/* Use flex for side-by-side */}
-        <Card className="md:w-[65%] flex flex-col shadow-md mb-6 md:mb-0"> {/* Adjusted width and margin */}
+      <div className="flex flex-col md:flex-row md:gap-6 items-start">
+        <Card className="md:w-[65%] flex flex-col shadow-md mb-6 md:mb-0"> {/* Layout Builder Card */}
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl font-bold">Visual Layout Builder & JSON Output</CardTitle>
@@ -878,15 +888,15 @@ export function TemplateDesigner({
                   onCheckedChange={(checked) => {
                     const newView = checked ? 'gui' : 'json';
                     console.log(`[DEBUG] TemplateDesigner: Switching editor view to: ${newView}`);
-                    setActiveEditorView(newView);
-                    if (newView === 'gui' && layoutDefinition !== lastSyncedJsonFromGui.current) {
+                    if (newView === 'gui' && jsonEditedManuallyRef.current) {
                         // If switching TO gui, and JSON was changed, parse it into GUI state
                         parseLayoutDefinitionToGuiState(layoutDefinition);
-                        lastSyncedJsonFromGui.current = layoutDefinition;
+                        jsonEditedManuallyRef.current = false;
                     } else if (newView === 'json' && activeEditorView === 'gui') {
                         // If switching TO json, ensure JSON is up-to-date from GUI
                         handleGenerateJsonFromBuilder(false); // false for no toast
                     }
+                    setActiveEditorView(newView);
                   }}
                   aria-label="Toggle editor view"
                   disabled={isSaving || isLoadingContexts}
@@ -924,6 +934,8 @@ export function TemplateDesigner({
                         <div><Label className="text-xs font-medium text-muted-foreground">Height</Label><p className="text-xs mt-1 h-8 flex items-center">{COMMON_CARD_SIZES.find(s => s.value === selectedSizePreset)?.height || canvasHeightSetting}</p></div>
                       </div>
                     )}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3 items-end mt-2">
                      <div> <Label htmlFor={`canvasBgColor-${mode}`} className="text-xs font-medium">Background Color (CSS)</Label> <Input id={`canvasBgColor-${mode}`} value={canvasBackgroundColor} onChange={(e) => handleCanvasDirectCSSChange('canvasBackgroundColor', e.target.value)} placeholder="e.g., hsl(var(--card))" disabled={isSaving || isLoadingContexts} className="mt-1 h-8 text-xs" /> </div>
                      <div> <Label htmlFor={`canvasBorderRadius-${mode}`} className="text-xs font-medium">Border Radius (CSS)</Label> <Input id={`canvasBorderRadius-${mode}`} value={canvasBorderRadius} onChange={(e) => handleCanvasDirectCSSChange('canvasBorderRadius', e.target.value)} placeholder="e.g., 8px or 0.5rem" disabled={isSaving || isLoadingContexts} className="mt-1 h-8 text-xs" /> </div>
                      <div> <Label htmlFor={`canvasBorderWidth-${mode}`} className="text-xs font-medium">Border Width (CSS)</Label> <Input id={`canvasBorderWidth-${mode}`} value={canvasBorderWidth} onChange={(e) => handleCanvasDirectCSSChange('canvasBorderWidth', e.target.value)} placeholder="e.g., 1px" disabled={isSaving || isLoadingContexts} className="mt-1 h-8 text-xs" /> </div>
@@ -935,7 +947,7 @@ export function TemplateDesigner({
                 {/* Layout Elements Configuration */}
                 <div className="space-y-3 p-3 border rounded-md bg-muted/30 flex-grow min-h-0 flex flex-col">
                   <h4 className="text-base font-semibold mb-1">Layout Elements (Toggle to Include & Configure)</h4>
-                  <ScrollArea className="pr-2">
+                  <ScrollArea className="pr-2"> {/* No max-h here, allow full scroll */}
                     <div className="space-y-2">
                       {layoutElementGuiConfigs.map((config) => (
                         <div key={config._uiId} className="p-2.5 border rounded-md bg-card/80 hover:bg-card transition-colors">
@@ -1021,7 +1033,7 @@ export function TemplateDesigner({
                                 </div>
                               )}
                               {/* Borders */}
-                              <div className="space-y-1.5">
+                               <div className="space-y-1.5">
                                 <h5 className="text-xs text-muted-foreground font-semibold flex items-center gap-1"><Settings className="mr-1 h-3 w-3" /> Borders</h5>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2 pl-1">
                                   <div><Label htmlFor={`el-twBorderRadius-${mode}-${config._uiId}`} className="text-xs">Border Radius (Tailwind)</Label><Select value={config.tailwindBorderRadius || NONE_VALUE} onValueChange={(value) => handleGuiConfigChange(config._uiId!, 'tailwindBorderRadius', value)} disabled={isSaving || isLoadingContexts}><SelectTrigger id={`el-twBorderRadius-${mode}-${config._uiId}`} className="h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger><SelectContent>{TAILWIND_BORDER_RADIUS_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}</SelectContent></Select></div>
@@ -1054,30 +1066,28 @@ export function TemplateDesigner({
                 </div>
               </>
             )}
-            {/* JSON Textarea (conditionally editable) */}
-            <div className="mt-4 flex-grow flex flex-col">
-              <div>
-                <Label htmlFor={`layoutDefinition-${mode}`} className="text-sm font-medium">{currentLayoutJsonLabel}</Label>
-                <Textarea
-                  id={`layoutDefinition-${mode}`}
-                  value={layoutDefinition}
-                  onChange={(e) => {
-                    setLayoutDefinition(e.target.value);
-                    if (layoutJsonError) setLayoutJsonError(null);
-                    if (activeEditorView === 'json') { // Mark GUI as potentially out of sync
-                        lastSyncedJsonFromGui.current = null; 
-                    }
-                  }}
-                  onBlur={validateAndFormatLayoutJsonOnBlur}
-                  placeholder='Click "Generate/Update JSON from Builder" (in page actions menu) to populate, or paste/edit your JSON here.'
-                  rows={15}
-                  className="font-mono text-xs flex-grow min-h-[200px] max-h-[350px] bg-muted/20 mt-1"
-                  disabled={isSaving || isLoadingContexts || activeEditorView === 'gui'}
-                  readOnly={activeEditorView === 'gui'}
-                />
-              </div>
-              {layoutJsonError && (<Alert variant="destructive" className="mt-2"><AlertTriangle className="h-4 w-4 !text-destructive-foreground" /><AlertTitle>JSON Error</AlertTitle><AlertDescription className="text-xs">{layoutJsonError}</AlertDescription></Alert>)}
-            </div>
+             {activeEditorView === 'json' && (
+                <div className="mt-4 flex-grow flex flex-col">
+                  <div>
+                    <Label htmlFor={`layoutDefinition-${mode}`} className="text-sm font-medium">Layout Definition JSON (Editable)</Label>
+                    <Textarea
+                      id={`layoutDefinition-${mode}`}
+                      value={layoutDefinition}
+                      onChange={(e) => {
+                        setLayoutDefinition(e.target.value);
+                        jsonEditedManuallyRef.current = true;
+                        if (layoutJsonError) setLayoutJsonError(null);
+                      }}
+                      onBlur={validateAndFormatLayoutJsonOnBlur}
+                      placeholder='Click "Generate/Update JSON from Builder" (in page actions menu) to populate, or paste/edit your JSON here.'
+                      rows={15}
+                      className="font-mono text-xs flex-grow min-h-[200px] max-h-[350px] bg-muted/20 mt-1"
+                      disabled={isSaving || isLoadingContexts}
+                    />
+                  </div>
+                  {layoutJsonError && (<Alert variant="destructive" className="mt-2"><HelpCircle className="h-4 w-4 !text-destructive-foreground" /><AlertTitle>JSON Error</AlertTitle><AlertDescription className="text-xs">{layoutJsonError}</AlertDescription></Alert>)}
+                </div>
+            )}
           </CardContent>
         </Card>
 
@@ -1086,7 +1096,7 @@ export function TemplateDesigner({
            <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl font-bold flex items-center">
-                <Eye className="mr-2 h-5 w-5" /> Live Layout Preview
+                <Palette className="mr-2 h-5 w-5" /> Live Layout Preview
               </CardTitle>
               <div className="flex items-center space-x-2">
                 <Label htmlFor={`show-pixel-grid-${mode}`} className="text-xs text-muted-foreground">Pixel Grid</Label>
@@ -1110,7 +1120,7 @@ export function TemplateDesigner({
           </CardContent>
         </Card>
       </div>
-    </div>
+    </>
   );
 }
 
