@@ -17,7 +17,7 @@ import {
   TAILWIND_BORDER_RADIUS_OPTIONS,
   BORDER_SIDE_WIDTH_OPTIONS,
   TAILWIND_BORDER_PALETTE_OPTIONS,
-  // TAILWIND_BACKGROUND_COLORS, // For canvas, not elements directly via this list
+  TAILWIND_BACKGROUND_COLORS,
   toCamelCase,
   generateSamplePlaceholderUrl,
   findTailwindClassValue,
@@ -33,7 +33,7 @@ console.log('[DEBUG] useTemplateDesigner.ts: Hook loaded');
 export interface UseTemplateDesignerProps {
   mode: "create" | "edit";
   initialTemplate?: CardTemplate;
-  onSave: (templateData: CardTemplate, existingTemplateId?: CardTemplateId) => Promise<{ success: boolean, message?: string }>;
+  onSaveProp: (templateData: CardTemplate, existingTemplateId?: CardTemplateId) => Promise<{ success: boolean, message?: string }>;
   isLoadingContexts?: boolean;
   existingTemplateIds?: CardTemplateId[];
 }
@@ -41,48 +41,52 @@ export interface UseTemplateDesignerProps {
 export function useTemplateDesigner({
   mode,
   initialTemplate,
-  onSave: onSaveProp,
+  onSaveProp,
   isLoadingContexts = false,
   existingTemplateIds = [],
 }: UseTemplateDesignerProps) {
   const { toast } = useToast();
-  console.log('[DEBUG] useTemplateDesigner: Initializing. Mode:', mode, 'isLoadingContexts:', isLoadingContexts);
+  console.log('[DEBUG] useTemplateDesigner: Initializing. Mode:', mode, 'isLoadingContexts:', isLoadingContexts, "Initial Template:", initialTemplate?.name);
 
+  // Core template data
   const [templateName, setTemplateName] = useState<string>('');
-  const [templateId, setTemplateId] = useState<string>('');
-  const [templateIdToEdit, setTemplateIdToEdit] = useState<CardTemplateId | undefined>(undefined);
-
+  const [templateId, setTemplateId] = useState<string>(''); // Auto-generated in create, read-only in edit
+  const [templateIdToEdit, setTemplateIdToEdit] = useState<CardTemplateId | undefined>(undefined); // Stores the original ID for updates
   const [fields, setFields] = useState<TemplateFieldDefinition[]>([]);
+
+  // Layout definition (JSON string)
   const [layoutDefinition, setLayoutDefinition] = useState<string>(DEFAULT_CARD_LAYOUT_JSON_STRING);
   const [layoutJsonError, setLayoutJsonError] = useState<string | null>(null);
 
-  // GUI Builder State for Canvas
+  // GUI Builder State - Canvas Setup
   const [canvasWidthSetting, setCanvasWidthSetting] = useState<string>(`${DEFAULT_CANVAS_WIDTH}px`);
   const [canvasHeightSetting, setCanvasHeightSetting] = useState<string>(`${DEFAULT_CANVAS_HEIGHT}px`);
   const [selectedSizePreset, setSelectedSizePreset] = useState<string>(
     COMMON_CARD_SIZES.find(s => s.width === `${DEFAULT_CANVAS_WIDTH}px` && s.height === `${DEFAULT_CANVAS_HEIGHT}px`)?.value || COMMON_CARD_SIZES[0].value
   );
-  
-  const [canvasDirectBackgroundColor, setCanvasDirectBackgroundColor] = useState<string>('hsl(var(--card))');
-  const [canvasBorderStyle, setCanvasBorderStyle] = useState<string>("solid");
-  const [canvasBorderRadius, setCanvasBorderRadius] = useState<string>('calc(var(--radius) - 2px)');
-  const [canvasBorderWidth, setCanvasBorderWidth] = useState<string>('1px');
-  // New state for Tailwind canvas border color
+  const [tailwindCanvasBackgroundColor, setTailwindCanvasBackgroundColor] = useState<string>(TAILWIND_BACKGROUND_COLORS.find(opt => opt.value === "bg-card")?.value || NONE_VALUE);
+  const [canvasDirectBackgroundColor, setCanvasDirectBackgroundColor] = useState<string>('hsl(var(--card))'); // Fallback if Tailwind BG is NONE
+  const [tailwindCanvasBorderRadius, setTailwindCanvasBorderRadius] = useState<string>(TAILWIND_BORDER_RADIUS_OPTIONS.find(opt => opt.value === "rounded-lg")?.value || NONE_VALUE);
   const [tailwindCanvasBorderColor, setTailwindCanvasBorderColor] = useState<string>(TAILWIND_BORDER_PALETTE_OPTIONS.find(opt => opt.value === "border")?.value || NONE_VALUE);
+  const [tailwindCanvasBorderWidth, setTailwindCanvasBorderWidth] = useState<string>(BORDER_SIDE_WIDTH_OPTIONS.find(opt => opt.value === "default" && !opt.classPrefix.includes("?"))?.value || NONE_VALUE);
+  const [canvasBorderStyle, setCanvasBorderStyle] = useState<string>("solid");
 
-
+  // GUI Builder State - Layout Elements
   const [layoutElementGuiConfigs, setLayoutElementGuiConfigs] = useState<LayoutElementGuiConfig[]>([]);
   const [activeEditorView, setActiveEditorView] = useState<'gui' | 'json'>('gui');
   const [showPixelGrid, setShowPixelGrid] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Refs for managing updates and avoiding loops
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const jsonEditedManuallyRef = useRef<boolean>(false); // Tracks if JSON textarea was directly edited
+  const lastSyncedLayoutDefForGui = useRef<string | null>(null); // Tracks last JSON used to update GUI
+
+  // Sample card for live preview
   const [sampleCardForPreview, setSampleCardForPreview] = useState<CardData | null>(null);
 
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const jsonEditedManuallyRef = useRef<boolean>(false);
-
-
   const parseLayoutDefinitionToGuiState = useCallback((jsonStringToParse: string, currentFields: TemplateFieldDefinition[]) => {
-    console.log('[DEBUG] useTemplateDesigner: parseLayoutDefinitionToGuiState called. JSON length:', jsonStringToParse.length, "Fields count:", currentFields.length);
+    console.log('[DEBUG] useTemplateDesigner: parseLayoutDefinitionToGuiState. JSON length:', jsonStringToParse.length, "Fields count:", currentFields.length);
     let parsedLayout: Partial<LayoutDefinition> = {};
     const defaultParsedLayout = JSON.parse(DEFAULT_CARD_LAYOUT_JSON_STRING);
 
@@ -104,95 +108,85 @@ export function useTemplateDesigner({
     const matchingPreset = COMMON_CARD_SIZES.find(s => String(s.width) === String(parsedLayout.width) && String(s.height) === String(parsedLayout.height));
     setSelectedSizePreset(matchingPreset ? matchingPreset.value : "custom");
 
+    const canvasClasses = (parsedLayout.canvasClassName || '').split(' ');
+    setTailwindCanvasBackgroundColor(findTailwindClassValue(canvasClasses.join(' '), TAILWIND_BACKGROUND_COLORS, NONE_VALUE));
     setCanvasDirectBackgroundColor(String(parsedLayout.backgroundColor || defaultParsedLayout.backgroundColor || 'hsl(var(--card))'));
-    setCanvasBorderRadius(String(parsedLayout.borderRadius || defaultParsedLayout.borderRadius || 'calc(var(--radius) - 2px)'));
-    setCanvasBorderWidth(String(parsedLayout.borderWidth || defaultParsedLayout.borderWidth || '1px'));
+    setTailwindCanvasBorderRadius(findTailwindClassValue(canvasClasses.join(' '), TAILWIND_BORDER_RADIUS_OPTIONS, NONE_VALUE));
+    setTailwindCanvasBorderColor(findTailwindClassValue(canvasClasses.join(' '), TAILWIND_BORDER_PALETTE_OPTIONS.filter(opt => opt.value === NONE_VALUE || opt.value === 'border' || !opt.value.includes('-')), NONE_VALUE));
+    setTailwindCanvasBorderWidth(findTailwindClassValue(canvasClasses.join(' '), BORDER_SIDE_WIDTH_OPTIONS.filter(o => !o.label.includes("Side") && o.value !== NONE_VALUE), NONE_VALUE));
     setCanvasBorderStyle(String(parsedLayout.borderStyle || defaultParsedLayout.borderStyle || "solid"));
     
-    // For Tailwind border color on canvas, parse canvasClassName
-    const canvasClasses = (parsedLayout.canvasClassName || '').split(' ');
-    setTailwindCanvasBorderColor(findTailwindClassValue(parsedLayout.canvasClassName, TAILWIND_BORDER_PALETTE_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS.find(opt => opt.value === "border")?.value || NONE_VALUE));
-
-
-    // Layout Elements GUI Configs
     const elementsFromJsonMap = new Map((Array.isArray(parsedLayout.elements) ? parsedLayout.elements : []).map((el: CardLayoutElement) => [el.fieldKey, el]));
-
+    
     const newGuiConfigs = currentFields.map((fieldDef, index) => {
-      const existingLayoutElement = elementsFromJsonMap.get(fieldDef.key);
-      const config: LayoutElementGuiConfig = { // Initialize with full structure
-        _uiId: fieldDef._uiId || `gui-${fieldDef.key}-${Date.now()}-${index}`,
-        fieldKey: fieldDef.key,
-        label: fieldDef.label,
-        originalType: fieldDef.type,
-        isEnabledOnCanvas: false,
-        isExpandedInGui: false,
-        elementType: 'text',
-        iconName: '',
-        styleTop: '', styleLeft: '', styleRight: '', styleBottom: '',
-        styleMaxHeight: '', stylePadding: '', styleFontStyle: 'normal', styleTextAlign: 'left',
-        // styleBorderTop: '', styleBorderBottom: '', // Removed for per-side Tailwind borders
-        tailwindTextColor: NONE_VALUE, tailwindFontSize: NONE_VALUE,
-        tailwindFontWeight: NONE_VALUE, tailwindLineHeight: NONE_VALUE,
-        tailwindOverflow: NONE_VALUE, tailwindTextOverflow: NONE_VALUE,
-        tailwindBorderRadius: NONE_VALUE,
-        // tailwindBorderColor: NONE_VALUE, // Removed global element border color
-        tailwindBorderTopW: NONE_VALUE, tailwindBorderRightW: NONE_VALUE,
-        tailwindBorderBottomW: NONE_VALUE, tailwindBorderLeftW: NONE_VALUE,
-        tailwindBorderTopColor: NONE_VALUE, tailwindBorderRightColor: NONE_VALUE,
-        tailwindBorderBottomColor: NONE_VALUE, tailwindBorderLeftColor: NONE_VALUE,
-      };
+        const existingUiConfig = layoutElementGuiConfigs.find(p => p._uiId === fieldDef._uiId); // Check current GUI state
+        const jsonElement = elementsFromJsonMap.get(fieldDef.key);
+        const defaultTop = `${10 + (index % 8) * 25}px`;
+        const defaultLeft = '10px';
+        const defaultWidth = '120px';
+        const defaultHeight = '20px';
 
-      if (existingLayoutElement) {
-        config.isEnabledOnCanvas = true;
-        config.elementType = existingLayoutElement.type || 'text';
-        config.iconName = existingLayoutElement.icon || '';
+        let config: LayoutElementGuiConfig = {
+            _uiId: fieldDef._uiId || `gui-new-${fieldDef.key}-${Date.now()}-${index}`,
+            fieldKey: fieldDef.key,
+            label: fieldDef.label,
+            originalType: fieldDef.type,
+            isEnabledOnCanvas: false,
+            isExpandedInGui: existingUiConfig?.isExpandedInGui || false,
+            elementType: 'text',
+            iconName: '',
+            styleTop: defaultTop, styleLeft: defaultLeft, styleRight: '', styleBottom: '',
+            styleMaxHeight: '', stylePadding: '', styleFontStyle: 'normal', styleTextAlign: 'left',
+            tailwindTextColor: TAILWIND_TEXT_COLORS.find(c => c.value === "text-black")?.value || NONE_VALUE,
+            tailwindFontSize: NONE_VALUE, tailwindFontWeight: NONE_VALUE,
+            tailwindLineHeight: NONE_VALUE, tailwindOverflow: NONE_VALUE,
+            tailwindTextOverflow: NONE_VALUE,
+            tailwindBorderRadius: NONE_VALUE, 
+            tailwindBorderTopW: NONE_VALUE, tailwindBorderRightW: NONE_VALUE,
+            tailwindBorderBottomW: NONE_VALUE, tailwindBorderLeftW: NONE_VALUE,
+            tailwindBorderTopColor: NONE_VALUE, tailwindBorderRightColor: NONE_VALUE,
+            tailwindBorderBottomColor: NONE_VALUE, tailwindBorderLeftColor: NONE_VALUE,
+        };
 
-        const style = existingLayoutElement.style || {};
-        config.styleTop = style.top || '';
-        config.styleLeft = style.left || '';
-        config.styleRight = style.right || '';
-        config.styleBottom = style.bottom || '';
-        config.styleMaxHeight = style.maxHeight || '';
-        config.stylePadding = style.padding || '';
-        config.styleFontStyle = style.fontStyle || 'normal';
-        config.styleTextAlign = style.textAlign || 'left';
-        // No longer parsing style.borderTop or style.borderBottom for GUI
+        if (jsonElement) {
+            config.isEnabledOnCanvas = true;
+            const style = jsonElement.style || {};
+            const className = jsonElement.className || '';
 
-        const className = existingLayoutElement.className || '';
-        config.tailwindTextColor = findTailwindClassValue(className, TAILWIND_TEXT_COLORS, NONE_VALUE);
-        config.tailwindFontSize = findTailwindClassValue(className, TAILWIND_FONT_SIZES, NONE_VALUE);
-        config.tailwindFontWeight = findTailwindClassValue(className, TAILWIND_FONT_WEIGHTS, NONE_VALUE);
-        config.tailwindLineHeight = findTailwindClassValue(className, TAILWIND_LINE_HEIGHTS, NONE_VALUE);
-        config.tailwindOverflow = findTailwindClassValue(className, TAILWIND_OVERFLOW, NONE_VALUE);
-        config.tailwindTextOverflow = findTailwindClassValue(className, TAILWIND_TEXT_OVERFLOW, NONE_VALUE);
-        config.tailwindBorderRadius = findTailwindClassValue(className, TAILWIND_BORDER_RADIUS_OPTIONS, NONE_VALUE);
-        
-        // Per-side border widths
-        config.tailwindBorderTopW = findSideBorderClassValue(className, 't', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS, NONE_VALUE);
-        config.tailwindBorderRightW = findSideBorderClassValue(className, 'r', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS, NONE_VALUE);
-        config.tailwindBorderBottomW = findSideBorderClassValue(className, 'b', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS, NONE_VALUE);
-        config.tailwindBorderLeftW = findSideBorderClassValue(className, 'l', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS, NONE_VALUE);
-
-        // Per-side border colors
-        config.tailwindBorderTopColor = findSideBorderClassValue(className, 't', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS, NONE_VALUE);
-        config.tailwindBorderRightColor = findSideBorderClassValue(className, 'r', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS, NONE_VALUE);
-        config.tailwindBorderBottomColor = findSideBorderClassValue(className, 'b', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS, NONE_VALUE);
-        config.tailwindBorderLeftColor = findSideBorderClassValue(className, 'l', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS, NONE_VALUE);
-
-      } else {
-        // Field is not in current JSON layout elements. Initialize with defaults for GUI.
-        config.isEnabledOnCanvas = false;
-        const defaultTopValue = `${10 + (index % 8) * 35}px`;
-        config.styleTop = defaultTopValue;
-        config.styleLeft = '10px';
-        // Other style... and tailwind... properties default to values set in initial config object.
-      }
-      return config;
+            config.elementType = jsonElement.type || 'text';
+            config.iconName = jsonElement.icon || '';
+            config.styleTop = style.top || defaultTop;
+            config.styleLeft = style.left || defaultLeft;
+            config.styleRight = style.right || '';
+            config.styleBottom = style.bottom || '';
+            config.styleMaxHeight = style.maxHeight || '';
+            config.stylePadding = style.padding || '';
+            config.styleFontStyle = style.fontStyle || 'normal';
+            config.styleTextAlign = style.textAlign || 'left';
+            
+            config.tailwindTextColor = findTailwindClassValue(className, TAILWIND_TEXT_COLORS, config.tailwindTextColor);
+            config.tailwindFontSize = findTailwindClassValue(className, TAILWIND_FONT_SIZES, NONE_VALUE);
+            config.tailwindFontWeight = findTailwindClassValue(className, TAILWIND_FONT_WEIGHTS, NONE_VALUE);
+            config.tailwindLineHeight = findTailwindClassValue(className, TAILWIND_LINE_HEIGHTS, NONE_VALUE);
+            config.tailwindOverflow = findTailwindClassValue(className, TAILWIND_OVERFLOW, NONE_VALUE);
+            config.tailwindTextOverflow = findTailwindClassValue(className, TAILWIND_TEXT_OVERFLOW, NONE_VALUE);
+            config.tailwindBorderRadius = findTailwindClassValue(className, TAILWIND_BORDER_RADIUS_OPTIONS, NONE_VALUE);
+            
+            config.tailwindBorderTopW = findSideBorderClassValue(className, 't', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) || NONE_VALUE;
+            config.tailwindBorderRightW = findSideBorderClassValue(className, 'r', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) || NONE_VALUE;
+            config.tailwindBorderBottomW = findSideBorderClassValue(className, 'b', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) || NONE_VALUE;
+            config.tailwindBorderLeftW = findSideBorderClassValue(className, 'l', 'width', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) || NONE_VALUE;
+            config.tailwindBorderTopColor = findSideBorderClassValue(className, 't', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) || NONE_VALUE;
+            config.tailwindBorderRightColor = findSideBorderClassValue(className, 'r', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) || NONE_VALUE;
+            config.tailwindBorderBottomColor = findSideBorderClassValue(className, 'b', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) || NONE_VALUE;
+            config.tailwindBorderLeftColor = findSideBorderClassValue(className, 'l', 'color', BORDER_SIDE_WIDTH_OPTIONS, TAILWIND_BORDER_PALETTE_OPTIONS) || NONE_VALUE;
+        }
+        return config;
     });
     setLayoutElementGuiConfigs(newGuiConfigs);
+    lastSyncedLayoutDefForGui.current = jsonStringToParse; // Mark this JSON as synced to GUI
     console.log('[DEBUG] useTemplateDesigner: GUI state updated from parsed JSON.');
-  }, [setLayoutJsonError, setCanvasWidthSetting, setCanvasHeightSetting, setSelectedSizePreset, setCanvasDirectBackgroundColor, setCanvasBorderRadius, setCanvasBorderWidth, setCanvasBorderStyle, setTailwindCanvasBorderColor]);
-
+  }, [layoutElementGuiConfigs]); // Added layoutElementGuiConfigs to potentially preserve isExpandedInGui
 
   // Initialization effect
   useEffect(() => {
@@ -217,34 +211,24 @@ export function useTemplateDesigner({
       newLayoutDef = initialTemplate.layoutDefinition || DEFAULT_CARD_LAYOUT_JSON_STRING;
     } else if (mode === 'create') {
       console.log('[DEBUG] useTemplateDesigner: Create mode setup.');
-      // Defaults for create mode are already set by useState initial values.
-      // newLayoutDef will be DEFAULT_CARD_LAYOUT_JSON_STRING with empty elements array
-      // ensuring a clean slate for the GUI builder.
       const parsedDefault = JSON.parse(DEFAULT_CARD_LAYOUT_JSON_STRING);
-      parsedDefault.elements = []; // Ensure elements is empty for create mode GUI
+      parsedDefault.elements = []; // Ensure elements is empty for create mode
       newLayoutDef = JSON.stringify(parsedDefault, null, 2);
     }
 
     setTemplateName(newTemplateName);
     setTemplateId(newTemplateIdForDisplay);
     setTemplateIdToEdit(newTemplateIdToEditFromProp);
-    setFields(newFields); // This triggers effect to build initial layoutElementGuiConfigs
-    setLayoutDefinition(newLayoutDef); // This triggers effect to parse JSON for GUI state
+    setFields(newFields); 
+    setLayoutDefinition(newLayoutDef); 
 
-    // Explicitly call parse for initial load in edit mode AFTER fields and layoutDef are set
-    if (mode === 'edit' && initialTemplate) {
-      parseLayoutDefinitionToGuiState(newLayoutDef, newFields);
-    } else if (mode === 'create') {
-        // For create mode, ensure GUI configs are built for potentially empty fields array
-        // and empty layout elements
-        parseLayoutDefinitionToGuiState(newLayoutDef, newFields);
-    }
-
-
+    // Initial parse of layoutDefinition to GUI state (important for edit mode)
+    // This needs `newFields` to correctly map fieldKeys
+    parseLayoutDefinitionToGuiState(newLayoutDef, newFields);
+    
     jsonEditedManuallyRef.current = false;
     console.log('[DEBUG] useTemplateDesigner: Initialization complete.');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, initialTemplate, isLoadingContexts]); // Removed parseLayoutDefinitionToGuiState from here
+  }, [mode, initialTemplate, isLoadingContexts, parseLayoutDefinitionToGuiState]);
 
 
   useEffect(() => {
@@ -253,38 +237,64 @@ export function useTemplateDesigner({
     }
   }, [templateName, mode]);
 
-  // Effect to sync layoutElementGuiConfigs with data fields (fields state)
+  // Sync LayoutElementGuiConfigs with Data Fields (main `fields` array)
   useEffect(() => {
     console.log('[DEBUG] useTemplateDesigner: Syncing layoutElementGuiConfigs with fields. Fields count:', fields.length);
-    if (isLoadingContexts && mode === 'edit' && !initialTemplate) return; // Avoid running too early
-
-    // Only call parseLayoutDefinitionToGuiState if layoutDefinition is already set
-    // This effect's main job is to ensure layoutElementGuiConfigs reflect the *data fields*
-    // and then `parseLayoutDefinitionToGuiState` will ensure these configs are updated
-    // based on the *current layout JSON*.
-    if (layoutDefinition && fields.length > 0) {
-        // Re-parse the current layout JSON using the potentially updated fields.
-        // This is important if fields were added/removed, as layoutElementGuiConfigs
-        // needs to be rebuilt to match, and then their state populated from JSON.
-        parseLayoutDefinitionToGuiState(layoutDefinition, fields);
-    } else if (layoutDefinition && fields.length === 0) {
-        // If all fields are removed, ensure GUI configs are also cleared.
-        setLayoutElementGuiConfigs([]);
-        // Also, likely reset the elements in the JSON definition to an empty array
-        try {
-            const parsed = JSON.parse(layoutDefinition);
-            if (parsed.elements && parsed.elements.length > 0) {
-                const updatedLayout = { ...parsed, elements: [] };
-                setLayoutDefinition(JSON.stringify(updatedLayout, null, 2));
-            }
-        } catch (e) {
-            // If JSON is invalid, do nothing here, error is shown elsewhere
-        }
+    if (isLoadingContexts && mode === 'edit' && !initialTemplate && fields.length === 0) {
+        // Avoid premature sync if fields haven't loaded for edit mode
+        return;
     }
+  
+    setLayoutElementGuiConfigs(prevConfigs => {
+      const existingConfigsMap = new Map(prevConfigs.map(c => [c.fieldKey, c]));
+      const newUiConfigs = fields.map((fieldDef, index) => {
+        const existingConfig = existingConfigsMap.get(fieldDef.key);
+        if (existingConfig) {
+          return {
+            ...existingConfig,
+            label: fieldDef.label, // Update label if it changed
+            originalType: fieldDef.type, // Update original type
+          };
+        }
+        // This is a new field, initialize its GUI config
+        const defaultTop = `${10 + (index % 8) * 25}px`; // Simple cascade
+        return {
+          _uiId: fieldDef._uiId || `gui-new-${fieldDef.key}-${Date.now()}-${index}`,
+          fieldKey: fieldDef.key,
+          label: fieldDef.label,
+          originalType: fieldDef.type,
+          isEnabledOnCanvas: true, // Default to true for new fields
+          isExpandedInGui: false,
+          elementType: fieldDef.type === 'textarea' ? 'textarea' : (fieldDef.type === 'placeholderImage' ? 'image' : 'text'),
+          iconName: fieldDef.type === 'number' ? 'Coins' : '',
+          styleTop: defaultTop, styleLeft: '10px', styleRight: '', styleBottom: '',
+          styleMaxHeight: '', stylePadding: '', styleFontStyle: 'normal', styleTextAlign: 'left',
+          tailwindTextColor: TAILWIND_TEXT_COLORS.find(c => c.value === "text-black")?.value || NONE_VALUE,
+          tailwindFontSize: NONE_VALUE, tailwindFontWeight: NONE_VALUE,
+          tailwindLineHeight: NONE_VALUE, tailwindOverflow: NONE_VALUE,
+          tailwindTextOverflow: NONE_VALUE,
+          tailwindBorderRadius: NONE_VALUE, 
+          tailwindBorderTopW: NONE_VALUE, tailwindBorderRightW: NONE_VALUE,
+          tailwindBorderBottomW: NONE_VALUE, tailwindBorderLeftW: NONE_VALUE,
+          tailwindBorderTopColor: NONE_VALUE, tailwindBorderRightColor: NONE_VALUE,
+          tailwindBorderBottomColor: NONE_VALUE, tailwindBorderLeftColor: NONE_VALUE,
+        };
+      });
+  
+      // Filter out configs for fields that no longer exist
+      const currentFieldKeys = new Set(fields.map(f => f.key));
+      const filteredConfigs = newUiConfigs.filter(config => currentFieldKeys.has(config.fieldKey));
+  
+      if (JSON.stringify(filteredConfigs) !== JSON.stringify(prevConfigs.filter(config => currentFieldKeys.has(config.fieldKey)))) {
+        console.log('[DEBUG] useTemplateDesigner: layoutElementGuiConfigs updated due to field changes.');
+        return filteredConfigs;
+      }
+      return prevConfigs; // No structural change in relation to fields
+    });
+  }, [fields, mode, initialTemplate, isLoadingContexts]);
 
-  }, [fields, mode, initialTemplate, isLoadingContexts, parseLayoutDefinitionToGuiState, layoutDefinition]); // Added layoutDefinition
 
-  const handleGenerateJsonFromBuilder = useCallback((showSuccessToast = true) => {
+  const handleGenerateJsonFromBuilder = useCallback((showSuccessToast = true): string => {
     console.log('[DEBUG] useTemplateDesigner: handleGenerateJsonFromBuilder called.');
     const elementsToInclude = layoutElementGuiConfigs.filter(config => config.isEnabledOnCanvas);
 
@@ -300,38 +310,53 @@ export function useTemplateDesigner({
       if (config.stylePadding?.trim()) style.padding = config.stylePadding.trim();
       if (config.styleFontStyle?.trim() && config.styleFontStyle !== 'normal') style.fontStyle = config.styleFontStyle.trim();
       if (config.styleTextAlign?.trim() && config.styleTextAlign !== 'left') style.textAlign = config.styleTextAlign.trim();
-      
-      // Tailwind typography
-      if (config.tailwindTextColor && config.tailwindTextColor !== NONE_VALUE) classNames.push(config.tailwindTextColor);
-      if (config.tailwindFontSize && config.tailwindFontSize !== NONE_VALUE) classNames.push(config.tailwindFontSize);
-      if (config.tailwindFontWeight && config.tailwindFontWeight !== NONE_VALUE) classNames.push(config.tailwindFontWeight);
-      if (config.tailwindLineHeight && config.tailwindLineHeight !== NONE_VALUE) classNames.push(config.tailwindLineHeight);
+      if (config.styleBorderTop?.trim()) style.borderTop = config.styleBorderTop.trim();
+      if (config.styleBorderBottom?.trim()) style.borderBottom = config.styleBorderBottom.trim();
 
-      // Tailwind overflow
-      if (config.tailwindOverflow && config.tailwindOverflow !== NONE_VALUE) classNames.push(config.tailwindOverflow);
-      if (config.tailwindTextOverflow && config.tailwindTextOverflow !== NONE_VALUE) classNames.push(config.tailwindTextOverflow);
+      if (config.tailwindTextColor && config.tailwindTextColor !== NONE_VALUE) classNames.push(config.tailwindTextColor);
+      else if ((config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue')) classNames.push(TAILWIND_TEXT_COLORS.find(c => c.value === "text-black")?.value || 'text-black');
       
-      // Tailwind borders for element
+      if (config.tailwindFontSize && config.tailwindFontSize !== NONE_VALUE) classNames.push(config.tailwindFontSize);
+      else if ((config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue')) classNames.push(TAILWIND_FONT_SIZES.find(s => s.value === 'text-base')?.value || 'text-base');
+
+      if (config.tailwindFontWeight && config.tailwindFontWeight !== NONE_VALUE) classNames.push(config.tailwindFontWeight);
+      else if ((config.elementType === 'text' || config.elementType === 'textarea' || config.elementType === 'iconValue')) classNames.push(TAILWIND_FONT_WEIGHTS.find(w => w.value === 'font-normal')?.value || 'font-normal');
+
+      if (config.tailwindLineHeight && config.tailwindLineHeight !== NONE_VALUE) classNames.push(config.tailwindLineHeight);
+      else if ((config.elementType === 'text' || config.elementType === 'textarea')) classNames.push(TAILWIND_LINE_HEIGHTS.find(lh => lh.value === 'leading-normal')?.value || 'leading-normal');
+
+      if (config.tailwindOverflow && config.tailwindOverflow !== NONE_VALUE) classNames.push(config.tailwindOverflow);
+      else if ((config.elementType === 'text' || config.elementType === 'textarea')) classNames.push(TAILWIND_OVERFLOW.find(o => o.value === 'overflow-visible')?.value || 'overflow-visible');
+      
+      if (config.tailwindTextOverflow && config.tailwindTextOverflow !== NONE_VALUE) classNames.push(config.tailwindTextOverflow);
       if (config.tailwindBorderRadius && config.tailwindBorderRadius !== NONE_VALUE) classNames.push(config.tailwindBorderRadius);
 
-      const sideBorderClasses: string[] = [];
       let hasAnySideBorderWidth = false;
+      const sideBorderWidthClasses: string[] = [];
       (['Top', 'Right', 'Bottom', 'Left'] as const).forEach(side => {
-        const widthKey = `tailwindBorder${side}W` as keyof LayoutElementGuiConfig;
-        const colorKey = `tailwindBorder${side}Color` as keyof LayoutElementGuiConfig;
-        const widthValue = config[widthKey] as string | undefined;
-        const colorValue = config[colorKey] as string | undefined;
-
-        if (widthValue && widthValue !== NONE_VALUE) {
-          hasAnySideBorderWidth = true;
-          sideBorderClasses.push(widthValue); 
-          if (colorValue && colorValue !== NONE_VALUE) {
-            sideBorderClasses.push(`border-${side.toLowerCase()}-${colorValue}`);
+          const widthKey = `tailwindBorder${side}W` as keyof LayoutElementGuiConfig;
+          const widthValue = config[widthKey] as string | undefined;
+          if (widthValue && widthValue !== NONE_VALUE) {
+              hasAnySideBorderWidth = true;
+              sideBorderWidthClasses.push(widthValue);
           }
-        }
       });
-      if (hasAnySideBorderWidth) classNames.push(...sideBorderClasses);
-
+      if (hasAnySideBorderWidth) {
+          classNames.push(...sideBorderWidthClasses);
+          // Add per-side colors only if corresponding width is set
+          (['Top', 'Right', 'Bottom', 'Left'] as const).forEach(side => {
+            const widthKey = `tailwindBorder${side}W`as keyof LayoutElementGuiConfig;
+            const colorKey = `tailwindBorder${side}Color` as keyof LayoutElementGuiConfig;
+            if (config[widthKey] && config[widthKey] !== NONE_VALUE && config[colorKey] && config[colorKey] !== NONE_VALUE) {
+              classNames.push(`border-${side.toLowerCase()}-${config[colorKey]}`);
+            }
+          });
+          // Fallback global border color if any width is set but no side colors are specifically set for those sides
+          if (!classNames.some(cls => cls.startsWith('border-t-') || cls.startsWith('border-r-') || cls.startsWith('border-b-') || cls.startsWith('border-l-')) ) {
+            //This logic is tricky. If a global border color should apply when any side width is set but no specific colors are.
+            //For now, if no side color is set for an active side width, it relies on default CSS or theme border color.
+          }
+      }
 
       const element: Partial<CardLayoutElement> = { fieldKey: config.fieldKey, type: config.elementType };
       if (Object.keys(style).length > 0) element.style = style;
@@ -341,29 +366,27 @@ export function useTemplateDesigner({
 
       return element;
     });
-    
-    let canvasClassNameString = "";
-    const canvasClassesArray = [];
-    if (tailwindCanvasBorderRadius && tailwindCanvasBorderRadius !== NONE_VALUE) canvasClassesArray.push(tailwindCanvasBorderRadius);
-    if (tailwindCanvasBorderWidth && tailwindCanvasBorderWidth !== NONE_VALUE ) {
-      canvasClassesArray.push(tailwindCanvasBorderWidth); // This is the full class like 'border' or 'border-2'
-      if (tailwindCanvasBorderColor && tailwindCanvasBorderColor !== NONE_VALUE) {
-        canvasClassesArray.push(tailwindCanvasBorderColor); // This is the full class like 'border-primary'
-      } else {
-        canvasClassesArray.push('border-border'); // Default border color if width is set but no color
-      }
-    }
-    canvasClassNameString = canvasClassesArray.filter(Boolean).join(' ').trim();
 
+    // Canvas properties
+    const canvasClassesArray = [];
+    if (tailwindCanvasBackgroundColor && tailwindCanvasBackgroundColor !== NONE_VALUE) canvasClassesArray.push(tailwindCanvasBackgroundColor);
+    if (tailwindCanvasBorderRadius && tailwindCanvasBorderRadius !== NONE_VALUE) canvasClassesArray.push(tailwindCanvasBorderRadius);
+    if (tailwindCanvasBorderWidth && tailwindCanvasBorderWidth !== NONE_VALUE) {
+        canvasClassesArray.push(tailwindCanvasBorderWidth === 'default' ? 'border' : `border-${tailwindCanvasBorderWidth}`);
+        if (tailwindCanvasBorderColor && tailwindCanvasBorderColor !== NONE_VALUE) {
+            canvasClassesArray.push(`border-${tailwindCanvasBorderColor}`);
+        } else {
+           canvasClassesArray.push('border-border'); // Default border color if width is set but no color
+        }
+    }
+    const canvasClassNameString = canvasClassesArray.filter(Boolean).join(' ').trim();
 
     const newLayoutData: LayoutDefinition = {
       width: canvasWidthSetting || `${DEFAULT_CANVAS_WIDTH}px`,
       height: canvasHeightSetting || `${DEFAULT_CANVAS_HEIGHT}px`,
-      backgroundColor: canvasDirectBackgroundColor, // Direct CSS for canvas BG
-      borderRadius: canvasBorderRadius,
-      borderWidth: canvasBorderWidth,
-      borderStyle: canvasBorderStyle,
-      canvasClassName: canvasClassNameString || undefined, // Tailwind classes for canvas border radius/width/color
+      backgroundColor: (tailwindCanvasBackgroundColor === NONE_VALUE || !tailwindCanvasBackgroundColor) ? canvasDirectBackgroundColor : undefined,
+      borderStyle: canvasBorderStyle || "solid",
+      canvasClassName: canvasClassNameString || undefined,
       elements: generatedElements as CardLayoutElement[]
     };
 
@@ -372,14 +395,15 @@ export function useTemplateDesigner({
     if (showSuccessToast) {
       toast({ title: "Layout JSON Updated", description: "JSON generated from GUI builder and updated." });
     }
-    jsonEditedManuallyRef.current = false;
+    jsonEditedManuallyRef.current = false; // GUI has updated the JSON
     return newLayoutJsonString;
   }, [
     layoutElementGuiConfigs, canvasWidthSetting, canvasHeightSetting,
-    canvasDirectBackgroundColor, canvasBorderRadius, canvasBorderWidth, canvasBorderStyle,
-    tailwindCanvasBorderRadius, tailwindCanvasBorderColor, tailwindCanvasBorderWidth, // Canvas tailwind states
-    toast
+    tailwindCanvasBackgroundColor, canvasDirectBackgroundColor,
+    tailwindCanvasBorderRadius, tailwindCanvasBorderColor, tailwindCanvasBorderWidth,
+    canvasBorderStyle, toast
   ]);
+
 
   // Debounced GUI -> JSON sync (for live preview)
   useEffect(() => {
@@ -387,66 +411,65 @@ export function useTemplateDesigner({
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
-      // console.log('[DEBUG] useTemplateDesigner: Scheduling debounced GUI -> JSON update.');
       debounceTimerRef.current = setTimeout(() => {
-        console.log('[DEBUG] useTemplateDesigner: Debounced GUI -> JSON update executing.');
-        handleGenerateJsonFromBuilder(false);
-        jsonEditedManuallyRef.current = false;
-      }, 700);
+        console.log('[DEBUG] useTemplateDesigner: Debounced: GUI state changed, auto-generating JSON for preview.');
+        handleGenerateJsonFromBuilder(false); // false to suppress toast for auto-updates
+      }, 700); // 700ms debounce
     }
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [
-    activeEditorView, handleGenerateJsonFromBuilder, // This callback now has all GUI states as deps
+  }, [ // Extensive list of dependencies that drive the GUI
+    activeEditorView, handleGenerateJsonFromBuilder,
     canvasWidthSetting, canvasHeightSetting, selectedSizePreset,
-    canvasDirectBackgroundColor, canvasBorderRadius, canvasBorderWidth, canvasBorderStyle,
-    tailwindCanvasBorderRadius, tailwindCanvasBorderColor, tailwindCanvasBorderWidth,
-    layoutElementGuiConfigs
+    tailwindCanvasBackgroundColor, canvasDirectBackgroundColor,
+    tailwindCanvasBorderRadius, tailwindCanvasBorderColor, tailwindCanvasBorderWidth, canvasBorderStyle,
+    layoutElementGuiConfigs 
   ]);
 
   // JSON -> GUI Sync (on view switch or external JSON change)
   useEffect(() => {
-    console.log('[DEBUG] useTemplateDesigner: JSON -> GUI sync effect. Active view:', activeEditorView, 'JSON manual edit flag:', jsonEditedManuallyRef.current, 'LayoutDef length:', layoutDefinition.length);
-    if (activeEditorView === 'gui' && (jsonEditedManuallyRef.current || mode === 'edit' || mode === 'create')) { // Always parse on switching to GUI or on initial load
-      console.log('[DEBUG] useTemplateDesigner: Switched to GUI view or layoutDefinition changed, re-parsing JSON to GUI state.');
+    console.log('[DEBUG] useTemplateDesigner: JSON -> GUI sync effect. Active view:', activeEditorView, 'LayoutDef changed:', layoutDefinition !== lastSyncedLayoutDefForGui.current);
+    if (activeEditorView === 'gui' && layoutDefinition !== lastSyncedLayoutDefForGui.current) {
+      console.log('[DEBUG] useTemplateDesigner: Switched to GUI view or layoutDefinition changed by JSON editor, re-parsing JSON to GUI state.');
       parseLayoutDefinitionToGuiState(layoutDefinition, fields); // Pass current fields
-      jsonEditedManuallyRef.current = false;
+      jsonEditedManuallyRef.current = false; // GUI is now synced from this JSON
     }
-  }, [activeEditorView, layoutDefinition, mode, fields, parseLayoutDefinitionToGuiState]);
+  }, [activeEditorView, layoutDefinition, fields, parseLayoutDefinitionToGuiState]);
 
 
   const handleLayoutDefinitionChangeFromTextarea = useCallback((newJson: string) => {
+    console.log('[DEBUG] useTemplateDesigner: Layout JSON changed by user in textarea.');
     setLayoutDefinition(newJson);
-    jsonEditedManuallyRef.current = true;
-    if (layoutJsonError) setLayoutJsonError(null);
-  }, [layoutJsonError]);
+    jsonEditedManuallyRef.current = true; // Mark that JSON was edited
+    if (layoutJsonError) setLayoutJsonError(null); // Clear error on type
+  }, [layoutJsonError]); // Added layoutJsonError to deps
 
   const validateAndFormatLayoutJsonOnBlur = useCallback(() => {
     console.log('[DEBUG] useTemplateDesigner: Validating and formatting JSON from textarea on blur.');
-    if (activeEditorView === 'gui') {
-      console.log('[DEBUG] useTemplateDesigner: GUI active, skipping format on blur for JSON textarea.');
-      return true;
+    if (activeEditorView === 'json') { // Only format/validate if JSON editor is active and blurred
+      try {
+        const parsed = JSON.parse(layoutDefinition);
+        const formattedJson = JSON.stringify(parsed, null, 2);
+        setLayoutDefinition(formattedJson); // Update with formatted JSON
+        setLayoutJsonError(null);
+        jsonEditedManuallyRef.current = true; // Confirm it was manually edited
+        return true;
+      } catch (e: any) {
+        setLayoutJsonError(`Invalid JSON: ${e.message}`);
+        console.warn('[DEBUG] useTemplateDesigner: Invalid JSON from textarea on blur', e.message);
+        return false;
+      }
     }
-    try {
-      const parsed = JSON.parse(layoutDefinition);
-      const formattedJson = JSON.stringify(parsed, null, 2);
-      setLayoutDefinition(formattedJson);
-      setLayoutJsonError(null);
-      jsonEditedManuallyRef.current = true;
-      return true;
-    } catch (e: any) {
-      setLayoutJsonError(`Invalid JSON: ${e.message}`);
-      console.warn('[DEBUG] useTemplateDesigner: Invalid JSON from textarea on blur', e.message);
-      return false;
-    }
+    return true; // If not in JSON view, no validation needed here
   }, [layoutDefinition, activeEditorView]);
 
-  // Sample card for preview
+
+  // Generate sample card data for live preview
   useEffect(() => {
-    // console.log('[DEBUG] useTemplateDesigner: Generating sampleCardForPreview.');
+    console.log('[DEBUG] useTemplateDesigner: Generating sampleCardForPreview.');
     const currentId = templateIdToEdit || templateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> & { [key: string]: any } = {
       id: 'preview-card',
@@ -460,15 +483,11 @@ export function useTemplateDesigner({
       const hasDefaultValue = fieldDef.defaultValue !== undefined && String(fieldDef.defaultValue).trim() !== '';
 
       if (fieldDef.type === 'placeholderImage') {
-        if (hasPreviewValue && typeof fieldDef.previewValue === 'string' && (fieldDef.previewValue.startsWith('http') || fieldDef.previewValue.startsWith('data:'))) {
-          valueForPreview = fieldDef.previewValue;
-        } else {
-          valueForPreview = generateSamplePlaceholderUrl({
-            width: fieldDef.placeholderConfigWidth, height: fieldDef.placeholderConfigHeight,
-            bgColor: fieldDef.placeholderConfigBgColor, textColor: fieldDef.placeholderConfigTextColor,
-            text: fieldDef.placeholderConfigText,
-          });
-        }
+        valueForPreview = generateSamplePlaceholderUrl({
+          width: fieldDef.placeholderConfigWidth, height: fieldDef.placeholderConfigHeight,
+          bgColor: fieldDef.placeholderConfigBgColor, textColor: fieldDef.placeholderConfigTextColor,
+          text: fieldDef.placeholderConfigText,
+        });
       } else if (hasPreviewValue) {
         const pv = fieldDef.previewValue as string;
         if (fieldDef.type === 'number') valueForPreview = !isNaN(Number(pv)) ? Number(pv) : (hasDefaultValue ? Number(fieldDef.defaultValue) : 0);
@@ -490,7 +509,7 @@ export function useTemplateDesigner({
           default: valueForPreview = `Value for ${fieldDef.label}`;
         }
       }
-      generatedSampleCard[key] = valueForPreview;
+      (generatedSampleCard as any)[key] = valueForPreview;
     });
 
     const baseSampleValues: Partial<CardData> = {
@@ -510,7 +529,7 @@ export function useTemplateDesigner({
     };
     for (const key in baseSampleValues) {
       if (generatedSampleCard[key as keyof CardData] === undefined && !fields.some(f => f.key === key)) {
-        generatedSampleCard[key as keyof CardData] = baseSampleValues[key as keyof CardData];
+        (generatedSampleCard as any)[key] = (baseSampleValues as any)[key];
       }
     }
     setSampleCardForPreview(generatedSampleCard as CardData);
@@ -531,14 +550,16 @@ export function useTemplateDesigner({
     let newFieldLabel = `${newFieldBaseLabel} ${fields.length + 1}`;
     let counter = fields.length + 1;
     while (fields.some(f => f.label === newFieldLabel)) {
-      counter++; newFieldLabel = `${newFieldBaseLabel} ${counter}`;
+      counter++;
+      newFieldLabel = `${newFieldBaseLabel} ${counter}`;
     }
     let baseKey = toCamelCase(newFieldLabel);
     if (!baseKey) baseKey = `newField${fields.length + 1}`;
     let newKey = baseKey;
     let keyCounter = 1;
     while (fields.some(f => f.key === newKey)) {
-      newKey = `${baseKey}${keyCounter}`; keyCounter++;
+      newKey = `${baseKey}${keyCounter}`;
+      keyCounter++;
     }
     const newUiId = `field-${mode}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     setFields(prevFields => [
@@ -554,8 +575,12 @@ export function useTemplateDesigner({
 
   const removeField = useCallback((uiIdToRemove: string) => {
     console.log('[DEBUG] useTemplateDesigner: removeField called for _uiId:', uiIdToRemove);
+    const fieldToRemove = fields.find(f => f._uiId === uiIdToRemove);
     setFields(prevFields => prevFields.filter(f => f._uiId !== uiIdToRemove));
-  }, []);
+    if (fieldToRemove) {
+        setLayoutElementGuiConfigs(prevConfigs => prevConfigs.filter(c => c.fieldKey !== fieldToRemove.key));
+    }
+  }, [fields]);
 
   const handleFieldChange = useCallback((uiIdToUpdate: string, updatedFieldData: Partial<TemplateFieldDefinition>) => {
     console.log('[DEBUG] useTemplateDesigner: handleFieldChange for _uiId:', uiIdToUpdate);
@@ -566,6 +591,7 @@ export function useTemplateDesigner({
           let modifiedField = { ...field, ...updatedFieldData };
 
           if (updatedFieldData.label !== undefined && updatedFieldData.label !== oldField.label) {
+            const oldKey = oldField.key;
             let baseKey = toCamelCase(updatedFieldData.label);
             if (!baseKey) {
               const prefix = 'field'; let fallbackCounter = 1; let potentialKey = `${prefix}${fallbackCounter}`;
@@ -579,6 +605,11 @@ export function useTemplateDesigner({
               newKey = `${baseKey}${keyCounter}`; keyCounter++;
             }
             modifiedField.key = newKey;
+            
+            // Update corresponding LayoutElementGuiConfig key and label
+            setLayoutElementGuiConfigs(prevConfigs => prevConfigs.map(config =>
+              config.fieldKey === oldKey ? { ...config, fieldKey: newKey, label: modifiedField.label } : config
+            ));
           }
           if (updatedFieldData.type === 'placeholderImage' && oldField.type !== 'placeholderImage') {
             modifiedField.placeholderConfigWidth = modifiedField.placeholderConfigWidth ?? (parseInt(String(canvasWidthSetting).replace('px', '') || String(DEFAULT_CANVAS_WIDTH)));
@@ -588,12 +619,18 @@ export function useTemplateDesigner({
             modifiedField.placeholderConfigBgColor = undefined; modifiedField.placeholderConfigTextColor = undefined;
             modifiedField.placeholderConfigText = undefined;
           }
+          if (updatedFieldData.type && updatedFieldData.type !== oldField.type) {
+             setLayoutElementGuiConfigs(prevConfigs => prevConfigs.map(config =>
+                config.fieldKey === modifiedField.key ? { ...config, originalType: modifiedField.type, elementType: modifiedField.type === 'textarea' ? 'textarea' : (modifiedField.type === 'placeholderImage' ? 'image' : 'text') } : config
+            ));
+          }
           return modifiedField;
         }
         return field;
       })
     );
   }, [canvasWidthSetting]);
+
 
   const handleSizePresetChange = useCallback((value: string) => {
     console.log('[DEBUG] useTemplateDesigner: handleSizePresetChange called with value:', value);
@@ -608,21 +645,27 @@ export function useTemplateDesigner({
   }, []);
   
   const handleCanvasDirectCSSChange = useCallback((
-    prop: 'canvasDirectBackgroundColor' | 'canvasBorderRadius' | 'canvasBorderWidth' | 'canvasBorderStyle',
+    prop: 'canvasDirectBackgroundColor' | 'canvasBorderStyle',
     value: string
   ) => {
     console.log('[DEBUG] useTemplateDesigner: handleCanvasDirectCSSChange for', prop, 'to', value);
     switch (prop) {
       case 'canvasDirectBackgroundColor': setCanvasDirectBackgroundColor(value); break;
-      case 'canvasBorderRadius': setCanvasBorderRadius(value); break;
-      case 'canvasBorderWidth': setCanvasBorderWidth(value); break;
       case 'canvasBorderStyle': setCanvasBorderStyle(value); break;
     }
   }, []);
 
-  const handleCanvasTailwindBorderColorChange = useCallback((value: string) => {
-    console.log('[DEBUG] useTemplateDesigner: handleCanvasTailwindBorderColorChange to', value);
-    setTailwindCanvasBorderColor(value);
+  const handleCanvasTailwindChange = useCallback((
+    prop: 'tailwindCanvasBackgroundColor' | 'tailwindCanvasBorderRadius' | 'tailwindCanvasBorderColor' | 'tailwindCanvasBorderWidth',
+    value: string
+  ) => {
+    console.log('[DEBUG] useTemplateDesigner: handleCanvasTailwindChange for', prop, 'to', value);
+    switch (prop) {
+      case 'tailwindCanvasBackgroundColor': setTailwindCanvasBackgroundColor(value); break;
+      case 'tailwindCanvasBorderRadius': setTailwindCanvasBorderRadius(value); break;
+      case 'tailwindCanvasBorderColor': setTailwindCanvasBorderColor(value); break;
+      case 'tailwindCanvasBorderWidth': setTailwindCanvasBorderWidth(value); break;
+    }
   }, []);
 
 
@@ -669,14 +712,31 @@ export function useTemplateDesigner({
       toast({ title: "No Fields", description: "Add at least one data field.", variant: "destructive" });
       setIsSaving(false); return;
     }
-    // Field key uniqueness check (already done by label->key generation logic usually)
-    // ...
+    const fieldKeysSet = new Set<string>();
+    let hasDuplicateKeys = false;
+    let duplicateKeyValues: string[] = [];
+    for (const field of fields) {
+      if (!field.key || !field.key.trim()) {
+        toast({ title: "Empty Field Key", description: `Field "${field.label}" has an empty key. Ensure all fields have valid labels.`, variant: "destructive", duration: 7000 });
+        setIsSaving(false); return;
+      }
+      if (fieldKeysSet.has(field.key)) {
+        hasDuplicateKeys = true;
+        if (!duplicateKeyValues.includes(field.key)) duplicateKeyValues.push(field.key);
+      } else {
+        fieldKeysSet.add(field.key);
+      }
+    }
+    if (hasDuplicateKeys) {
+      toast({ title: "Duplicate Field Keys", description: `Field keys must be unique. Duplicates: ${duplicateKeyValues.join(', ')}. Adjust field labels.`, variant: "destructive", duration: 7000 });
+      setIsSaving(false); return;
+    }
 
     let finalLayoutDefToSave = layoutDefinition;
     if (activeEditorView === 'gui') {
       console.log('[DEBUG] useTemplateDesigner: GUI active on save, ensuring JSON reflects final GUI state.');
-      finalLayoutDefToSave = handleGenerateJsonFromBuilder(false); // Get latest JSON from GUI
-      setLayoutDefinition(finalLayoutDefToSave); // Ensure state is updated
+      finalLayoutDefToSave = handleGenerateJsonFromBuilder(false); // Get latest JSON string from GUI
+      setLayoutDefinition(finalLayoutDefToSave); // Ensure state is updated if it changed
     }
 
     if (!finalLayoutDefToSave.trim()) {
@@ -699,14 +759,15 @@ export function useTemplateDesigner({
       layoutDefinition: finalLayoutDefToSave,
     };
 
-    console.log('[DEBUG] useTemplateDesigner: Calling props.onSave for ID:', currentIdForSave);
+    console.log('[DEBUG] useTemplateDesigner: Calling props.onSaveProp for ID:', currentIdForSave);
     try {
       const result = await onSaveProp(templateToSave, mode === 'edit' ? templateIdToEdit : undefined);
       if (!result.success) {
-        console.warn('[DEBUG] useTemplateDesigner: props.onSave reported failure from parent:', result.message);
+        console.warn('[DEBUG] useTemplateDesigner: props.onSaveProp reported failure from parent:', result.message);
+         toast({ title: "Save Failed (from parent)", description: result.message || "Could not save template via context.", variant: "destructive"});
       }
     } catch (err) {
-      console.error('[DEBUG] useTemplateDesigner: props.onSave promise rejected', err);
+      console.error('[DEBUG] useTemplateDesigner: props.onSaveProp promise rejected', err);
       const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred during save.";
       toast({ title: "Save Error", description: errorMessage, variant: "destructive" });
     } finally {
@@ -715,35 +776,43 @@ export function useTemplateDesigner({
   }, [
     templateName, templateId, templateIdToEdit, fields, layoutDefinition, mode, existingTemplateIds, 
     activeEditorView, handleGenerateJsonFromBuilder, 
-    onSaveProp, toast
+    onSaveProp, toast, layoutElementGuiConfigs, // Added missing layoutElementGuiConfigs
+    canvasWidthSetting, canvasHeightSetting, // and canvas settings
+    tailwindCanvasBackgroundColor, canvasDirectBackgroundColor,
+    tailwindCanvasBorderRadius, tailwindCanvasBorderColor, tailwindCanvasBorderWidth, canvasBorderStyle
   ]);
 
 
   return {
+    // Core template data
     templateName, setTemplateName,
     templateId,
     fields, addField, removeField, handleFieldChange,
-    layoutDefinition, setLayoutDefinition: handleLayoutDefinitionChangeFromTextarea,
+    // Layout definition and JSON editor
+    layoutDefinition, setLayoutDefinition: handleLayoutDefinitionChangeFromTextarea, // Expose the direct setter for JSON mode
     layoutJsonError, validateAndFormatLayoutJsonOnBlur,
+    // GUI Builder - Canvas Setup
     canvasWidthSetting, setCanvasWidthSetting,
     canvasHeightSetting, setCanvasHeightSetting,
     selectedSizePreset, handleSizePresetChange,
-    canvasDirectBackgroundColor, 
-    canvasBorderRadius, 
-    canvasBorderWidth, 
-    canvasBorderStyle,
-    handleCanvasDirectCSSChange,
-    tailwindCanvasBorderColor, setTailwindCanvasBorderColor: handleCanvasTailwindBorderColorChange,
+    tailwindCanvasBackgroundColor, setTailwindCanvasBackgroundColor,
+    canvasDirectBackgroundColor, setCanvasDirectBackgroundColor,
+    tailwindCanvasBorderRadius, setTailwindCanvasBorderRadius,
+    tailwindCanvasBorderColor, setTailwindCanvasBorderColor,
+    tailwindCanvasBorderWidth, setTailwindCanvasBorderWidth,
+    canvasBorderStyle, setCanvasBorderStyle,
+    // GUI Builder - Layout Elements
     layoutElementGuiConfigs, handleGuiConfigChange, handleToggleGuiExpand,
+    // Editor View Toggle
     activeEditorView, setActiveEditorView,
+    // Preview
     showPixelGrid, setShowPixelGrid,
     sampleCardForPreview,
     templateForPreview,
+    // Actions
     handleGenerateJsonFromBuilder,
     handleSave,
     isSaving,
-    mode, // Pass mode through for UI text
+    mode,
   };
 }
-
-    
