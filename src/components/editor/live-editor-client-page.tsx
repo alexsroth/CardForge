@@ -23,7 +23,7 @@ interface LiveEditorClientPageProps {
 }
 
 function EditorClientPageSkeleton() {
-  console.log('[DEBUG] LiveEditorClientPage/EditorClientPageSkeleton: Rendering skeleton.');
+  // console.log('[DEBUG] LiveEditorClientPage/EditorClientPageSkeleton: Rendering skeleton.');
   return (
     <div className="flex h-full bg-muted/40">
       {/* Left Panel Skeleton */}
@@ -91,7 +91,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
-    console.log('[DEBUG] LiveEditorClientPage: Mounted.');
+    // console.log('[DEBUG] LiveEditorClientPage: Mounted.');
     setIsMounted(true);
     if (initialProjectData.cards && initialProjectData.cards.length > 0 && !selectedCardId) {
       setSelectedCardId(initialProjectData.cards[0].id);
@@ -100,14 +100,14 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   }, []); 
 
   useEffect(() => {
-    console.log('[DEBUG] LiveEditorClientPage: initialProjectData prop changed or editorProjectId changed.', {
+    // console.log('[DEBUG] LiveEditorClientPage: initialProjectData prop changed or editorProjectId changed.', {
       newId: initialProjectData.id,
       currentEditorId: editorProjectId,
       newName: initialProjectData.name,
       currentName: projectName,
     });
     if (initialProjectData.id !== editorProjectId) {
-      console.log('[DEBUG] LiveEditorClientPage: Project ID changed. Full re-initialization.', initialProjectData.id);
+      // console.log('[DEBUG] LiveEditorClientPage: Project ID changed. Full re-initialization.', initialProjectData.id);
       setEditorProjectId(initialProjectData.id);
       setProjectName(initialProjectData.name);
       const currentCards = initialProjectData.cards || [];
@@ -117,11 +117,11 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     } else {
       // Same project ID, check for metadata updates
       if (initialProjectData.name !== projectName) {
-        console.log('[DEBUG] LiveEditorClientPage: Project name updated from prop.', initialProjectData.name);
+        // console.log('[DEBUG] LiveEditorClientPage: Project name updated from prop.', initialProjectData.name);
         setProjectName(initialProjectData.name);
       }
       if (JSON.stringify(initialProjectData.associatedTemplateIds || []) !== JSON.stringify(associatedTemplateIds)) {
-         console.log('[DEBUG] LiveEditorClientPage: Associated templates updated from prop.');
+         // console.log('[DEBUG] LiveEditorClientPage: Associated templates updated from prop.');
          setAssociatedTemplateIds(initialProjectData.associatedTemplateIds || []);
       }
     }
@@ -133,14 +133,14 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     if (!isMounted || !editorProjectId) {
       return;
     }
-    console.log('[DEBUG] LiveEditorClientPage: Save effect triggered. Dependencies changed:', { cardsLength: cards.length, projectName, associatedTemplateIdsLength: associatedTemplateIds.length });
+    // console.log('[DEBUG] LiveEditorClientPage: Save effect triggered. Dependencies changed:', { cardsLength: cards.length, projectName, associatedTemplateIdsLength: associatedTemplateIds.length });
 
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
     debounceTimerRef.current = setTimeout(() => {
-      console.log('[DEBUG] LiveEditorClientPage: Debounce timer expired. Attempting to save project:', editorProjectId);
+      // console.log('[DEBUG] LiveEditorClientPage: Debounce timer expired. Attempting to save project:', editorProjectId);
       const projectToUpdate = getProjectById(editorProjectId);
       if (projectToUpdate) {
         const updatedFullProject: Project = {
@@ -150,13 +150,13 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
           associatedTemplateIds: associatedTemplateIds,
           // lastModified will be updated by ProjectContext.updateProject
         };
-        console.log('[DEBUG] LiveEditorClientPage: Calling updateProject for', editorProjectId, 'with', cards.length, 'cards.');
+        // console.log('[DEBUG] LiveEditorClientPage: Calling updateProject for', editorProjectId, 'with', cards.length, 'cards.');
         updateProject(updatedFullProject).then(result => {
           if (!result.success) {
             toast({ title: "Save Error", description: `Failed to save project changes: ${result.message}`, variant: "destructive" });
             console.error('[DEBUG] LiveEditorClientPage: Project update failed', result.message);
           } else {
-            // console.log('[DEBUG] LiveEditorClientPage: Project update successful.');
+            // // console.log('[DEBUG] LiveEditorClientPage: Project update successful.');
           }
         });
       } else {
@@ -181,12 +181,12 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   }, []);
 
   const handleSelectCard = useCallback((cardId: string) => {
-    console.log('[DEBUG] LiveEditorClientPage/handleSelectCard: Selected card ID:', cardId);
+    // console.log('[DEBUG] LiveEditorClientPage/handleSelectCard: Selected card ID:', cardId);
     setSelectedCardId(cardId);
   }, []);
 
   const handleUpdateCard = useCallback((updatedCard: CardData) => {
-    console.log('[DEBUG] LiveEditorClientPage/handleUpdateCard: Updating card ID:', updatedCard.id, 'New name:', updatedCard.name);
+    // console.log('[DEBUG] LiveEditorClientPage/handleUpdateCard: Updating card ID:', updatedCard.id, 'New name:', updatedCard.name);
     setCards(prevCards => 
       prevCards.map(card => card.id === updatedCard.id ? updatedCard : card)
     );
@@ -202,13 +202,13 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
       imageUrl: 'https://placehold.co/280x400.png', 
       dataAiHint: 'new card art',
     };
-    console.log('[DEBUG] LiveEditorClientPage/handleAddCard: Adding new card ID:', newCardId);
+    // console.log('[DEBUG] LiveEditorClientPage/handleAddCard: Adding new card ID:', newCardId);
     setCards(prevCards => [...prevCards, newCard]);
     setSelectedCardId(newCardId);
   }, []);
 
   const handleDeleteCard = useCallback((cardIdToDelete: string) => {
-    console.log('[DEBUG] LiveEditorClientPage/handleDeleteCard: Deleting card ID:', cardIdToDelete);
+    // console.log('[DEBUG] LiveEditorClientPage/handleDeleteCard: Deleting card ID:', cardIdToDelete);
     setCards(currentCards => {
       const newCardsList = currentCards.filter(card => card.id !== cardIdToDelete);
       if (selectedCardId === cardIdToDelete) {
@@ -219,7 +219,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   }, [selectedCardId]);
   
   const handleGenerateName = useCallback(async (description: string): Promise<string> => {
-    console.log('[DEBUG] LiveEditorClientPage/handleGenerateName: Generating name for description:', description.substring(0, 30) + '...');
+    // console.log('[DEBUG] LiveEditorClientPage/handleGenerateName: Generating name for description:', description.substring(0, 30) + '...');
     if (!description.trim()) {
       toast({ title: "Cannot generate name", description: "Card description is empty.", variant: "destructive" });
       return '';
@@ -228,7 +228,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
     try {
       const name = await generateCardNameAction({ cardDescription: description });
       toast({ title: "Name Generated!", description: `Suggested name: ${name}` });
-      console.log('[DEBUG] LiveEditorClientPage/handleGenerateName: Success - Generated name:', name);
+      // console.log('[DEBUG] LiveEditorClientPage/handleGenerateName: Success - Generated name:', name);
       return name;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -241,7 +241,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   }, [toast]);
 
   const handleImportData = useCallback((importedCards: CardData[]) => {
-    console.log('[DEBUG] LiveEditorClientPage/handleImportData: Importing', importedCards.length, 'cards.');
+    // console.log('[DEBUG] LiveEditorClientPage/handleImportData: Importing', importedCards.length, 'cards.');
     const validImportedCards = importedCards.map(card => ({
       ...card,
       templateId: associatedTemplateIds.includes(card.templateId as CardTemplateId) 
@@ -255,12 +255,12 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
 
 
   if (!isMounted) {
-    console.log('[DEBUG] LiveEditorClientPage: Not mounted yet, showing skeleton.');
+    // console.log('[DEBUG] LiveEditorClientPage: Not mounted yet, showing skeleton.');
     return <EditorClientPageSkeleton />;
   }
 
   const selectedEditorCard = cards.find(card => card.id === selectedCardId);
-  console.log('[DEBUG] LiveEditorClientPage: Rendering. Selected card ID:', selectedCardId, 'Found:', !!selectedEditorCard);
+  // console.log('[DEBUG] LiveEditorClientPage: Rendering. Selected card ID:', selectedCardId, 'Found:', !!selectedEditorCard);
 
   return (
       <div className="flex h-full bg-muted/40">

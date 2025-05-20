@@ -4,7 +4,7 @@ import type { TemplateField } from '@/lib/card-templates';
 import type { TemplateFieldDefinition } from './types';
 
 export const mapFieldDefinitionToTemplateField = (def: TemplateFieldDefinition): TemplateField => {
-  console.log('[DEBUG] card-designer/mappers.ts: mapFieldDefinitionToTemplateField called for:', def.label);
+  // console.log('[DEBUG] card-designer/mappers.ts: mapFieldDefinitionToTemplateField called for:', def.label);
   const field: TemplateField = {
     key: def.key,
     label: def.label,
@@ -45,7 +45,7 @@ export const mapFieldDefinitionToTemplateField = (def: TemplateFieldDefinition):
 };
 
 export const mapTemplateFieldToFieldDefinition = (field: TemplateField, uiIdPrefix: string = 'field'): TemplateFieldDefinition => {
-  console.log('[DEBUG] card-designer/mappers.ts: mapTemplateFieldToFieldDefinition called for:', field.label);
+  // console.log('[DEBUG] card-designer/mappers.ts: mapTemplateFieldToFieldDefinition called for:', field.label);
   const uniqueUiId = `${uiIdPrefix}-${field.key}-${Date.now()}-${Math.random().toString(36).substring(2,7)}`;
   return {
     _uiId: uniqueUiId,
@@ -64,6 +64,6 @@ export const mapTemplateFieldToFieldDefinition = (field: TemplateField, uiIdPref
   };
 };
 
-console.log('[DEBUG] card-designer/mappers.ts: Module loaded');
+// console.log('[DEBUG] card-designer/mappers.ts: Module loaded');
 
     

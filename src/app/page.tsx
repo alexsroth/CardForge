@@ -27,7 +27,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
 function DashboardLoadingSkeleton() {
-  console.log('[DEBUG] DashboardPage/DashboardLoadingSkeleton: Rendering skeleton.');
+  // console.log('[DEBUG] DashboardPage/DashboardLoadingSkeleton: Rendering skeleton.');
   return (
     <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div className="flex justify-between items-center mb-8">
@@ -73,10 +73,10 @@ export default function DashboardPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  console.log('[DEBUG] DashboardPage: Rendering. Projects loading:', projectsLoading, 'Templates loading:', templatesLoading, 'Templates count:', templates.length);
+  // console.log('[DEBUG] DashboardPage: Rendering. Projects loading:', projectsLoading, 'Templates loading:', templatesLoading, 'Templates count:', templates.length);
 
   const handleCreateProject = async (projectName: string, associatedTemplateIds: CardTemplateId[]) => {
-    console.log('[DEBUG] DashboardPage/handleCreateProject: Attempting to create project', projectName, 'with templates:', associatedTemplateIds);
+    // console.log('[DEBUG] DashboardPage/handleCreateProject: Attempting to create project', projectName, 'with templates:', associatedTemplateIds);
     if (!projectName.trim()) {
       toast({
         title: "Project Name Required",
@@ -103,7 +103,7 @@ export default function DashboardPage() {
         description: `Project "${result.newProject.name}" has been successfully created.`,
       });
       setIsCreateProjectDialogOpen(false);
-      console.log('[DEBUG] DashboardPage/handleCreateProject: Success - Navigating to editor for project ID:', result.newProject.id);
+      // console.log('[DEBUG] DashboardPage/handleCreateProject: Success - Navigating to editor for project ID:', result.newProject.id);
       router.push(`/project/${result.newProject.id}/editor`);
     } else {
       toast({
@@ -116,13 +116,13 @@ export default function DashboardPage() {
   };
 
   const handleOpenEditDialog = (project: Project) => {
-    console.log('[DEBUG] DashboardPage/handleOpenEditDialog: Editing project', project.id);
+    // console.log('[DEBUG] DashboardPage/handleOpenEditDialog: Editing project', project.id);
     setProjectToEdit(project);
     setIsEditProjectDialogOpen(true);
   };
 
   const handleEditProject = async (updatedData: Partial<Omit<Project, 'id' | 'cards' | 'lastModified' | 'associatedTemplateIds'>>) => {
-    console.log('[DEBUG] DashboardPage/handleEditProject: Attempting to edit project', projectToEdit?.id, 'with data', updatedData);
+    // console.log('[DEBUG] DashboardPage/handleEditProject: Attempting to edit project', projectToEdit?.id, 'with data', updatedData);
     if (!projectToEdit) return;
 
     const fullProjectData = getProjectById(projectToEdit.id);
@@ -147,7 +147,7 @@ export default function DashboardPage() {
       });
       setIsEditProjectDialogOpen(false);
       setProjectToEdit(null);
-      console.log('[DEBUG] DashboardPage/handleEditProject: Success - Project updated', projectToEdit.id);
+      // console.log('[DEBUG] DashboardPage/handleEditProject: Success - Project updated', projectToEdit.id);
     } else {
       toast({
         title: "Update Failed",
@@ -159,13 +159,13 @@ export default function DashboardPage() {
   };
 
   const handleOpenDeleteDialog = (project: Project) => {
-    console.log('[DEBUG] DashboardPage/handleOpenDeleteDialog: Deleting project', project.id);
+    // console.log('[DEBUG] DashboardPage/handleOpenDeleteDialog: Deleting project', project.id);
     setProjectToDelete(project);
     setIsDeleteProjectDialogOpen(true);
   };
 
   const handleConfirmDeleteProject = async () => {
-    console.log('[DEBUG] DashboardPage/handleConfirmDeleteProject: Confirmed delete for project', projectToDelete?.id);
+    // console.log('[DEBUG] DashboardPage/handleConfirmDeleteProject: Confirmed delete for project', projectToDelete?.id);
     if (!projectToDelete) return;
     const result = await deleteProject(projectToDelete.id);
     if (result.success) {
@@ -173,7 +173,7 @@ export default function DashboardPage() {
         title: "Project Deleted",
         description: result.message,
       });
-      console.log('[DEBUG] DashboardPage/handleConfirmDeleteProject: Success - Project deleted', projectToDelete.id);
+      // console.log('[DEBUG] DashboardPage/handleConfirmDeleteProject: Success - Project deleted', projectToDelete.id);
     } else {
       toast({
         title: "Deletion Failed",

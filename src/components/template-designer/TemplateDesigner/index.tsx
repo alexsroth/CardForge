@@ -2,10 +2,9 @@
 'use client';
 
 import React from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
-import { useTemplateDesigner } from '@/hooks/useTemplateDesigner';
-
+import * as LucideIcons from 'lucide-react';
+import { useTemplateDesigner } from './hooks/useTemplateDesigner';
 import { TopToolbar } from './panels/TopToolbar';
 import { TemplateInfo } from './panels/TemplateInfo';
 import { DataFieldsPanel } from './panels/DataFields';

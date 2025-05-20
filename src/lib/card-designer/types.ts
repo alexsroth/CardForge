@@ -65,6 +65,6 @@ export interface LayoutElementGuiConfig {
   tailwindBorderLeftColor: string;
 }
 
-console.log('[DEBUG] card-designer/types.ts: Module loaded');
+// console.log('[DEBUG] card-designer/types.ts: Module loaded');
 
     

@@ -3,7 +3,7 @@ import * as LucideIcons from 'lucide-react';
 import { HelpCircle } from 'lucide-react'; // Explicit import for fallback
 import { NONE_VALUE } from './constants';
 
-console.log('[DEBUG] card-designer/utils.ts: Module loaded, attempting to define helpers.');
+// console.log('[DEBUG] card-designer/utils.ts: Module loaded, attempting to define helpers.');
 
 export const toCamelCase = (str: string): string => {
   // console.log('[DEBUG] card-designer/utils.ts: toCamelCase called with:', str);
@@ -175,4 +175,4 @@ export const findSideBorderClassValue = (
   return defaultValue;
 };
 
-console.log('[DEBUG] card-designer/utils.ts: Module fully loaded and helpers defined.');
+// console.log('[DEBUG] card-designer/utils.ts: Module fully loaded and helpers defined.');

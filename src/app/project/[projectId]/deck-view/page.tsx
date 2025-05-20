@@ -14,10 +14,10 @@ export default function DeckViewRedirectPage() {
 
   useEffect(() => {
     if (projectId) {
-      console.log(`[DEBUG] DeckViewRedirectPage: Redirecting from deck-view to editor for project ${projectId}`);
+      // console.log(`[DEBUG] DeckViewRedirectPage: Redirecting from deck-view to editor for project ${projectId}`);
       router.replace(`/project/${projectId}/editor`);
     } else {
-      console.log('[DEBUG] DeckViewRedirectPage: ProjectId not found, redirecting to dashboard from deck-view.');
+      // console.log('[DEBUG] DeckViewRedirectPage: ProjectId not found, redirecting to dashboard from deck-view.');
       router.replace('/');
     }
   }, [projectId, router]);

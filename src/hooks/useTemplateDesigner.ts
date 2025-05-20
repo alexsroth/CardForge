@@ -1,4 +1,3 @@
-
 // src/hooks/useTemplateDesigner.ts
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { toCamelCase } from '@/lib/card-designer';
@@ -47,7 +46,14 @@ export function useTemplateDesigner({
   );
 
   // Live‑preview sample card
-  const [sampleCard, setSampleCard] = useState<CardData | null>(null);
+  const [sampleCard, setSampleCard] = useState<CardData>({
+    id: 'preview-card',
+    templateId: (initialTemplate?.id || 'previewTemplateId') as CardTemplateId,
+    name: initialTemplate?.name || 'Preview Card',
+    imageUrl: generateSamplePlaceholderUrl({ width: 300, height: 180, text: 'Image' }),
+    // Initialize other potential CardData properties with default values if needed
+    // e.g., description: '', cost: 0, attributes: [], etc.
+  });
 
   // Track saving
   const [isSaving, setIsSaving] = useState(false);

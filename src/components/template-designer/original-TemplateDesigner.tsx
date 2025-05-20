@@ -51,7 +51,7 @@ import {
   type LayoutElementGuiConfig,
 } from '@/lib/card-designer';
 
-console.log('[DEBUG] TemplateDesigner.tsx: Module loaded');
+// console.log('[DEBUG] TemplateDesigner.tsx: Module loaded');
 
 
 // Props interface
@@ -72,7 +72,7 @@ export function TemplateDesigner({
   isLoadingContexts = false,
   existingTemplateIds = [],
 }: TemplateDesignerProps) {
-  console.log('[DEBUG] TemplateDesigner: Rendering. Mode:', mode, 'Initial Template Name:', initialTemplate?.name, 'isLoadingContexts:', isLoadingContexts);
+  // console.log('[DEBUG] TemplateDesigner: Rendering. Mode:', mode, 'Initial Template Name:', initialTemplate?.name, 'isLoadingContexts:', isLoadingContexts);
 
   const { toast } = useToast();
 
@@ -113,9 +113,9 @@ export function TemplateDesigner({
   }, [isSavingProp]);
 
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesigner: Initial setup effect running. Mode:', mode, 'isLoadingContexts:', isLoadingContexts, 'initialTemplate changed:', !!initialTemplate);
+    // console.log('[DEBUG] TemplateDesigner: Initial setup effect running. Mode:', mode, 'isLoadingContexts:', isLoadingContexts, 'initialTemplate changed:', !!initialTemplate);
     if (isLoadingContexts && mode === 'edit' && !initialTemplate) {
-      console.log('[DEBUG] TemplateDesigner: Contexts loading for edit mode, initialTemplate not yet ready. Deferring setup.');
+      // console.log('[DEBUG] TemplateDesigner: Contexts loading for edit mode, initialTemplate not yet ready. Deferring setup.');
       return;
     }
 
@@ -127,14 +127,14 @@ export function TemplateDesigner({
 
 
     if (mode === 'edit' && initialTemplate) {
-      console.log('[DEBUG] TemplateDesigner: Edit mode setup, using initialTemplate:', initialTemplate.name);
+      // console.log('[DEBUG] TemplateDesigner: Edit mode setup, using initialTemplate:', initialTemplate.name);
       newTemplateName = initialTemplate.name;
       newTemplateIdForDisplay = initialTemplate.id; // This is the fixed ID for edit mode
       newTemplateIdToEdit = initialTemplate.id;
       newFields = initialTemplate.fields.map((f, idx) => mapTemplateFieldToFieldDefinition(f, idx));
       newLayoutDefinition = initialTemplate.layoutDefinition || DEFAULT_CARD_LAYOUT_JSON_STRING;
     } else if (mode === 'create') {
-      console.log('[DEBUG] TemplateDesigner: Create mode setup, setting defaults.');
+      // console.log('[DEBUG] TemplateDesigner: Create mode setup, setting defaults.');
       // Defaults are already set by useState initial values for layoutDefinition, fields, name etc.
       // The newTemplateId will be derived from newTemplateName by another effect.
     }
@@ -180,7 +180,7 @@ export function TemplateDesigner({
     }
 
     setActiveEditorView('gui');
-    console.log('[DEBUG] TemplateDesigner: Initial setup effect finished.');
+    // console.log('[DEBUG] TemplateDesigner: Initial setup effect finished.');
   }, [mode, initialTemplate, isLoadingContexts]); // Removed layoutDefinition from here to avoid loop
 
 
@@ -198,7 +198,7 @@ export function TemplateDesigner({
   // Sync LayoutElementGuiConfigs with Data Fields (main `fields` array)
   // Also populates GUI configs from layoutDefinition when it changes or in edit mode.
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesigner: Syncing/Parsing GUI configs. Mode:', mode, 'Fields count:', fields.length, 'LayoutDef Length:', layoutDefinition.length);
+    // console.log('[DEBUG] TemplateDesigner: Syncing/Parsing GUI configs. Mode:', mode, 'Fields count:', fields.length, 'LayoutDef Length:', layoutDefinition.length);
 
     let parsedLayoutForElements: any;
     try {
@@ -287,12 +287,12 @@ export function TemplateDesigner({
 
   // Effect to parse layoutDefinition string for Canvas Setup GUI state (when layoutDefinition string changes from textarea or load)
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesigner: Parsing layoutDefinition for Canvas Setup GUI. Current layoutDef length:', layoutDefinition.length);
+    // console.log('[DEBUG] TemplateDesigner: Parsing layoutDefinition for Canvas Setup GUI. Current layoutDef length:', layoutDefinition.length);
 
     // Avoid re-parsing and setting state if GUI is active and has initiated the change to layoutDefinition
     // This check might be too simplistic if debouncing causes delays.
     if (activeEditorView === 'gui' && guiBuilderLastUpdateRef.current > (Date.now() - 1000)) { // 1 sec threshold
-      console.log('[DEBUG] TemplateDesigner: GUI likely source of recent layoutDefinition change, skipping Canvas Setup parse for now.');
+      // console.log('[DEBUG] TemplateDesigner: GUI likely source of recent layoutDefinition change, skipping Canvas Setup parse for now.');
       return;
     }
 
@@ -330,13 +330,13 @@ export function TemplateDesigner({
     setCanvasDirectBackgroundColor(String(parsedLayout.backgroundColor || 'hsl(var(--card))'));
     setCanvasBorderStyle(String(parsedLayout.borderStyle || "solid"));
 
-    console.log('[DEBUG] TemplateDesigner: Canvas Setup GUI controls populated from parsed layoutDefinition.');
+    // console.log('[DEBUG] TemplateDesigner: Canvas Setup GUI controls populated from parsed layoutDefinition.');
   }, [layoutDefinition, activeEditorView]); // Re-run if layoutDefinition string or activeEditorView changes
 
 
   // Generate sample card data for live preview
   useEffect(() => {
-    console.log('[DEBUG] TemplateDesigner: Generating sampleCardForPreview.');
+    // console.log('[DEBUG] TemplateDesigner: Generating sampleCardForPreview.');
     const currentTemplateIdForPreview = templateIdToEdit || templateId || 'previewTemplateId';
     const generatedSampleCard: Partial<CardData> & { [key: string]: any } = {
       id: 'preview-card',
@@ -423,7 +423,7 @@ export function TemplateDesigner({
   }, [templateId, templateIdToEdit, templateName, fields, layoutDefinition]);
 
   const handleAddField = useCallback(() => {
-    console.log('[DEBUG] TemplateDesigner: handleAddField called.');
+    // console.log('[DEBUG] TemplateDesigner: handleAddField called.');
     const newFieldBaseLabel = `New Field`;
     let newFieldLabel = `${newFieldBaseLabel} ${fields.length + 1}`;
     let counter = fields.length + 1;
@@ -458,12 +458,12 @@ export function TemplateDesigner({
   }, [fields, canvasWidthSetting, mode]);
 
   const handleRemoveField = useCallback((uiIdToRemove: string) => {
-    console.log('[DEBUG] TemplateDesigner: handleRemoveField called for _uiId:', uiIdToRemove);
+    // console.log('[DEBUG] TemplateDesigner: handleRemoveField called for _uiId:', uiIdToRemove);
     setFields(prevFields => prevFields.filter(f => f._uiId !== uiIdToRemove));
   }, []);
 
   const handleFieldChange = useCallback((uiIdToUpdate: string, updatedFieldDefinition: Partial<TemplateFieldDefinition>) => {
-    console.log('[DEBUG] TemplateDesigner: handleFieldChange for _uiId:', uiIdToUpdate, 'with data:', updatedFieldDefinition);
+    // console.log('[DEBUG] TemplateDesigner: handleFieldChange for _uiId:', uiIdToUpdate, 'with data:', updatedFieldDefinition);
     setFields(prevFields =>
       prevFields.map(field => {
         if (field._uiId === uiIdToUpdate) {
@@ -510,7 +510,7 @@ export function TemplateDesigner({
 
 
   const handleSizePresetChange = (value: string) => {
-    console.log('[DEBUG] TemplateDesigner: handleSizePresetChange called with value:', value);
+    // console.log('[DEBUG] TemplateDesigner: handleSizePresetChange called with value:', value);
     setSelectedSizePreset(value);
     if (value === "custom") {
     } else {
@@ -524,7 +524,7 @@ export function TemplateDesigner({
   };
 
   const handleCustomDimensionChange = (dimension: 'width' | 'height', value: string) => {
-    console.log('[DEBUG] TemplateDesigner: handleCustomDimensionChange for', dimension, 'to', value);
+    // console.log('[DEBUG] TemplateDesigner: handleCustomDimensionChange for', dimension, 'to', value);
     if (dimension === 'width') {
       setCanvasWidthSetting(value);
     } else {
@@ -540,7 +540,7 @@ export function TemplateDesigner({
     prop: 'tailwindCanvasBackgroundColor' | 'tailwindCanvasBorderRadius' | 'tailwindCanvasBorderColor' | 'tailwindCanvasBorderWidth',
     value: string
   ) => {
-    console.log('[DEBUG] TemplateDesigner: handleCanvasTailwindChange for', prop, 'to', value);
+    // console.log('[DEBUG] TemplateDesigner: handleCanvasTailwindChange for', prop, 'to', value);
     switch (prop) {
       case 'tailwindCanvasBackgroundColor': setTailwindCanvasBackgroundColor(value); break;
       case 'tailwindCanvasBorderRadius': setTailwindCanvasBorderRadius(value); break;
@@ -554,7 +554,7 @@ export function TemplateDesigner({
     prop: 'canvasDirectBackgroundColor' | 'canvasBorderStyle',
     value: string
   ) => {
-    console.log('[DEBUG] TemplateDesigner: handleCanvasDirectCSSChange for', prop, 'to', value);
+    // console.log('[DEBUG] TemplateDesigner: handleCanvasDirectCSSChange for', prop, 'to', value);
     switch (prop) {
       case 'canvasDirectBackgroundColor': setCanvasDirectBackgroundColor(value); break;
       case 'canvasBorderStyle': setCanvasBorderStyle(value); break;
@@ -564,7 +564,7 @@ export function TemplateDesigner({
 
 
   const handleGuiConfigChange = useCallback((targetUiId: string, property: keyof LayoutElementGuiConfig, value: any) => {
-    console.log('[DEBUG] TemplateDesigner: handleGuiConfigChange for _uiId:', targetUiId, 'property:', property, 'value:', value);
+    // console.log('[DEBUG] TemplateDesigner: handleGuiConfigChange for _uiId:', targetUiId, 'property:', property, 'value:', value);
     setLayoutElementGuiConfigs(prevConfigs =>
       prevConfigs.map(config =>
         config._uiId === targetUiId ? { ...config, [property]: value } : config
@@ -574,7 +574,7 @@ export function TemplateDesigner({
   }, []);
 
   const handleToggleGuiExpand = useCallback((targetUiId: string) => {
-    console.log('[DEBUG] TemplateDesigner: handleToggleGuiExpand for _uiId:', targetUiId);
+    // console.log('[DEBUG] TemplateDesigner: handleToggleGuiExpand for _uiId:', targetUiId);
     setLayoutElementGuiConfigs(prevConfigs =>
       prevConfigs.map(config =>
         config._uiId === targetUiId ? { ...config, isExpandedInGui: !config.isExpandedInGui } : { ...config, isExpandedInGui: false } // Only one expanded at a time
@@ -583,7 +583,7 @@ export function TemplateDesigner({
   }, []);
 
   const handleGenerateJsonFromBuilder = useCallback((showSuccessToast = true) => {
-    console.log('[DEBUG] TemplateDesigner: handleGenerateJsonFromBuilder called.');
+    // console.log('[DEBUG] TemplateDesigner: handleGenerateJsonFromBuilder called.');
     const elementsToInclude = layoutElementGuiConfigs.filter(config => config.isEnabledOnCanvas);
 
     const generatedElements = elementsToInclude.map(config => {
@@ -703,7 +703,7 @@ export function TemplateDesigner({
     }
     guiBuilderLastUpdateRef.current = window.setTimeout(() => {
       if (activeEditorView === 'gui') {
-        console.log('[DEBUG] TemplateDesigner: GUI state changed, auto-generating JSON for preview (debounced).');
+        // console.log('[DEBUG] TemplateDesigner: GUI state changed, auto-generating JSON for preview (debounced).');
         handleGenerateJsonFromBuilder(false);
       }
     }, 700);
@@ -711,7 +711,7 @@ export function TemplateDesigner({
 
   useEffect(() => {
     if (activeEditorView === 'gui') {
-      console.log('[DEBUG] TemplateDesigner: GUI related state changed, calling debouncedGuiUpdate.');
+      // console.log('[DEBUG] TemplateDesigner: GUI related state changed, calling debouncedGuiUpdate.');
       debouncedGuiUpdate();
     }
     return () => {
@@ -728,15 +728,15 @@ export function TemplateDesigner({
 
   const handleLayoutDefinitionChangeFromTextarea = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newLayoutDef = e.target.value;
-    console.log('[DEBUG] TemplateDesigner: Layout JSON changed by user in textarea.');
+    // console.log('[DEBUG] TemplateDesigner: Layout JSON changed by user in textarea.');
     setLayoutDefinition(newLayoutDef);
     if (layoutJsonError) setLayoutJsonError(null);
   };
 
   const validateAndFormatLayoutJsonOnBlur = useCallback(() => {
-    console.log('[DEBUG] TemplateDesigner: Validating and formatting JSON from textarea on blur. Active view:', activeEditorView);
+    // console.log('[DEBUG] TemplateDesigner: Validating and formatting JSON from textarea on blur. Active view:', activeEditorView);
     if (activeEditorView === 'gui') {
-      console.log('[DEBUG] TemplateDesigner: GUI active, skipping format on blur for textarea.');
+      // console.log('[DEBUG] TemplateDesigner: GUI active, skipping format on blur for textarea.');
       return true;
     }
     try {
@@ -752,7 +752,7 @@ export function TemplateDesigner({
   }, [layoutDefinition, activeEditorView]);
 
   const handleSave = async () => {
-    console.log('[DEBUG] TemplateDesigner: handleSave called. Current active view:', activeEditorView);
+    // console.log('[DEBUG] TemplateDesigner: handleSave called. Current active view:', activeEditorView);
     setIsSaving(true);
 
     let currentIdForSave = mode === 'edit' ? templateIdToEdit : templateId;
@@ -808,7 +808,7 @@ export function TemplateDesigner({
 
     let finalLayoutDefToSave = layoutDefinition; // Start with current layoutDefinition
     if (activeEditorView === 'gui') {
-      console.log('[DEBUG] TemplateDesigner: GUI active on save, ensuring JSON reflects final GUI state before save.');
+      // console.log('[DEBUG] TemplateDesigner: GUI active on save, ensuring JSON reflects final GUI state before save.');
       // Generate JSON based on current GUI state to ensure it's up-to-date
       // This part relies on handleGenerateJsonFromBuilder correctly updating layoutDefinition state
       // For safety, we explicitly call it here if not debounced.
@@ -837,14 +837,14 @@ export function TemplateDesigner({
       layoutDefinition: finalLayoutDefToSave,
     };
 
-    console.log('[DEBUG] TemplateDesigner: Calling props.onSave with ID:', currentIdForSave);
+    // console.log('[DEBUG] TemplateDesigner: Calling props.onSave with ID:', currentIdForSave);
     onSave(templateToSave, mode === 'edit' ? templateIdToEdit : undefined)
       .then(result => {
         if (!result.success) {
           console.warn('[DEBUG] TemplateDesigner: onSave reported failure', result.message);
           // Toast for actual save failure is handled by parent page (new/edit route)
         } else {
-          console.log('[DEBUG] TemplateDesigner: onSave reported success');
+          // console.log('[DEBUG] TemplateDesigner: onSave reported success');
         }
       })
       .catch(err => {
@@ -857,7 +857,7 @@ export function TemplateDesigner({
   };
 
   const handleCopyIconName = useCallback(async (iconName: string) => {
-    console.log('[DEBUG] TemplateDesigner: handleCopyIconName for icon:', iconName);
+    // console.log('[DEBUG] TemplateDesigner: handleCopyIconName for icon:', iconName);
     try {
       await navigator.clipboard.writeText(iconName);
       toast({ title: "Copied!", description: `Icon name "${iconName}" copied.`, duration: 2000 });
@@ -1004,7 +1004,7 @@ export function TemplateDesigner({
                   checked={activeEditorView === 'gui'}
                   onCheckedChange={(checked) => {
                     const newView = checked ? 'gui' : 'json';
-                    console.log(`[DEBUG] TemplateDesigner: Switching editor view to: ${newView}`);
+                    // console.log(`[DEBUG] TemplateDesigner: Switching editor view to: ${newView}`);
                     if (newView === 'json' && activeEditorView === 'gui') {
                       handleGenerateJsonFromBuilder(false);
                     }

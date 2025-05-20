@@ -15,7 +15,7 @@ export default function DynamicCardRenderer({ card, template, showPixelGrid = fa
   template: CardTemplate;
   showPixelGrid?: boolean;
 }) {
-  // console.log('[DEBUG] DynamicCardRenderer: Rendering card', card?.id, 'with template', template?.id, 'Show Grid:', showPixelGrid);
+  // // console.log('[DEBUG] DynamicCardRenderer: Rendering card', card?.id, 'with template', template?.id, 'Show Grid:', showPixelGrid);
   let layout: LayoutDefinition | null = null;
 
   if (template.layoutDefinition) {

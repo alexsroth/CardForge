@@ -156,10 +156,10 @@ export default function TemplateLibraryPage() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isTogglingAssociation, setIsTogglingAssociation] = useState<Record<string, boolean>>({});
 
-  console.log('[DEBUG] TemplateLibraryPage: Rendering. Templates loading:', templatesLoading, 'Projects loading:', projectsLoading);
+  // console.log('[DEBUG] TemplateLibraryPage: Rendering. Templates loading:', templatesLoading, 'Projects loading:', projectsLoading);
 
   const handleDeleteTemplate = async (templateIdToDelete: CardTemplateId) => {
-    console.log('[DEBUG] TemplateLibraryPage/handleDeleteTemplate: Attempting to delete', templateIdToDelete);
+    // console.log('[DEBUG] TemplateLibraryPage/handleDeleteTemplate: Attempting to delete', templateIdToDelete);
     setIsDeleting(templateIdToDelete);
     const result = await deleteTemplate(templateIdToDelete);
     if (result.success) {
@@ -167,7 +167,7 @@ export default function TemplateLibraryPage() {
         title: "Template Deleted",
         description: result.message,
       });
-      console.log('[DEBUG] TemplateLibraryPage/handleDeleteTemplate: Success', templateIdToDelete);
+      // console.log('[DEBUG] TemplateLibraryPage/handleDeleteTemplate: Success', templateIdToDelete);
     } else {
       toast({
         title: "Deletion Failed",
@@ -181,7 +181,7 @@ export default function TemplateLibraryPage() {
 
   const handleToggleAssociation = async (project: Project, templateIdToToggle: CardTemplateId, currentlyAssociated: boolean) => {
     const toggleKey = `${project.id}-${templateIdToToggle}`;
-    console.log(`[DEBUG] TemplateLibraryPage/handleToggleAssociation: Project ${project.id}, Template ${templateIdToToggle}, Currently Associated: ${currentlyAssociated}`);
+    // console.log(`[DEBUG] TemplateLibraryPage/handleToggleAssociation: Project ${project.id}, Template ${templateIdToToggle}, Currently Associated: ${currentlyAssociated}`);
     setIsTogglingAssociation(prev => ({ ...prev, [toggleKey]: true }));
 
     let newAssociatedIds: CardTemplateId[];
@@ -198,7 +198,7 @@ export default function TemplateLibraryPage() {
         title: "Association Updated",
         description: `Template ${currentlyAssociated ? 'disassociated from' : 'associated with'} project "${project.name}".`,
       });
-      console.log(`[DEBUG] TemplateLibraryPage/handleToggleAssociation: Success for project ${project.id}, template ${templateIdToToggle}`);
+      // console.log(`[DEBUG] TemplateLibraryPage/handleToggleAssociation: Success for project ${project.id}, template ${templateIdToToggle}`);
     } else {
       toast({
         title: "Update Failed",
@@ -211,7 +211,7 @@ export default function TemplateLibraryPage() {
   };
 
   const displayTemplates = useMemo(() => {
-    // console.log('[DEBUG] TemplateLibraryPage: Recalculating displayTemplates. Templates count:', templates.length);
+    // // console.log('[DEBUG] TemplateLibraryPage: Recalculating displayTemplates. Templates count:', templates.length);
     return templates;
   }, [templates]);
 

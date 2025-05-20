@@ -10,10 +10,10 @@ import { TemplateDesigner } from '@/components/template-designer/TemplateDesigne
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from "lucide-react";
 
-console.log('[DEBUG] /templates/new/page.tsx: Module loaded');
+// console.log('[DEBUG] /templates/new/page.tsx: Module loaded');
 
 export default function NewTemplatePage() {
-  console.log("[DEBUG] NewTemplatePage: Rendering.");
+  // console.log("[DEBUG] NewTemplatePage: Rendering.");
   const router = useRouter();
   const { toast } = useToast();
   const { addTemplate, isLoading: templatesLoading, templates } = useTemplates();
@@ -24,10 +24,7 @@ export default function NewTemplatePage() {
       newTemplateData: CardTemplate,
       _existingTemplateId?: CardTemplateId // Not used in create mode
     ): Promise<{ success: boolean; message?: string }> => {
-      console.log(
-        "[DEBUG] NewTemplatePage: handleCreateTemplate called for",
-        newTemplateData.name
-      );
+      
       setIsSaving(true);
       let result: { success: boolean; message?: string };
       try {
@@ -65,7 +62,7 @@ export default function NewTemplatePage() {
   );
 
   if (templatesLoading && !isSaving) { // Check templatesLoading but not local isSaving
-    console.log("[DEBUG] NewTemplatePage: Contexts loading, showing loader.");
+    // console.log("[DEBUG] NewTemplatePage: Contexts loading, showing loader.");
     return (
       <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -76,7 +73,7 @@ export default function NewTemplatePage() {
     );
   }
 
-  console.log("[DEBUG] NewTemplatePage: Rendering TemplateDesigner.");
+  // console.log("[DEBUG] NewTemplatePage: Rendering TemplateDesigner.");
   return (
     <TemplateDesigner
       mode="create"

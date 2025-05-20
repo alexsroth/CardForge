@@ -71,7 +71,7 @@ function isCardFieldTldrawShape(shape: TLShape): shape is CardFieldTldrawShape {
 
 // Helper to convert our LayoutElement to something tldraw can create
 function layoutElementToShapeProps(element: LayoutElement, editor: Editor | null, index: number): Omit<CardFieldTldrawShape, 'parentId' | 'index' | 'rotation' | 'isLocked'> {
-  console.log('[DEBUG] CardLayoutEditor/layoutElementToShapeProps: Converting element', element, 'at index', index);
+  // console.log('[DEBUG] CardLayoutEditor/layoutElementToShapeProps: Converting element', element, 'at index', index);
   // Determine a cascading default position if not provided
   const defaultX = 10 + (index % 3) * (DEFAULT_SHAPE_WIDTH + SHAPE_CASCADE_OFFSET_X);
   const defaultY = 10 + Math.floor(index / 3) * (DEFAULT_SHAPE_HEIGHT + SHAPE_CASCADE_OFFSET_Y);
@@ -106,7 +106,7 @@ function layoutElementToShapeProps(element: LayoutElement, editor: Editor | null
 // Helper to convert a tldraw shape back to our LayoutElement
 function tldrawShapeToLayoutElement(shape: CardFieldTldrawShape): LayoutElement {
   const round = (num: number) => Math.round(num); 
-  // console.log('[DEBUG] CardLayoutEditor/tldrawShapeToLayoutElement: Converting shape', shape);
+  // // console.log('[DEBUG] CardLayoutEditor/tldrawShapeToLayoutElement: Converting shape', shape);
   return {
     fieldKey: shape.meta.fieldKey,
     type: 'text', // Defaulting to 'text' as type is not stored on tldraw shape for minimal version
@@ -137,7 +137,7 @@ const FieldToggleItem: React.FC<FieldToggleItemProps> = ({ fieldKey, isChecked, 
         id={uniqueId}
         checked={isChecked}
         onCheckedChange={(checked) => {
-          console.log(`[DEBUG] FieldToggleItem: ${fieldKey} toggled to ${Boolean(checked)}`);
+          // console.log(`[DEBUG] FieldToggleItem: ${fieldKey} toggled to ${Boolean(checked)}`);
           onToggle(fieldKey, Boolean(checked));
         }}
         className="mr-2 h-4 w-4"
@@ -167,7 +167,7 @@ export function CardLayoutEditor({
   }, [onChange]);
 
   const onEditorMount = useCallback((editorInstance: Editor) => {
-    console.log('[DEBUG] CardLayoutEditor/onEditorMount: Editor mounted.');
+    // console.log('[DEBUG] CardLayoutEditor/onEditorMount: Editor mounted.');
     setEditor(editorInstance);
     editorInstance.updateInstanceState({ isGridMode: true }); 
     editorInstance.updateInstanceState({
@@ -181,21 +181,21 @@ export function CardLayoutEditor({
   // Effect to synchronize initialElements prop with the tldraw canvas
   useEffect(() => {
     if (!editor) {
-        console.log('[DEBUG] CardLayoutEditor: initialElements prop effect: editor not ready.');
+        // console.log('[DEBUG] CardLayoutEditor: initialElements prop effect: editor not ready.');
         return;
     }
      if (!editor.currentPageShapesArray) {
-        console.log('[DEBUG] CardLayoutEditor: initialElements prop effect: editor.currentPageShapesArray not ready.');
+        // console.log('[DEBUG] CardLayoutEditor: initialElements prop effect: editor.currentPageShapesArray not ready.');
         return;
     }
-    console.log('[DEBUG] CardLayoutEditor: initialElements prop effect running. Prop length:', initialElements.length);
+    // console.log('[DEBUG] CardLayoutEditor: initialElements prop effect running. Prop length:', initialElements.length);
     
     const currentShapesOnCanvas = editor.currentPageShapesArray.filter(isCardFieldTldrawShape);
     const currentElementsOnCanvas = currentShapesOnCanvas.map(tldrawShapeToLayoutElement);
 
     // Basic deep comparison for arrays of objects.
     if (JSON.stringify(initialElements) !== JSON.stringify(currentElementsOnCanvas)) {
-      console.log('[DEBUG] CardLayoutEditor: initialElements differ from canvas. Re-syncing canvas. Initial:', initialElements.length, 'Canvas Elements:', currentElementsOnCanvas.length);
+      // console.log('[DEBUG] CardLayoutEditor: initialElements differ from canvas. Re-syncing canvas. Initial:', initialElements.length, 'Canvas Elements:', currentElementsOnCanvas.length);
       editor.batch(() => {
         const idsToDelete = editor.currentPageShapesArray.map(s => s.id); 
         if (idsToDelete.length > 0) {
@@ -208,14 +208,14 @@ export function CardLayoutEditor({
             if (validShapesToCreate.length > 0) {
               editor.createShapes(validShapesToCreate);
             } else {
-              console.log('[DEBUG] CardLayoutEditor: No valid shapes to create from initialElements.');
+              // console.log('[DEBUG] CardLayoutEditor: No valid shapes to create from initialElements.');
             }
         } else {
-          console.log('[DEBUG] CardLayoutEditor: initialElements was empty, nothing to create.');
+          // console.log('[DEBUG] CardLayoutEditor: initialElements was empty, nothing to create.');
         }
       });
     } else {
-      console.log('[DEBUG] CardLayoutEditor: initialElements are same as on canvas. No re-sync needed.');
+      // console.log('[DEBUG] CardLayoutEditor: initialElements are same as on canvas. No re-sync needed.');
     }
      // After syncing canvas, update currentLayoutJsonElements from the source of truth (initialElements)
     setCurrentLayoutJsonElements([...initialElements]);
@@ -236,7 +236,7 @@ export function CardLayoutEditor({
       const newLayoutElements = shapes.map(tldrawShapeToLayoutElement);
       
       if (JSON.stringify(newLayoutElements) !== JSON.stringify(currentLayoutJsonElements)) {
-        console.log('[DEBUG] CardLayoutEditor: Layout changed (from store listener). New elements count:', newLayoutElements.length, 'Calling onChange prop.');
+        // console.log('[DEBUG] CardLayoutEditor: Layout changed (from store listener). New elements count:', newLayoutElements.length, 'Calling onChange prop.');
         setCurrentLayoutJsonElements(newLayoutElements); 
         onChangeRef.current(newLayoutElements);
       }
@@ -255,7 +255,7 @@ export function CardLayoutEditor({
       console.warn('[DEBUG] CardLayoutEditor/handleToggleFieldOnCanvas: Editor not available.');
       return;
     }
-    console.log(`[DEBUG] CardLayoutEditor/handleToggleFieldOnCanvas: fieldKey: ${fieldKeyToToggle}, isChecked: ${isChecked}`);
+    // console.log(`[DEBUG] CardLayoutEditor/handleToggleFieldOnCanvas: fieldKey: ${fieldKeyToToggle}, isChecked: ${isChecked}`);
 
     editor.batch(() => {
       const existingShapesForFieldKey = editor.currentPageShapesArray
@@ -282,16 +282,16 @@ export function CardLayoutEditor({
             }
           }, editor, currentFieldShapesCount) as CardFieldTldrawShape; // Pass index for potential use in ID generation
           editor.createShape(newShapeProps);
-          console.log('[DEBUG] CardLayoutEditor: Created shape for', fieldKeyToToggle, 'at', x, y);
+          // console.log('[DEBUG] CardLayoutEditor: Created shape for', fieldKeyToToggle, 'at', x, y);
         } else {
-          console.log('[DEBUG] CardLayoutEditor: Shape for', fieldKeyToToggle, 'already exists. Toggle ON, no action.');
+          // console.log('[DEBUG] CardLayoutEditor: Shape for', fieldKeyToToggle, 'already exists. Toggle ON, no action.');
         }
       } else {
         if (existingShapesForFieldKey.length > 0) {
           editor.deleteShapes(existingShapesForFieldKey.map(s => s.id));
-          console.log('[DEBUG] CardLayoutEditor: Deleted shapes for', fieldKeyToToggle);
+          // console.log('[DEBUG] CardLayoutEditor: Deleted shapes for', fieldKeyToToggle);
         } else {
-            console.log('[DEBUG] CardLayoutEditor: No shape found for', fieldKeyToToggle, 'to delete. Toggle OFF, no action.');
+            // console.log('[DEBUG] CardLayoutEditor: No shape found for', fieldKeyToToggle, 'to delete. Toggle OFF, no action.');
         }
       }
     });
@@ -304,7 +304,7 @@ export function CardLayoutEditor({
         const newLayoutElements = shapes.map(tldrawShapeToLayoutElement);
         // Check if this state update is redundant given the store listener
         if (JSON.stringify(newLayoutElements) !== JSON.stringify(currentLayoutJsonElements)) {
-            console.log('[DEBUG] CardLayoutEditor/handleToggleFieldOnCanvas: Forcing JSON update after toggle.');
+            // console.log('[DEBUG] CardLayoutEditor/handleToggleFieldOnCanvas: Forcing JSON update after toggle.');
             setCurrentLayoutJsonElements(newLayoutElements);
             onChangeRef.current(newLayoutElements);
         }

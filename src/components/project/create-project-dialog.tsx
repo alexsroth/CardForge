@@ -34,10 +34,10 @@ export default function CreateProjectDialog({ isOpen, onClose, onSubmit }: Creat
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { templates: globalTemplates, isLoading: templatesLoading } = useTemplates();
 
-  console.log('[DEBUG] CreateProjectDialog: Rendering. Global templates loading:', templatesLoading, 'Count:', globalTemplates.length);
+  // console.log('[DEBUG] CreateProjectDialog: Rendering. Global templates loading:', templatesLoading, 'Count:', globalTemplates.length);
 
   const handleTemplateSelectionChange = (templateId: CardTemplateId, checked: boolean | string) => {
-    console.log('[DEBUG] CreateProjectDialog/handleTemplateSelectionChange: Template ID:', templateId, 'Checked:', checked);
+    // console.log('[DEBUG] CreateProjectDialog/handleTemplateSelectionChange: Template ID:', templateId, 'Checked:', checked);
     setSelectedTemplateIds(prev => {
       if (checked) {
         return [...prev, templateId];
@@ -48,7 +48,7 @@ export default function CreateProjectDialog({ isOpen, onClose, onSubmit }: Creat
   };
 
   const handleSubmit = async () => {
-    console.log('[DEBUG] CreateProjectDialog/handleSubmit: Submitting. Project name:', projectName, 'Selected templates:', selectedTemplateIds);
+    // console.log('[DEBUG] CreateProjectDialog/handleSubmit: Submitting. Project name:', projectName, 'Selected templates:', selectedTemplateIds);
     setIsSubmitting(true);
     await onSubmit(projectName, selectedTemplateIds);
     setIsSubmitting(false);

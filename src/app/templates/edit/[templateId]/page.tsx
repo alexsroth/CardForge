@@ -11,10 +11,10 @@ import { Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
-console.log('[DEBUG] /templates/edit/[templateId]/page.tsx: Module loaded');
+// // console.log('[DEBUG] /templates/edit/[templateId]/page.tsx: Module loaded');
 
 export default function EditTemplatePage() {
-  console.log('[DEBUG] EditTemplatePage: Rendering.');
+  // console.log('[DEBUG] EditTemplatePage: Rendering.');
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
@@ -28,9 +28,9 @@ export default function EditTemplatePage() {
   const [isSaving, setIsSaving] = useState(false); // Local saving state for this page's action
 
   useEffect(() => {
-    console.log('[DEBUG] EditTemplatePage: useEffect to load template. ID from URL:', templateIdFromUrl, 'Templates loading:', templatesLoading);
+    // console.log('[DEBUG] EditTemplatePage: useEffect to load template. ID from URL:', templateIdFromUrl, 'Templates loading:', templatesLoading);
     if (templatesLoading) {
-      console.log('[DEBUG] EditTemplatePage: Templates context still loading, deferring template fetch.');
+      // console.log('[DEBUG] EditTemplatePage: Templates context still loading, deferring template fetch.');
       setIsLoadingPage(true); 
       return;
     }
@@ -46,7 +46,7 @@ export default function EditTemplatePage() {
     if (foundTemplate) {
       setTemplateToEdit(foundTemplate);
       setErrorLoading(null);
-      console.log('[DEBUG] EditTemplatePage: Found template to edit:', foundTemplate.name);
+      // console.log('[DEBUG] EditTemplatePage: Found template to edit:', foundTemplate.name);
     } else {
       setErrorLoading(`Template with ID "${templateIdFromUrl}" not found.`);
       setTemplateToEdit(undefined);
@@ -60,7 +60,7 @@ export default function EditTemplatePage() {
     updatedTemplateData: CardTemplate,
     existingTemplateIdFromDesigner?: CardTemplateId // This is the ID being edited, passed from TemplateDesigner
   ): Promise<{ success: boolean, message?: string }> => {
-    console.log('[DEBUG] EditTemplatePage: handleUpdateTemplate called for ID:', existingTemplateIdFromDesigner);
+    // console.log('[DEBUG] EditTemplatePage: handleUpdateTemplate called for ID:', existingTemplateIdFromDesigner);
     
     const currentId = existingTemplateIdFromDesigner || templateIdFromUrl;
     if (!currentId) {
@@ -104,7 +104,7 @@ export default function EditTemplatePage() {
 
 
   if (isLoadingPage || (templatesLoading && !templateToEdit && !!templateIdFromUrl)) { 
-    console.log("[DEBUG] EditTemplatePage: Initial loading state active.");
+    // console.log("[DEBUG] EditTemplatePage: Initial loading state active.");
     return (
       <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -114,7 +114,7 @@ export default function EditTemplatePage() {
   }
 
   if (errorLoading) {
-    console.log("[DEBUG] EditTemplatePage: Error loading template -", errorLoading);
+    // console.log("[DEBUG] EditTemplatePage: Error loading template -", errorLoading);
     return (
       <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
         <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
@@ -128,7 +128,7 @@ export default function EditTemplatePage() {
   }
   
   if (!templateToEdit) {
-     console.log("[DEBUG] EditTemplatePage: Template to edit is still undefined after loading attempt.");
+     // console.log("[DEBUG] EditTemplatePage: Template to edit is still undefined after loading attempt.");
      if (!templateIdFromUrl) {
         return (
              <div className="container mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center flex flex-col items-center justify-center min-h-[calc(100vh-10rem)]">
@@ -153,7 +153,7 @@ export default function EditTemplatePage() {
     );
   }
   
-  console.log("[DEBUG] EditTemplatePage: Rendering TemplateDesigner with template:", templateToEdit.name);
+  // console.log("[DEBUG] EditTemplatePage: Rendering TemplateDesigner with template:", templateToEdit.name);
   return (
     <TemplateDesigner
       mode="edit"

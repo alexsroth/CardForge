@@ -31,7 +31,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   const persistProjects = useCallback((updatedProjects: Project[]) => {
-    console.log('[DEBUG] ProjectContext/persistProjects: Persisting projects to localStorage', updatedProjects.length);
+    // console.log('[DEBUG] ProjectContext/persistProjects: Persisting projects to localStorage', updatedProjects.length);
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedProjects));
     } catch (error) {
@@ -40,12 +40,12 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    console.log('[DEBUG] ProjectContext: Initializing - loading projects from localStorage or seed.');
+    // console.log('[DEBUG] ProjectContext: Initializing - loading projects from localStorage or seed.');
     let initialData: Project[];
     try {
       const storedProjects = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (storedProjects) {
-        console.log('[DEBUG] ProjectContext: Found projects in localStorage.');
+        // console.log('[DEBUG] ProjectContext: Found projects in localStorage.');
         let parsedProjects: Project[] = JSON.parse(storedProjects);
         initialData = parsedProjects.map(p => ({
           ...p,
@@ -64,7 +64,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
           dataAiHint: p.dataAiHint || 'abstract game concept',
         }));
       } else {
-        console.log('[DEBUG] ProjectContext: No projects in localStorage, using seed data (empty).');
+        // console.log('[DEBUG] ProjectContext: No projects in localStorage, using seed data (empty).');
         initialData = seedProjectsData; // Should be empty
         if (initialData.length > 0) {
             persistProjects(initialData);
@@ -77,7 +77,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
     setProjects(initialData);
     setIsLoading(false);
-    console.log('[DEBUG] ProjectContext: Initialization complete. Projects loaded:', initialData.length);
+    // console.log('[DEBUG] ProjectContext: Initialization complete. Projects loaded:', initialData.length);
   }, [persistProjects]);
 
 
@@ -91,7 +91,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   const addProject = useCallback(async (
     projectData: { name: string; associatedTemplateIds?: CardTemplateId[] }
   ): Promise<{ success: boolean; message: string; newProject?: Project }> => {
-    console.log('[DEBUG] ProjectContext/addProject: Attempting to add project', projectData);
+    // console.log('[DEBUG] ProjectContext/addProject: Attempting to add project', projectData);
 
     const starterCardTemplateId =
       (projectData.associatedTemplateIds && projectData.associatedTemplateIds.length > 0)
@@ -129,13 +129,13 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
       persistProjects(updatedProjects);
       return updatedProjects;
     });
-    console.log('[DEBUG] ProjectContext/addProject: Success - Project added', newProject.id);
+    // console.log('[DEBUG] ProjectContext/addProject: Success - Project added', newProject.id);
     return { success: true, message: `Project "${newProject.name}" created.`, newProject };
   }, [persistProjects]);
 
 
   const updateProject = useCallback(async (updatedProjectData: Project): Promise<{ success: boolean; message: string }> => {
-    console.log('[DEBUG] ProjectContext/updateProject: Attempting to update project', updatedProjectData.id, updatedProjectData.name);
+    // console.log('[DEBUG] ProjectContext/updateProject: Attempting to update project', updatedProjectData.id, updatedProjectData.name);
     if (!updatedProjectData.id) {
         console.error('[DEBUG] ProjectContext/updateProject: Error - Project ID is missing.');
         return { success: false, message: "Project ID is missing." };
@@ -167,7 +167,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     });
 
     if (projectWasFoundAndUpdated) {
-        console.log('[DEBUG] ProjectContext/updateProject: Success - Project updated', updatedProjectData.id);
+        // console.log('[DEBUG] ProjectContext/updateProject: Success - Project updated', updatedProjectData.id);
         return { success: true, message: `Project '${updatedProjectData.name}' updated successfully.` };
     } else {
         console.error('[DEBUG] ProjectContext/updateProject: Error - Project not found for update', updatedProjectData.id);
@@ -176,7 +176,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
   }, [persistProjects]);
 
   const deleteProject = useCallback(async (projectId: string): Promise<{ success: boolean; message: string }> => {
-    console.log('[DEBUG] ProjectContext/deleteProject: Attempting to delete project', projectId);
+    // console.log('[DEBUG] ProjectContext/deleteProject: Attempting to delete project', projectId);
     let projectFoundAndDeleted = false;
     let projectName = '';
 
@@ -194,7 +194,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
     });
 
     if (projectFoundAndDeleted) {
-      console.log('[DEBUG] ProjectContext/deleteProject: Success - Project deleted', projectId);
+      // console.log('[DEBUG] ProjectContext/deleteProject: Success - Project deleted', projectId);
       return { success: true, message: `Project "${projectName}" deleted successfully.` };
     } else {
       console.error('[DEBUG] ProjectContext/deleteProject: Error - Project not found for deletion', projectId);
@@ -204,7 +204,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
 
   const updateProjectAssociatedTemplates = useCallback(async (projectId: string, associatedTemplateIds: CardTemplateId[]): Promise<{ success: boolean; message: string }> => {
-    console.log('[DEBUG] ProjectContext/updateProjectAssociatedTemplates: Project ID:', projectId, 'New Template IDs:', associatedTemplateIds);
+    // console.log('[DEBUG] ProjectContext/updateProjectAssociatedTemplates: Project ID:', projectId, 'New Template IDs:', associatedTemplateIds);
     const projectToUpdate = getProjectById(projectId);
     if (!projectToUpdate) {
       console.error('[DEBUG] ProjectContext/updateProjectAssociatedTemplates: Project not found', projectId);
@@ -216,7 +216,7 @@ export const ProjectProvider = ({ children }: { children: ReactNode }) => {
 
 
   const updateProjectCards = useCallback(async (projectId: string, cards: CardData[]): Promise<{ success: boolean; message: string }> => {
-    console.log('[DEBUG] ProjectContext/updateProjectCards: Project ID:', projectId, 'New cards count:', cards.length);
+    // console.log('[DEBUG] ProjectContext/updateProjectCards: Project ID:', projectId, 'New cards count:', cards.length);
     const projectToUpdate = getProjectById(projectId);
     if (!projectToUpdate) {
       console.error('[DEBUG] ProjectContext/updateProjectCards: Project not found', projectId);

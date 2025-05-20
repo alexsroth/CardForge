@@ -29,16 +29,16 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    console.log('[DEBUG] TemplateContext: Initializing - loading templates from localStorage or seed.');
+    // console.log('[DEBUG] TemplateContext: Initializing - loading templates from localStorage or seed.');
     
     let loadedTemplates: CardTemplate[];
     try {
       const storedTemplates = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (storedTemplates) {
-        console.log('[DEBUG] TemplateContext: Found templates in localStorage.');
+        // console.log('[DEBUG] TemplateContext: Found templates in localStorage.');
         loadedTemplates = JSON.parse(storedTemplates);
       } else {
-        console.log('[DEBUG] TemplateContext: No templates in localStorage, using seed data.');
+        // console.log('[DEBUG] TemplateContext: No templates in localStorage, using seed data.');
         loadedTemplates = initialSeedTemplates;
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(loadedTemplates));
       }
@@ -46,7 +46,7 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
       console.error("Failed to load templates from localStorage, using initial seed:", error);
       loadedTemplates = initialSeedTemplates;
     }
-    console.log('[DEBUG] TemplateContext: loadedTemplates', loadedTemplates);
+    // console.log('[DEBUG] TemplateContext: loadedTemplates', loadedTemplates);
 
     const validatedTemplates = loadedTemplates.map(t => ({
       ...t,
@@ -55,15 +55,15 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
                           ? t.layoutDefinition 
                           : DEFAULT_CARD_LAYOUT_JSON_STRING,
     }));
-    console.log('[DEBUG] TemplateContext: validatedTemplates', validatedTemplates);
+    // console.log('[DEBUG] TemplateContext: validatedTemplates', validatedTemplates);
 
     setTemplates(validatedTemplates);
     setIsLoading(false);
-    console.log('[DEBUG] TemplateContext: Initialization complete. Templates loaded:', validatedTemplates.length);
+    // console.log('[DEBUG] TemplateContext: Initialization complete. Templates loaded:', validatedTemplates.length);
   }, []);
 
   const persistTemplates = useCallback((updatedTemplates: CardTemplate[]) => {
-    console.log('[DEBUG] TemplateContext/persistTemplates: Persisting templates to localStorage', updatedTemplates.length);
+    // console.log('[DEBUG] TemplateContext/persistTemplates: Persisting templates to localStorage', updatedTemplates.length);
     try {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedTemplates));
     } catch (error) {
@@ -79,7 +79,7 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
   }, [templates]);
 
   const addTemplate = useCallback(async (templateData: CardTemplate): Promise<{ success: boolean; message: string }> => {
-    console.log('[DEBUG] TemplateContext/addTemplate: Attempting to add template', templateData.id, templateData.name);
+    // console.log('[DEBUG] TemplateContext/addTemplate: Attempting to add template', templateData.id, templateData.name);
     if (templates.some(t => t.id === templateData.id)) {
       console.error('[DEBUG] TemplateContext/addTemplate: Error - Duplicate ID', templateData.id);
       return { success: false, message: `Template ID '${templateData.id}' already exists.` };
@@ -97,12 +97,12 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
       persistTemplates(updatedTemplates);
       return updatedTemplates;
     });
-    console.log('[DEBUG] TemplateContext/addTemplate: Success - Template added', newTemplateData.id);
+    // console.log('[DEBUG] TemplateContext/addTemplate: Success - Template added', newTemplateData.id);
     return { success: true, message: `Template '${newTemplateData.name}' saved successfully.` };
   }, [templates, persistTemplates]);
 
   const updateTemplate = useCallback(async (templateData: CardTemplate): Promise<{ success: boolean; message: string }> => {
-    console.log('[DEBUG] TemplateContext/updateTemplate: Attempting to update template', templateData.id, templateData.name);
+    // console.log('[DEBUG] TemplateContext/updateTemplate: Attempting to update template', templateData.id, templateData.name);
     if (!templateData.id) {
       console.error('[DEBUG] TemplateContext/updateTemplate: Error - Template ID missing.');
       return { success: false, message: "Template ID is missing, cannot update." };
@@ -133,7 +133,7 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
     });
 
     if (found) {
-      console.log('[DEBUG] TemplateContext/updateTemplate: Success - Template updated', updatedTemplateData.id);
+      // console.log('[DEBUG] TemplateContext/updateTemplate: Success - Template updated', updatedTemplateData.id);
       return { success: true, message: `Template '${updatedTemplateData.name}' updated successfully.` };
     } else {
       console.error('[DEBUG] TemplateContext/updateTemplate: Error - Template not found', updatedTemplateData.id);
@@ -142,7 +142,7 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
   }, [persistTemplates, templates]); // Added `templates` to dep array as it's used for checking existence implicitly.
 
   const deleteTemplate = useCallback(async (templateId: CardTemplateId): Promise<{ success: boolean; message: string }> => {
-    console.log('[DEBUG] TemplateContext/deleteTemplate: Attempting to delete template', templateId);
+    // console.log('[DEBUG] TemplateContext/deleteTemplate: Attempting to delete template', templateId);
     let templateName = 'Unknown Template';
     let found = false;
     setTemplates(prevTemplates => {
@@ -156,7 +156,7 @@ export const TemplateProvider = ({ children }: { children: ReactNode }) => {
       return updatedTemplates;
     });
     if (found) {
-      console.log('[DEBUG] TemplateContext/deleteTemplate: Success - Template deleted', templateId);
+      // console.log('[DEBUG] TemplateContext/deleteTemplate: Success - Template deleted', templateId);
       return { success: true, message: `Template '${templateName}' deleted successfully.` };
     } else {
       console.error('[DEBUG] TemplateContext/deleteTemplate: Error - Template not found', templateId);

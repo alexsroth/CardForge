@@ -5,6 +5,6 @@ export * from './utils';
 export * from './mappers';
 export * from './types';
 
-console.log('[DEBUG] card-designer/index.ts: Module loaded and exporting all');
+// console.log('[DEBUG] card-designer/index.ts: Module loaded and exporting all');
 
     

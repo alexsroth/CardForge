@@ -128,6 +128,6 @@ export const commonLucideIconsForGuide = [
   "TreePine", "Trophy", "Umbrella", "User", "Video", "Wallet", "Watch", "Wifi", "Wrench"
 ] as const;
 
-console.log('[DEBUG] card-designer/constants.ts: Module loaded');
+// console.log('[DEBUG] card-designer/constants.ts: Module loaded');
 
     
