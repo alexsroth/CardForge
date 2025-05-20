@@ -1,0 +1,40 @@
+name: CardForge CI
+
+on:
+  push:
+    branches: [ main, master, develop ] # Adjust to your main branches
+  pull_request:
+    branches: [ main, master, develop ] # Adjust to your main branches
+
+jobs:
+  build-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20' # Or your project's Node version
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v3
+      with:
+        version: 8 # Or your project's pnpm version
+
+    - name: Install dependencies
+      run: pnpm install
+
+    - name: Run ESLint
+      run: pnpm lint
+
+    # Test step placeholder - will be more meaningful after T-4
+    # If you don't have a test script yet, this might fail or do nothing.
+    # You can comment it out until tests are set up.
+    - name: Run tests
+      run: pnpm test --if-present
+
+    - name: Build project
+      run: pnpm build
