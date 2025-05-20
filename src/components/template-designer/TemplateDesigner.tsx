@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Palette, HelpCircle, Copy, ChevronDown, ChevronRight, Settings, Save } from 'lucide-react';
+import { PlusCircle, Palette, HelpCircle, Copy, ChevronDown, ChevronRight, Settings, Save, Loader2 } from 'lucide-react';
 import FieldRow from '@/components/template-designer/field-row'; // Corrected path if it was wrong before
 import { useToast } from '@/hooks/use-toast';
 import type { CardTemplate, CardTemplateId, LayoutElement as CardLayoutElement, LayoutDefinition } from '@/lib/card-templates';

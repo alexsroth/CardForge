@@ -100,12 +100,7 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
   }, []); 
 
   useEffect(() => {
-    // console.log('[DEBUG] LiveEditorClientPage: initialProjectData prop changed or editorProjectId changed.', {
-      newId: initialProjectData.id,
-      currentEditorId: editorProjectId,
-      newName: initialProjectData.name,
-      currentName: projectName,
-    });
+    
     if (initialProjectData.id !== editorProjectId) {
       // console.log('[DEBUG] LiveEditorClientPage: Project ID changed. Full re-initialization.', initialProjectData.id);
       setEditorProjectId(initialProjectData.id);
@@ -150,13 +145,11 @@ export default function LiveEditorClientPage({ initialProjectData }: LiveEditorC
           associatedTemplateIds: associatedTemplateIds,
           // lastModified will be updated by ProjectContext.updateProject
         };
-        // console.log('[DEBUG] LiveEditorClientPage: Calling updateProject for', editorProjectId, 'with', cards.length, 'cards.');
         updateProject(updatedFullProject).then(result => {
           if (!result.success) {
             toast({ title: "Save Error", description: `Failed to save project changes: ${result.message}`, variant: "destructive" });
             console.error('[DEBUG] LiveEditorClientPage: Project update failed', result.message);
           } else {
-            // // console.log('[DEBUG] LiveEditorClientPage: Project update successful.');
           }
         });
       } else {

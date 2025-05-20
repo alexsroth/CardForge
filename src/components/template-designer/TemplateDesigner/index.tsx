@@ -18,13 +18,14 @@ export const TemplateDesigner: React.FC<TemplateDesignerProps> = (props) => {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
-      {/* Toolbar */}
       <TopToolbar
         mode={props.mode}
-        onGenerateJson={() => {/* TODO connect */ }}
+        onGenerateJson={() => handleGenerateJsonFromBuilder(true)} // Connect to the handler, pass true for toast
         onSave={designer.saveTemplate}
         isSaving={designer.isSaving}
       />
+
+
 
       {/* Main content */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
