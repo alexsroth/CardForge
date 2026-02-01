@@ -22,8 +22,8 @@ I built it to slash the grunt work, so anyone with a spark of an idea can print 
 ## 🚀 Quick Start
 1. **Clone & Install**  
    ```bash
-   git clone https://github.com/your-org/cardforge.git
-   cd cardforge
+   git clone https://github.com/alexsroth/CardForge.git
+   cd CardForge
    npm install
    ```
 2. **Run**  
