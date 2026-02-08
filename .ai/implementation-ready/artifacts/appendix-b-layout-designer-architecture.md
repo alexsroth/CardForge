@@ -1,4 +1,4 @@
-# Card Layout Designer Architecture (V1)
+# Appendix B: Card Layout Designer Architecture (V1)
 
 ## 1. Objective
 Define a production-ready architecture for a container-first card layout designer where users:

@@ -1,4 +1,4 @@
-# CardForge Architecture Blueprint (V1)
+# Appendix A: CardForge Architecture Blueprint (V1)
 
 ## 1. Architecture Goals
 1. Support a ground-up Electron rebuild aligned to the V1 PRD.
@@ -318,7 +318,7 @@ Result:
 5. Crash-safe write and lock behavior verified in integration tests.
 
 ## 15. Companion Design Spec
-Use `layout-designer-architecture.md` as the implementation-level specification for the canvas editor subsystem, including:
+Use `appendix-b-layout-designer-architecture.md` as the implementation-level specification for the canvas editor subsystem, including:
 1. selected library stack (`react-konva` + `konva`)
 2. layer/component model
 3. state interfaces and command history

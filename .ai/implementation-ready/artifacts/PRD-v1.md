@@ -1,252 +1,341 @@
 # CardForge V1 Product Requirements Document
 
-## 1. Document Purpose
-This PRD defines the target product for a full CardForge rebuild.
+## 1. Purpose
+This document is the **primary implementation artifact** for CardForge V1.
 
-This is a **greenfield implementation**. The previous codebase is not a technical dependency. Legacy behavior is used only as product inspiration and historical context.
+It defines product behavior, scope, and acceptance criteria for a **ground-up rebuild**.
+The previous CardForge codebase is not an implementation dependency.
 
-## 2. Product Summary
-CardForge is a desktop app for designing, iterating, and exporting tabletop card games.
+## 2. How to Use This PRD
+If you are implementing V1, follow this order:
+1. Read Sections 1-8 to understand product intent and required behavior.
+2. Use Sections 9-12 to build feature-by-feature.
+3. Use Section 13 as your done criteria.
+4. Use Section 14 build phases to execute in sequence.
+5. Use appendices only when deeper implementation detail is needed.
 
-V1 focuses on:
-1. Fast path from idea to playable prototype.
-2. Safe, deterministic editing for templates and card data.
-3. Portable game packages for handoff and continued work.
-
-## 3. Platform Scope
-1. App shell: Electron desktop.
-2. Initial platform: macOS.
-3. Planned next platform: Windows (V2).
-4. Collaboration and AI are future-ready in data contracts, but not core V1 runtime features.
+## 3. Platform and Delivery Scope
+1. Application type: Electron desktop app.
+2. V1 target: macOS.
+3. Planned V2 target: Windows.
+4. V1 is print-first.
+5. V1 must remain digital-ready at the data contract level.
+6. AI is non-core in V1.
 
 ## 4. Product Goals
-1. Let a first-time user reach a playtestable deck in about 30 minutes.
-2. Support both visual creation and high-volume CSV workflows.
-3. Make template changes safe for existing cards.
-4. Ensure preview/export consistency.
-5. Make exports portable and importable across users and machines.
+1. First-time users can create a playable prototype deck in about 30 minutes.
+2. Users can work either visually or through CSV at scale.
+3. Template changes are safe and controlled.
+4. Preview and export outputs are consistent.
+5. Exports are portable and importable by other users.
 
 ## 5. Product Principles
 1. Usability first.
-2. Deterministic behavior over hidden fallback.
-3. Reversible user actions by default.
-4. Progressive complexity: beginner-friendly core, advanced controls available.
-5. Portability as a first-class concern.
+2. Deterministic behavior over silent fallback.
+3. Reversible operations whenever possible.
+4. Progressive complexity (basic and advanced usage).
+5. Portability as a core requirement.
 
-## 6. Core Domain Model
-CardForge separates **what a card is** from **how it looks**.
+## 6. Domain Model (Core Concepts)
+CardForge separates card data definition from visual layout.
 
-1. Card Data Template: schema of card fields.
-2. Layout Template: visual mapping of fields to a canvas.
-3. Card: field values bound to a Card Data Template.
-4. Game: container for metadata, assets, templates, decks, and settings.
-5. Library: container for games (foundation for future shared/rental models).
+1. **Library**
+- A container of games.
+- Future-ready for owned/shared/rental models.
 
-## 7. Functional Requirements
+2. **Game**
+- Contains metadata, settings, assets, templates, and decks.
+
+3. **Card Data Template**
+- Defines what fields cards contain.
+- Example fields: name, rules text, category, number value, image, icon.
+
+4. **Layout Template**
+- Defines how fields are placed on canvas.
+- Supports print and digital targets as separate layout experiences.
+
+5. **Card**
+- Concrete field values tied to a card data template.
+
+6. **Deck**
+- Collection of cards for a game.
+
+7. **Checkpoint**
+- Named snapshot of state for rollback/export selection.
+
+8. **Export Package**
+- Portable bundle containing game data + templates + assets.
+
+## 7. V1 Feature Scope
 
 ### 7.1 Games Workspace
-1. Primary container term is `Games`.
-2. Games Home supports sorting and filtering.
+Required behavior:
+1. Primary object name is `Games`.
+2. Games Home supports sort and filter.
 3. Multiple libraries are supported.
-4. Recycle-bin deletion pattern (no immediate destructive delete).
-5. Game metadata is first-class:
-   - rules
-   - playtest notes/templates
-   - attached game assets
+4. Deletion uses recycle-bin behavior.
+5. Game metadata includes rules, playtest notes/templates, and assets.
 
 ### 7.2 Template System
+Required behavior:
 1. Templates are global and reusable across games.
-2. Template usage is visible (where each template is used).
-3. Two linked template layers:
-   - Card Data Template
-   - Layout Template
-4. Card Data Template field types in V1:
-   - category (stable option IDs)
-   - single line text
-   - area text
-   - number
-   - image (with dimension guidance)
-   - icon (optional category mapping)
+2. UI shows where each template is used.
+3. Two-template model is required:
+- Card Data Template
+- Layout Template
+4. Card data field types in V1:
+- `category` (stable option IDs)
+- `singleLineText`
+- `areaText`
+- `number`
+- `image` (dimension guidance)
+- `icon` (optional category mapping)
 5. Layout authoring is container-first:
-   - draw/place container
-   - map data field to container
-6. V1 layout element types:
-   - single line text
-   - text with icon
-   - area text
-   - image
-   - layout/group container
-   - basic decoration (boxes, borders, outlines)
-7. Reusable layout component library is included in V1.
+- draw/place container first
+- map data field second
+6. V1 layout elements:
+- single line text
+- text with icon
+- area text
+- image
+- layout/group container
+- decoration (borders/boxes/outlines)
+7. Reusable layout component library is in scope for V1.
 
-### 7.3 Print and Digital Layout Direction
-1. V1 is print-first in workflow and output priorities.
+### 7.3 Layout Targets (Print and Digital)
+Required behavior:
+1. V1 prioritizes print workflows and outputs.
 2. Print and digital layouts are separate template experiences.
-3. Shared layer is card data templates and field mapping model.
-4. V1 does not ship interactive digital runtime behavior.
-5. Digital-ready metadata is preserved in schemas for future adapters.
+3. Shared layer is card data templates and field mapping rules.
+4. Interactive digital runtime behavior is out of scope in V1.
+5. V1 schemas/exports must retain digital metadata for future adapters.
 
-### 7.4 Canvas and Print Constraints
-1. Each print layout template is bound to one card size profile.
-2. A game can include multiple templates/layouts with different sizes.
-3. A given template can have multiple layout versions for A/B testing.
-4. Print canvas contract includes:
-   - unit (`mm` or `in`)
-   - width/height
-   - target DPI
-   - bleed margins
-   - safe-zone margins
-   - optional trim/corner settings
-5. Export preflight blocks critical print violations.
+### 7.4 Print Canvas Rules
+Required behavior:
+1. A print layout template is bound to one card size profile.
+2. A game may contain multiple sizes via different templates.
+3. A template can have multiple layout versions for A/B testing.
+4. Print canvas configuration includes:
+- unit (`mm` or `in`)
+- width/height
+- DPI
+- bleed margins
+- safe-zone margins
+- optional trim/corner settings
+5. Export preflight must block critical print failures.
 
-### 7.5 Template Assignment and Guardrails
-1. Assignment to a game is manual.
-2. Assignment source of truth is Game Settings.
-3. Unassigning a template in use is blocked.
-4. User must choose one resolution path:
-   - bulk migrate affected cards to another template (with remap), or
-   - remove affected cards
-5. Impact dialogs must show affected-card counts before confirm.
+### 7.5 Template Assignment Guardrails
+Required behavior:
+1. Assignment is manual.
+2. Source of truth is Game Settings.
+3. Unassigning an in-use template is blocked.
+4. User must choose one resolution:
+- bulk migrate affected cards with field remap, or
+- remove affected cards
+5. Impact dialog must show affected-card counts before confirmation.
 
 ### 7.6 Card Editing and Bulk Workflows
-1. Cards are grouped by template type in-editor.
-2. V1 bulk operations:
-   - CSV import flow
-   - bulk template switch with required remapping
-3. Mixed-template bulk switch requires remap per source template group.
-4. CSV workflow requirements:
-   - export template-specific CSV template
-   - column mapping on import
-   - invalid rows skipped
-   - explicit import issues report
-5. Save behavior:
-   - autosave by default
-   - named checkpoints
-   - rollback to checkpoint
+Required behavior:
+1. Card list groups by template type.
+2. V1 bulk operations include:
+- CSV import
+- bulk template switch with required remap
+3. Mixed-template selection requires remap per source template group.
+4. CSV workflow must support:
+- template CSV export
+- column mapping at import
+- skip invalid rows
+- import issues report
+5. Save model:
+- autosave enabled
+- named checkpoints
+- rollback to checkpoint
 
-### 7.7 Rendering
-1. Rendering is deterministic.
-2. Safe mode rejects unsupported behavior explicitly.
+### 7.7 Rendering Requirements
+Required behavior:
+1. Rendering must be deterministic.
+2. Unsupported behavior must fail explicitly.
 3. V1 primitive set:
-   - text
-   - image slot
-   - icon
-   - stat value
-   - shape/container
+- text
+- image slot
+- icon
+- stat value
+- shape/container
 4. Preview/export parity is required.
-5. Layout save requires field-mapping compatibility validation.
+5. Save operation validates data-field bindings.
 
 ### 7.8 Import/Export and Portability
-1. Full game export includes:
-   - game metadata
-   - data templates used by the game
-   - layout templates used by the game
-   - deck/card data
-   - managed assets
-2. Partial exports supported:
-   - cards only
-   - templates only
-   - full game package
-3. Export source can be:
-   - current state
-   - selected named checkpoint
-4. Import conflicts fail fast and require explicit resolution.
-5. Schema versions are strict with explicit migrations.
-6. Export package remains app-consumable for round-trip handoff.
+Required behavior:
+1. Full export includes:
+- game metadata
+- data templates used by game
+- layout templates used by game
+- decks/cards
+- assets
+2. Partial exports include:
+- cards only
+- templates only
+- full game
+3. Export can target:
+- current state
+- selected named checkpoint
+4. Import conflict handling is explicit and fail-fast.
+5. Schema versioning and explicit migration are required.
+6. Export package must be app-consumable (round-trip import).
 
-### 7.9 Onboarding and UX Guidance
+### 7.9 Onboarding and Guidance
+Required behavior:
 1. First-run onboarding wizard.
 2. Starter sample game.
 3. Guided CSV walkthrough.
-4. Basic mode and advanced mode UX tiers.
-5. Actionable error messaging and recovery steps.
+4. Basic and advanced workspace modes.
+5. Actionable error messages with recovery actions.
 
-### 7.10 Data Safety and Storage
+### 7.10 Persistence and Reliability
+Required behavior:
 1. Hybrid persistence:
-   - SQLite for operational state/indexing
-   - JSON contracts for portability
-   - managed asset files
+- SQLite for operational data
+- JSON contracts for portability
+- managed assets on disk
 2. Crash-safe atomic writes.
-3. Startup migrations for schema updates.
-4. Single-writer lock per library in V1.
-5. Named checkpoints stored as full snapshots in V1.
+3. Startup migrations before write operations.
+4. Single-writer lock per library.
+5. Checkpoints stored as full snapshots in V1.
 
-## 8. V1 Out of Scope
-1. Core AI-assisted authoring workflows.
-2. Real-time multi-user editing.
-3. Shared/rental permission UX.
-4. Plugin ecosystem for custom renderer logic.
-5. Full tag management UI.
+## 8. Out of Scope (V1)
+1. Core AI-assisted authoring.
+2. Real-time collaboration editing.
+3. Shared/rental permissions UX.
+4. Renderer plugin ecosystem.
+5. Full tags feature set.
 6. Interactive digital runtime behavior.
 
-## 9. V2+ Direction
-1. Windows desktop release.
-2. Shared/rental libraries and collaboration UX.
-3. Optional bring-your-own AI integrations.
-4. Expanded rendering primitives.
-5. Deeper digital runtime adapters.
+## 9. User Stories
+1. As a game designer, I want to create a game quickly so I can test ideas immediately.
+2. As a designer, I want reusable global templates so I can keep card systems consistent.
+3. As a designer, I want visual layout editing with advanced controls so I can work quickly and precisely.
+4. As a content-heavy user, I want CSV import with mapping and error reporting so I can scale card creation.
+5. As a designer, I want safe migration flows for template changes so cards do not break.
+6. As a designer, I want autosave and checkpoints so I can experiment safely.
+7. As a designer, I want game notes/rules/assets stored together so handoff is complete.
+8. As a multi-project user, I want sorting/filtering and multiple libraries so navigation stays manageable.
+9. As a collaborator, I want portable exports with schemas so imports remain editable and reliable.
+10. As a future team user, I want data models ready for shared/rental evolution.
+11. As a designer, I want preview/export parity so I can trust outputs.
+12. As a designer, I want recycle-bin recovery so mistakes are reversible.
+13. As a cost-conscious user, I want optional BYO AI later so AI is assistive, not required.
+14. As a print-focused designer, I want real print constraints so exported layouts hold up physically.
+15. As a cross-target designer, I want shared data with separate print/digital layout experiences.
 
-## 10. User Stories
-1. As a game designer, I want to create a game quickly so I can start testing ideas immediately.
-2. As a designer, I want reusable global templates so I can maintain consistent card systems.
-3. As a designer, I want visual layout editing plus advanced controls so I can work fast and still fine-tune.
-4. As a content-heavy creator, I want CSV import with mapping and error reporting so I can build large sets efficiently.
-5. As a designer, I want safe migration flows for template changes so I do not break existing cards.
-6. As a designer, I want autosave and named checkpoints so I can experiment without losing work.
-7. As a designer, I want game metadata and assets stored with the game so handoff/playtest context stays complete.
-8. As a multi-project user, I want sorting/filtering and multiple libraries so I can manage scale.
-9. As a collaborator, I want portable exports with schema-backed templates so imported projects stay editable and reliable.
-10. As a future team user, I want a model that can evolve to shared/rental libraries without breaking old data.
-11. As a designer, I want preview/export parity so I can trust what I am validating.
-12. As a designer, I want recycle-bin recovery so accidental deletes are reversible.
-13. As a cost-conscious user, I want optional BYO AI in the future so AI is helpful, not mandatory.
-14. As a print-focused designer, I want card-size and bleed-safe canvas rules so outputs are physically reliable.
-15. As a cross-target designer, I want shared card data with separate print/digital layouts so each medium can be optimized.
+## 10. Core User Flows
 
-## 11. Core User Flows
-
-### Flow A: First Run to First Playtest Deck
+### Flow A: First Run to First Deck
 1. Launch app and complete onboarding.
 2. Create game.
 3. Assign templates in Game Settings.
 4. Add cards manually or via CSV.
-5. Preview and export for playtest.
+5. Preview cards and export for playtest.
 
-### Flow B: CSV-Driven Deck Build
-1. Export template-specific CSV file.
-2. Fill rows externally.
-3. Import and map columns to fields.
-4. Create valid cards; skip invalid rows.
-5. Review import issues report and retry.
+### Flow B: CSV Deck Creation
+1. Export template-specific CSV.
+2. Fill rows in spreadsheet tool.
+3. Import and map columns.
+4. Import valid rows and skip invalid rows.
+5. Review issues report and retry.
 
 ### Flow C: Safe Template Evolution
-1. Edit template used by existing cards.
+1. Edit template in use.
 2. Review impact summary.
 3. Choose global update or fork/version path.
-4. Complete required remapping.
-5. Validate and apply changes.
+4. Complete remapping.
+5. Validate and apply.
 
 ### Flow D: Portable Handoff
 1. Choose current state or named checkpoint.
-2. Export package with metadata, templates, decks/cards, and assets.
+2. Export package.
 3. Recipient imports package.
-4. App validates schema/version/conflicts before finalize.
+4. App validates version/schema/conflicts before finalize.
 
-## 12. Acceptance Criteria
-1. End-to-end flow succeeds: create game, assign templates, import cards, preview, export.
-2. Template changes that affect cards always require explicit migration/remap path.
-3. Unsupported rendering rules fail explicitly.
-4. Preview output matches export output for V1 primitives.
-5. Import never silently overwrites conflicts.
-6. Export/import round-trip preserves data, templates, and assets.
+## 11. Implementation Notes (Beginner-Friendly)
+This section translates requirements into concrete implementation expectations.
+
+1. Implement contracts first.
+- Build and validate JSON schemas before feature screens.
+- Reject invalid data at boundaries (save/import/export).
+
+2. Build with strict feature boundaries.
+- Start with Games, Templates, Cards, Import/Export modules.
+- Keep each module independently testable.
+
+3. Treat state changes as workflows.
+- Use state machines for high-risk flows (CSV import, template remap, export, unassignment).
+- Avoid hidden side effects in UI components.
+
+4. Keep renderer deterministic.
+- Use one rendering pipeline for preview and export.
+- Do not maintain separate visual logic branches.
+
+5. Design errors for user recovery.
+- Every blocking error should suggest the next action.
+- Never silently drop conflicting data.
+
+6. Implement reliability early.
+- Add atomic writes and library locking before broad feature expansion.
+- Ensure restart safety and migration checks at startup.
+
+## 12. Suggested Build Plan
+1. Foundation
+- Project scaffolding, IPC contracts, schema package.
+
+2. Data Layer
+- SQLite model, migration framework, asset storage paths, locking.
+
+3. Games and Templates
+- Games workspace and settings.
+- Data template + layout template CRUD.
+
+4. Cards and CSV
+- Card editor, grouping by template, CSV import/export pipeline.
+
+5. Layout Designer MVP
+- Grid, print guides, draw containers, field binding, validation.
+
+6. Rendering and Export
+- Deterministic renderer, preview/export parity, export package pipeline.
+
+7. Reliability and Onboarding
+- Checkpoints, recycle bin, onboarding wizard, actionable error UX.
+
+## 13. Acceptance Criteria
+1. End-to-end flow works: create game, assign templates, import cards, preview, export.
+2. Template changes affecting cards always trigger explicit remap/migration.
+3. Unsupported rendering behavior fails explicitly.
+4. Preview output equals export output for V1 primitives.
+5. Import conflicts never overwrite silently.
+6. Export/import round-trip preserves templates, cards, metadata, and assets.
 7. Print preflight catches critical bleed/safe-zone/DPI failures.
-8. New users can produce a basic playable deck in approximately 30 minutes.
+8. New user can reach a basic playtest deck in about 30 minutes.
 
-## 13. Delivery Notes
-1. This PRD defines product behavior and contracts for a fresh implementation.
-2. Existing repository code is not required to satisfy this document.
-3. Any implementation may change internals as long as these behaviors and contracts are met.
-4. Companion implementation artifacts:
-   - `architecture-blueprint.md`
-   - `layout-designer-architecture.md`
-   - `../schemas/v1/`
+## 14. Risks and Mitigations
+1. Schema drift across features.
+- Mitigation: central contracts package and CI schema validation.
+
+2. Rendering mismatch between preview/export.
+- Mitigation: single render path and parity snapshot tests.
+
+3. Complex migration flows.
+- Mitigation: explicit workflow states and impact previews.
+
+4. Data corruption risk in desktop filesystem workflows.
+- Mitigation: atomic writes, locking, startup integrity checks.
+
+## 15. Appendices
+These are supporting deep-dive documents. This PRD remains the source of truth.
+
+### Appendix A: Architecture Blueprint
+- File: `appendix-a-architecture-blueprint.md`
+- Purpose: system structure, module boundaries, persistence and testing architecture.
+
+### Appendix B: Layout Designer Architecture
+- File: `appendix-b-layout-designer-architecture.md`
+- Purpose: canvas subsystem design, library choices, layer model, state model, and validation pipeline.
