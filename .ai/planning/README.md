@@ -3,6 +3,7 @@
 These files capture discovery and decision process history.
 
 Contents:
+
 1. `PRD-restart.md`
 2. `current-features-state.md`
 3. `decisions.md`

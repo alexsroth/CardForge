@@ -1,9 +1,7 @@
 
-
 # 🎴 CardForge – Rapid Card-Game Prototyping
 
 *Forge digital card games at lightning speed.*
-
 
 CardForge turns your ideas (and spreadsheets) into playable prototypes without breaking a sweat. Define your data, design gorgeous cards, and iterate live — all right in your browser.
 
@@ -20,17 +18,22 @@ I built it to slash the grunt work, so anyone with a spark of an idea can print 
 - **Made by a fellow card‑game tinkerer** — forged from my own prototype pains, so you skip the headaches.
 
 ## 🚀 Quick Start
+
 1. **Clone & Install**  
+
    ```bash
    git clone https://github.com/your-org/cardforge.git
    cd cardforge
    npm install
    ```
+
 2. **Run**  
+
    ```bash
    npm run dev
    # open http://localhost:3000
    ```
+
 3. **Follow the in‑app tour** — the *Getting Started* page builds your first deck in five minutes flat.
 
 ## 🛠️ Core Workflow
@@ -46,29 +49,34 @@ Here’s the exact loop I follow whenever a new concept grabs me—steal it and 
 4. **Share or Export**  
    Export your deck as JSON or CSV for play‑testing, printing, or feeding into your engine.
 
-*(Deck grid view is currently getting a makeover — stay tuned!)*
+Deck grid view is currently getting a makeover and will return soon.
 
 ## 🧩 Feature Deep Dive
 
 ### Project Dashboard
+
 - Snapshot of every prototype with editable thumbnails.
 - Archive or delete experiments you’ve outgrown.
 
 ### Template Library & Designer
+
 - Global template bank with cross‑project reuse.
 - Dual‑mode builder: friendly GUI or raw JSON.
 - Placeholder image generator for speedy mocks.
 - Pixel‑perfect preview with optional grid overlay.
 
 ### Live Card Editor
+
 - Accordion list of cards grouped by template.
 - Real‑time rendered preview via `DynamicCardRenderer`.
 
 ### Data Import / Export
+
 - Drop in JSON or CSV to bulk‑create cards.
 - Download your deck anytime — perfect for version control.
 
 ### Persistence
+
 Everything is stored in **localStorage**, so your work stays put between sessions.
 
 ## ⚙️ Tech Stack
@@ -83,7 +91,7 @@ Everything is stored in **localStorage**, so your work stays put between session
 
 ## 📂 Project Blueprint
 
-```
+```text
 src/
  ├─ app/                       # Pages & routes
  │   ├─ page.tsx                       – dashboard
@@ -106,6 +114,7 @@ CardForge doubles as my personal sandbox for levelling up as a product‑and‑U
 If something feels clunky, open an issue or tweet at me—I’m probably already scheming a fix during a late‑night prototyping sprint.
 
 ## 🌱 Roadmap
+
 - [ ] Cloud sync (Firebase or Supabase)  
 - [ ] Advanced deck validation  
 - [ ] AI image & effect generation  

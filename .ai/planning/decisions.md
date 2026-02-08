@@ -1,11 +1,13 @@
 # CardForge Rebuild Decision Log (Detailed)
 
 ## Purpose
+
 This file records product decisions with context, alternatives, chosen direction, and rationale.
 It is meant to guide rebuild planning, not to document implementation details.
 Decisions should optimize for user outcomes first, then technical convenience.
 
 ## Legend
+
 - `Current behavior`: what the previous app attempted/did from the audit.
 - `Options considered`: options discussed during review.
 - `Decision`: selected direction.
@@ -15,13 +17,16 @@ Decisions should optimize for user outcomes first, then technical convenience.
 - `Release target`: intended phase (`V1`, `V2`, or later).
 
 ## Decision Rule (User-First)
+
 Before finalizing any new decision:
+
 1. Identify the primary user story it supports.
 2. State expected positive user impact (speed, clarity, safety, flexibility).
 3. Reject options that mainly optimize implementation but harm usability.
 4. If no existing story maps cleanly, create or refine a user story in `.ai/user-stories.md` before locking the decision.
 
 ## Story Mapping Status
+
 - Existing decisions D-001 to D-023 were made before story IDs were formalized.
 - Going forward, every new decision should include `User story reference(s)`.
 - If story coverage is missing, decision status should be `Draft` until a matching story is added.
@@ -29,6 +34,7 @@ Before finalizing any new decision:
 ---
 
 ## D-001: Rename "Projects" to "Games"
+
 - Date: 2026-02-08
 - Current behavior:
   - The app used the term `Project` for game/deck containers.
@@ -45,6 +51,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-002: Games Home Should Be Rich (Not Minimal)
+
 - Date: 2026-02-08
 - Current behavior:
   - Dashboard existed with project cards and basic actions.
@@ -61,6 +68,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-003: Recycle Bin as Default Deletion Pattern
+
 - Date: 2026-02-08
 - Current behavior:
   - Hard-delete oriented flows were present.
@@ -77,6 +85,7 @@ Before finalizing any new decision:
   - V1 baseline pattern
 
 ## D-004: Expand Game Metadata and Local Asset Ownership
+
 - Date: 2026-02-08
 - Current behavior:
   - Game metadata existed but was shallow.
@@ -95,6 +104,7 @@ Before finalizing any new decision:
   - V1 core model
 
 ## D-005: Multi-Library Architecture
+
 - Date: 2026-02-08
 - Current behavior:
   - Single local data store model.
@@ -111,6 +121,7 @@ Before finalizing any new decision:
   - V1 architecture, V2+ collaboration UX
 
 ## D-006: Templates Are Global
+
 - Date: 2026-02-08
 - Current behavior:
   - Templates were treated as globally managed and assigned to projects.
@@ -127,6 +138,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-007: Template Usage Visibility Across Games
+
 - Date: 2026-02-08
 - Current behavior:
   - Some visibility existed, but not formalized as decision criteria.
@@ -143,6 +155,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-008: Dual Editing Modes for Templates (Visual + JSON)
+
 - Date: 2026-02-08
 - Current behavior:
   - Visual builder and JSON editing both existed.
@@ -160,6 +173,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-009: Evolve Visual Editor to Drag-and-Drop + Snap Grid
+
 - Date: 2026-02-08
 - Current behavior:
   - Visual editing existed but felt more like guarded form editing of JSON.
@@ -176,6 +190,7 @@ Before finalizing any new decision:
   - V1 direction, polish can continue post-V1
 
 ## D-010: Template Evolution Supports Global Update or Fork/Version
+
 - Date: 2026-02-08
 - Current behavior:
   - Updating templates risks broad downstream impact.
@@ -193,6 +208,7 @@ Before finalizing any new decision:
   - V1 capability
 
 ## D-011: Mandatory Data Remap When Template Shape Changes
+
 - Date: 2026-02-08
 - Current behavior:
   - Template changes could leave mismatched card fields.
@@ -210,6 +226,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-012: Template Asset Slots, Not High-Fidelity Asset Preview for V1
+
 - Date: 2026-02-08
 - Current behavior:
   - Layouts included image/placeholder concepts.
@@ -226,6 +243,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-013: Template-to-Game Assignment Is Manual
+
 - Date: 2026-02-08
 - Current behavior:
   - Template assignment controls existed and were explicit.
@@ -242,6 +260,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-014: Unassign Guardrail for In-Use Templates
+
 - Date: 2026-02-08
 - Current behavior:
   - Assignment/removal pathways could create dangling references.
@@ -261,6 +280,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-015: Assignment Management Owned by Game Settings
+
 - Date: 2026-02-08
 - Current behavior:
   - Assignment operations existed in library context.
@@ -278,6 +298,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-016: Impact Dialogs Required for Risky Assignment Changes
+
 - Date: 2026-02-08
 - Current behavior:
   - Limited impact preview in destructive flows.
@@ -294,6 +315,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-017: CSV Round-Trip as Core Workflow
+
 - Date: 2026-02-08
 - Current behavior:
   - Import/export existed, but CSV handling was simplistic.
@@ -313,6 +335,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-018: CSV Import Must Include Mapping and Error Reporting
+
 - Date: 2026-02-08
 - Current behavior:
   - Naive parse behavior and limited reporting.
@@ -333,6 +356,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-019: V1 Bulk Actions Scope
+
 - Date: 2026-02-08
 - Current behavior:
   - Bulk capabilities were limited.
@@ -349,6 +373,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-020: Bulk Template Switching Is Allowed With Grouped Remap
+
 - Date: 2026-02-08
 - Current behavior:
   - Template changes were possible per card but not formalized for mixed-source bulk sets.
@@ -367,6 +392,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-021: Formal JSON Schemas for Core Data Structures
+
 - Date: 2026-02-08
 - Current behavior:
   - Types existed, but schema governance was not formalized.
@@ -383,6 +409,7 @@ Before finalizing any new decision:
   - V1 architecture requirement
 
 ## D-022: Card Organization in Editor
+
 - Date: 2026-02-08
 - Current behavior:
   - Cards were grouped by template in editor flows.
@@ -401,6 +428,7 @@ Before finalizing any new decision:
   - V1 grouping, V2+ tags
 
 ## D-023: Save Strategy = Autosave + Named Checkpoints
+
 - Date: 2026-02-08
 - Current behavior:
   - Autosave-oriented behavior existed.
@@ -418,6 +446,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-024: V1 Renderer Prioritizes Deterministic Consistency
+
 - Date: 2026-02-08
 - Current behavior:
   - Rendering supported dynamic layouts but could be affected by broad style/input variation.
@@ -436,6 +465,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-025: Safe Rendering Mode Required in V1
+
 - Date: 2026-02-08
 - Current behavior:
   - Unsupported rules could be handled inconsistently depending on renderer behavior.
@@ -454,6 +484,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-026: V1 Renderer Primitive Set Is Minimal
+
 - Date: 2026-02-08
 - Current behavior:
   - Template layouts used common primitives with room for expansion.
@@ -477,6 +508,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-027: Editor Preview and Export Render Must Match in V1
+
 - Date: 2026-02-08
 - Current behavior:
   - Preview and output fidelity could diverge depending on rendering path.
@@ -495,6 +527,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-028: Full Game Export Is Multi-Part and Portable
+
 - Date: 2026-02-08
 - Current behavior:
   - Export/import existed, but full-game portability contract was not finalized.
@@ -517,6 +550,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-029: Export Packaging Includes Asset Files (Not References Only)
+
 - Date: 2026-02-08
 - Current behavior:
   - Asset handling for portable exports was not locked.
@@ -536,6 +570,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-030: Import ID Conflicts Are Fail-Fast and Explicit
+
 - Date: 2026-02-08
 - Current behavior:
   - Conflict behavior on import was not standardized.
@@ -555,6 +590,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-031: Export Scope Supports Current State or Named Save State
+
 - Date: 2026-02-08
 - Current behavior:
   - Save/checkpoint behavior existed, but export-state selection was not formalized.
@@ -575,6 +611,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-032: Collaboration Metadata Groundwork Starts in V1
+
 - Date: 2026-02-08
 - Current behavior:
   - Collaboration model was future-facing but not yet encoded in export contracts.
@@ -593,6 +630,7 @@ Before finalizing any new decision:
   - V1 architecture groundwork
 
 ## D-033: Schema-Versioning Strategy for Import/Export Is Pending
+
 - Date: 2026-02-08
 - Current behavior:
   - No final decision yet between strict migration-first vs tolerant parsing.
@@ -611,6 +649,7 @@ Before finalizing any new decision:
   - V1 (must be finalized before implementation)
 
 ## D-034: Persistence Model Is Hybrid (SQLite + Portable JSON + Asset Files)
+
 - Date: 2026-02-08
 - Current behavior:
   - Prior app was local-storage centered and lacked a formal desktop persistence contract.
@@ -633,6 +672,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-035: Multiple Selectable Libraries
+
 - Date: 2026-02-08
 - Current behavior:
   - Single-library assumptions were common in the legacy app.
@@ -651,6 +691,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-036: Crash-Safe Atomic Write Strategy
+
 - Date: 2026-02-08
 - Current behavior:
   - Previous architecture did not define a strong crash-safe write contract.
@@ -669,6 +710,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-037: Checkpoints Stored as Full Snapshots
+
 - Date: 2026-02-08
 - Current behavior:
   - Checkpoint model existed conceptually but storage strategy was not formalized.
@@ -687,6 +729,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-038: Managed Asset Copy Strategy
+
 - Date: 2026-02-08
 - Current behavior:
   - Legacy approach included placeholders and non-portable asset pathways.
@@ -705,6 +748,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-039: Startup Auto-Migration for Schema Changes
+
 - Date: 2026-02-08
 - Current behavior:
   - Migration timing strategy was not finalized.
@@ -723,6 +767,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-040: Single-Writer Lock Per Library
+
 - Date: 2026-02-08
 - Current behavior:
   - Concurrency behavior was not formalized for desktop filesystem workflows.
@@ -741,6 +786,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-041: V1 Onboarding Uses Interactive Step-by-Step Wizard
+
 - Date: 2026-02-08
 - Current behavior:
   - Legacy onboarding was documentation-oriented and less flow-driven.
@@ -760,6 +806,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-042: Include a Starter Sample Game on First Run
+
 - Date: 2026-02-08
 - Current behavior:
   - Starting state could be sparse and require users to discover workflow manually.
@@ -779,6 +826,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-043: CSV Onboarding Includes Guided Mini-Flow
+
 - Date: 2026-02-08
 - Current behavior:
   - CSV was available but onboarding depth was limited.
@@ -801,6 +849,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-044: Track Onboarding Progress and Allow Reset
+
 - Date: 2026-02-08
 - Current behavior:
   - Onboarding progress state was not a formal product contract.
@@ -820,6 +869,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-045: Basic and Advanced Workspace Modes
+
 - Date: 2026-02-08
 - Current behavior:
   - Advanced capabilities existed but discoverability and cognitive load needed clearer structure.
@@ -839,6 +889,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-046: Actionable Errors With Fix Guidance
+
 - Date: 2026-02-08
 - Current behavior:
   - Error messages could be technical and not always recovery-oriented.
@@ -858,6 +909,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-047: No Core AI Features in V1 Product Scope
+
 - Date: 2026-02-08
 - Current behavior:
   - Legacy app included an AI name-generation path.
@@ -876,6 +928,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-048: Future AI Model Is BYO Provider (No Platform-Funded Usage)
+
 - Date: 2026-02-08
 - Current behavior:
   - AI provider/cost ownership model was not formalized.
@@ -894,6 +947,7 @@ Before finalizing any new decision:
   - V2+
 
 ## D-049: AI Features Must Degrade Gracefully Offline
+
 - Date: 2026-02-08
 - Current behavior:
   - AI was optional but offline behavior contract was not explicit.
@@ -912,6 +966,7 @@ Before finalizing any new decision:
   - V2+ behavior contract
 
 ## D-050: Future AI Feature Candidates Prioritized for Exploration
+
 - Date: 2026-02-08
 - Current behavior:
   - Legacy AI focus was mainly card-name generation.
@@ -933,6 +988,7 @@ Before finalizing any new decision:
   - V2+ exploration backlog
 
 ## D-051: Do Not Persist AI Prompt Payloads by Default
+
 - Date: 2026-02-08
 - Current behavior:
   - Prompt/result persistence policy was unspecified.
@@ -951,6 +1007,7 @@ Before finalizing any new decision:
   - V2+ behavior contract
 
 ## D-052: Layout Designer Uses Container-First Authoring With Group-Only Layout Container
+
 - Date: 2026-02-08
 - Current behavior:
   - Template layout behavior supported element placement, but authoring sequence was not explicitly locked as container-first.
@@ -979,6 +1036,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-053: Template Canvas Designer With Single Size per Template in V1
+
 - Date: 2026-02-08
 - Current behavior:
   - Template layouts supported size-like properties but real print-oriented size governance was not a locked product rule.
@@ -999,6 +1057,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-054: Same-Size Layout Versioning in V1; Multi-Size Layout Sets Considered for V2
+
 - Date: 2026-02-08
 - Current behavior:
   - Layout variation behavior was not formally separated between same-size A/B testing and multi-size targeting.
@@ -1019,6 +1078,7 @@ Before finalizing any new decision:
   - V1 (same-size versions), V2+ (multi-size layout sets)
 
 ## D-055: Print Geometry and Preflight Are Mandatory in V1 Canvas Contracts
+
 - Date: 2026-02-08
 - Current behavior:
   - Layout authoring captured size intent, but explicit print production constraints were not mandatory in contract and export checks.
@@ -1044,6 +1104,7 @@ Before finalizing any new decision:
   - V1
 
 ## D-056: V1 Is Print-First With Digital-Ready Non-Interactive Exports
+
 - Date: 2026-02-08
 - Current behavior:
   - Product direction included both print and future digital needs, but explicit V1 boundary was not captured as a single rule.
@@ -1066,6 +1127,7 @@ Before finalizing any new decision:
   - V1 (groundwork), V2+ (interactive runtime features)
 
 ## D-057: Split Template Model Into Data Template and Target-Specific Layout Templates
+
 - Date: 2026-02-08
 - Current behavior:
   - Earlier direction treated template definition and layout concerns as closely bundled, with print-primary assumptions.
@@ -1088,6 +1150,7 @@ Before finalizing any new decision:
   - V1 architecture contract
 
 ## D-058: Component Builder Is a First-Class Layout Capability
+
 - Date: 2026-02-08
 - Current behavior:
   - Layout authoring supported container composition but reusable component contracts were not explicit.
@@ -1108,4 +1171,5 @@ Before finalizing any new decision:
 ---
 
 ## Open Items (Pending Decision)
+
 - None (feature review complete; next phase is scope synthesis + stack selection)
