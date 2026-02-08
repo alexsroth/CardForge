@@ -316,3 +316,10 @@ Result:
 3. Preview/export parity validated in automated tests.
 4. Full game package round-trip passes with assets/checkpoints.
 5. Crash-safe write and lock behavior verified in integration tests.
+
+## 15. Companion Design Spec
+Use `layout-designer-architecture.md` as the implementation-level specification for the canvas editor subsystem, including:
+1. selected library stack (`react-konva` + `konva`)
+2. layer/component model
+3. state interfaces and command history
+4. validation and print-guide behavior
