@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cardforge.app/schemas/v1/modules/print.geometry.schema.json",
+  "title": "Print Geometry Extension",
+  "description": "Print-focused geometry and quality constraints.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "sizeProfile",
+    "printGeometry",
+    "minimumImageDpi",
+    "output"
+  ],
+  "properties": {
+    "sizeProfile": {
+      "$ref": "#/$defs/SizeProfile"
+    },
+    "printGeometry": {
+      "$ref": "#/$defs/PrintGeometry"
+    },
+    "minimumImageDpi": {
+      "type": "integer",
+      "minimum": 72,
+      "default": 300
+    },
+    "output": {
+      "$ref": "#/$defs/OutputSettings"
+    }
+  },
+  "$defs": {
+    "Length": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "Insets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "top",
+        "right",
+        "bottom",
+        "left"
+      ],
+      "properties": {
+        "top": {
+          "$ref": "#/$defs/Length"
+        },
+        "right": {
+          "$ref": "#/$defs/Length"
+        },
+        "bottom": {
+          "$ref": "#/$defs/Length"
+        },
+        "left": {
+          "$ref": "#/$defs/Length"
+        }
+      }
+    },
+    "SizeProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profileId",
+        "unit",
+        "width",
+        "height",
+        "dpi"
+      ],
+      "properties": {
+        "profileId": {
+          "type": "string",
+          "enum": [
+            "poker",
+            "bridge",
+            "tarot",
+            "mini",
+            "custom"
+          ]
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "mm",
+            "in"
+          ]
+        },
+        "width": {
+          "$ref": "#/$defs/Length"
+        },
+        "height": {
+          "$ref": "#/$defs/Length"
+        },
+        "dpi": {
+          "type": "integer",
+          "minimum": 72
+        },
+        "cornerRadius": {
+          "$ref": "#/$defs/Length"
+        }
+      }
+    },
+    "PrintGeometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bleed",
+        "safeZone"
+      ],
+      "properties": {
+        "bleed": {
+          "$ref": "#/$defs/Insets"
+        },
+        "safeZone": {
+          "$ref": "#/$defs/Insets"
+        },
+        "trimLineInset": {
+          "$ref": "#/$defs/Insets"
+        }
+      }
+    },
+    "OutputSettings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "colorProfile",
+        "includeBleed"
+      ],
+      "properties": {
+        "colorProfile": {
+          "type": "string",
+          "enum": [
+            "srgb",
+            "cmyk"
+          ],
+          "default": "srgb"
+        },
+        "includeBleed": {
+          "type": "boolean",
+          "default": true
+        },
+        "cropMarks": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  }
+}

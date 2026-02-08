@@ -12,6 +12,7 @@ V2 expands to Windows and deeper collaboration capabilities.
 3. Make template evolution safe for existing card data.
 4. Guarantee predictable rendering and export behavior.
 5. Provide portable game packages that can be imported and edited by others.
+6. Enable an inexperienced user to reach a viable playtest deck in ~30 minutes with guided flow.
 
 ## 3. Target Users
 1. Solo game designers iterating on mechanics quickly.
@@ -23,6 +24,7 @@ V2 expands to Windows and deeper collaboration capabilities.
 2. Target OS: macOS.
 3. Data model must be forward-compatible with Windows support and collaboration workflows.
 4. AI is not part of core V1 functionality.
+5. V1 is print-first, but data/layout contracts must be digital-ready without requiring separate authoring modes.
 
 ## 5. Product Principles
 1. Trustworthy behavior over maximum flexibility.
@@ -43,13 +45,45 @@ V2 expands to Windows and deeper collaboration capabilities.
 ### 6.2 Global Template System
 1. Templates are globally reusable across games.
 2. Show where each template is used.
-3. Provide dual editing modes:
-   - visual template editor
-   - JSON editor for advanced control
-4. Support template evolution:
+3. Separate template concerns into two linked artifacts:
+   - **Card Data Template** (what data a card holds)
+   - **Layout Template** (how data is visually presented)
+4. Card Data Template designer defines field schema and types:
+   - category (with stable option IDs)
+   - single line text
+   - area text
+   - image (with image dimension guidance)
+   - number
+   - icon (including optional category mapping)
+5. Layout Template designer maps data fields to visual containers.
+6. Support target-specific layout experiences:
+   - print layout templates
+   - digital layout templates (separate experience; V2+ runtime depth)
+7. Layout designer uses container-first authoring:
+   - user places/draws containers first
+   - user maps defined data fields to containers second
+8. V1 container types:
+   - single line text
+   - text with icon
+   - area text
+   - image
+   - layout (group/frame only)
+   - decoration (borders/boxes/outlines)
+9. Include a component builder/library for reusable layout starting blocks.
+10. Support template evolution:
    - update globally, or
    - fork/version for game-specific divergence
-5. Require guided remapping when template/schema changes impact existing cards.
+11. Require guided remapping when data template/schema changes impact existing cards.
+12. In V1 print layout templates, each layout is bound to a single card size profile.
+13. V1 supports multiple layout versions for that single size (A/B layout testing).
+14. A game may include multiple templates/layouts of different sizes.
+15. Print canvas contract must include geometry inputs:
+   - physical unit (`mm` or `in`)
+   - width/height
+   - DPI target
+   - bleed margins
+   - safe-zone margins
+   - optional trim/corner settings
 
 ### 6.3 Template Assignment to Games
 1. Template assignment is manual.
@@ -85,6 +119,9 @@ V2 expands to Windows and deeper collaboration capabilities.
    - stat value
    - shape/container
 4. Preview/export parity is required: rendered preview must match exported visual output.
+5. Container-first layout contracts must validate field mapping compatibility before save.
+6. Rendering contracts must enforce data-template to layout-template compatibility.
+7. Print layout contracts must enforce size consistency (no mixed-size print layout binding in one print layout template).
 
 ### 6.6 Import/Export and Portability
 1. CSV is a core authoring workflow:
@@ -94,7 +131,8 @@ V2 expands to Windows and deeper collaboration capabilities.
    - produce “cards with issues importing” report
 2. Full game export must include:
    - game metadata
-   - templates used by the game
+   - card data templates used by the game
+   - layout templates used by the game
    - card/deck data
 3. Support partial exports:
    - cards only
@@ -107,6 +145,17 @@ V2 expands to Windows and deeper collaboration capabilities.
    - selected named checkpoint
 7. Use strict schema versioning with explicit migrations for compatibility.
 8. Include collaboration-ready metadata groundwork in export/import contracts.
+9. Export preflight must validate print-readiness and flag:
+   - text/content outside safe zone
+   - assets below minimum DPI
+   - unsupported rules for selected output profile
+10. V1 export contracts must preserve digital-target metadata for future adapters, even when using print-first workflows.
+
+### 6.9 Digital-Ready Baseline (V1)
+1. Users author card data and layouts in a single flow (no print vs digital mode switch).
+2. V1 supports separate digital layout contracts and metadata in schemas/exports.
+3. V1 does not include interactive digital runtime features (animations/stateful behaviors).
+4. V1 may include basic digital-oriented export adapters where they do not introduce runtime behavior complexity.
 
 ### 6.7 Onboarding and Guidance
 1. Provide interactive first-run onboarding wizard.
@@ -132,6 +181,8 @@ V2 expands to Windows and deeper collaboration capabilities.
 3. Shared/rental library permissions UX.
 4. Extended renderer plugin ecosystem.
 5. Full tag management feature set.
+6. Multi-size layout-set management inside a single template.
+7. Interactive digital runtime behavior (state-driven animations/triggers/effects).
 
 ## 8. V2+ Direction
 1. Windows release and distribution.
@@ -139,6 +190,8 @@ V2 expands to Windows and deeper collaboration capabilities.
 3. Optional bring-your-own AI provider integrations.
 4. Expanded rendering primitives and advanced layout capabilities.
 5. Advanced library-scale tagging/search systems.
+6. Optional multi-size layout sets within a single template, with strict per-layout size binding.
+7. Interactive digital runtime adapters and target-specific digital pipelines.
 
 ## 9. User Stories
 
@@ -167,7 +220,7 @@ As a game designer, I want game metadata, notes, rules, and assets stored with t
 As a multi-project designer, I want sort/filter and multiple libraries, so I can manage many games without navigation overhead.
 
 ### US-09 Export Portable Game Packages
-As a collaborator, I want exported games to include their template schemas, so others can open/edit the game reliably in another workspace.
+As a collaborator, I want exported games to include their data template and layout template schemas, so others can open/edit the game reliably in another workspace.
 
 ### US-10 Collaborate Later Without Rework
 As a future team user, I want data models that can support shared/rental libraries, so collaboration can be added without breaking existing data.
@@ -180,6 +233,12 @@ As a designer, I want recycle-bin style recovery instead of immediate destructiv
 
 ### US-13 Optional BYO AI Assistance
 As a cost-conscious designer, I want optional bring-your-own AI integrations for assistive workflows, so I can use AI help without platform lock-in or mandatory usage costs.
+
+### US-14 Print-Accurate Template Design
+As a designer preparing physical prototypes, I want layout canvas sizing to match real print card dimensions, so layout decisions hold up when exported or printed.
+
+### US-15 One Authoring Flow for Print and Digital
+As a designer, I want to author card data once without choosing a separate print vs digital mode, so I can reuse the same card data across output targets while keeping layout experiences separate.
 
 ## 10. Core User Flows
 
@@ -223,6 +282,8 @@ As a cost-conscious designer, I want optional bring-your-own AI integrations for
 4. Import conflicts never overwrite silently; resolution is explicit.
 5. Crash/restart does not corrupt persisted game data under normal usage.
 6. Assets in exported package remain valid after import on another machine.
+7. Canvas preflight catches unsafe print layouts before export.
+8. A first-time user can complete guided onboarding and produce a basic playtest deck within 30 minutes.
 
 ## 12. Risks and Mitigations
 1. Hybrid storage complexity:

@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "1.0.0",
+  "libraryId": "lib-main",
+  "gameId": "game-neon-arena",
+  "name": "Neon Arena",
+  "description": "Fast iteration prototype for playtesting.",
+  "status": "active",
+  "metadata": {
+    "rules": "Each player draws 5 cards and takes alternating turns.",
+    "playtestNotes": "Focus this session on pacing and card clarity.",
+    "playtestTemplates": [
+      {
+        "templateId": "pt-core-loop",
+        "name": "Core Loop Check",
+        "prompt": "Rate clarity of card effects from 1 to 5."
+      }
+    ],
+    "referenceImageAssetIds": [
+      "asset-board-01"
+    ],
+    "tags": [
+      "prototype",
+      "sci-fi"
+    ]
+  },
+  "settings": {
+    "assignedDataTemplateIds": [
+      "dt-unit",
+      "dt-spell"
+    ],
+    "assignedLayoutTemplateIds": [
+      "lt-print-unit-a",
+      "lt-print-spell-a"
+    ],
+    "defaultDeckId": "deck-core-set",
+    "defaultExportTarget": "print"
+  },
+  "assetIndex": [
+    {
+      "assetId": "asset-board-01",
+      "kind": "image",
+      "path": "assets/images/board-reference.png",
+      "contentType": "image/png",
+      "sizeBytes": 248112
+    }
+  ],
+  "deckRefs": [
+    {
+      "deckId": "deck-core-set",
+      "name": "Core Set",
+      "cardCount": 120,
+      "default": true
+    }
+  ],
+  "createdAt": "2026-02-08T18:00:00Z",
+  "updatedAt": "2026-02-08T18:00:00Z"
+}

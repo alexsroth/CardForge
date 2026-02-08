@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cardforge.app/schemas/v1/modules/layout.print.schema.json",
+  "title": "Print Layout Template",
+  "description": "Print layout template: shared layout core + mandatory print canvas constraints.",
+  "allOf": [
+    {
+      "$ref": "https://cardforge.app/schemas/v1/core/layout-template-core.schema.json"
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "canvas"
+      ],
+      "properties": {
+        "target": {
+          "const": "print"
+        },
+        "canvas": {
+          "$ref": "https://cardforge.app/schemas/v1/modules/print.geometry.schema.json"
+        }
+      }
+    }
+  ]
+}

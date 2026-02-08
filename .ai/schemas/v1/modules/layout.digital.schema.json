@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cardforge.app/schemas/v1/modules/layout.digital.schema.json",
+  "title": "Digital Layout Template",
+  "description": "Digital layout template: shared layout core + digital canvas/runtime metadata.",
+  "allOf": [
+    {
+      "$ref": "https://cardforge.app/schemas/v1/core/layout-template-core.schema.json"
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "canvas"
+      ],
+      "properties": {
+        "target": {
+          "const": "digital"
+        },
+        "canvas": {
+          "$ref": "https://cardforge.app/schemas/v1/modules/digital.runtime.schema.json"
+        }
+      }
+    }
+  ]
+}

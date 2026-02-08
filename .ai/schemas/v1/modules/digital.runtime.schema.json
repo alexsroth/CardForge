@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cardforge.app/schemas/v1/modules/digital.runtime.schema.json",
+  "title": "Digital Runtime Extension",
+  "description": "Optional digital runtime metadata for future adapters and engines.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "renderProfile",
+    "logicalResolution"
+  ],
+  "properties": {
+    "renderProfile": {
+      "type": "string",
+      "enum": [
+        "digital.default",
+        "digital.tts",
+        "digital.custom"
+      ]
+    },
+    "logicalResolution": {
+      "$ref": "#/$defs/Resolution"
+    },
+    "interaction": {
+      "$ref": "#/$defs/InteractionHints"
+    },
+    "stateBindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/StateBinding"
+      }
+    }
+  },
+  "$defs": {
+    "Resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "width",
+        "height"
+      ],
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "InteractionHints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hoverEnabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "tooltipFieldKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clickActionId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "StateBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "elementId",
+        "stateKey",
+        "behavior"
+      ],
+      "properties": {
+        "elementId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stateKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "behavior": {
+          "type": "string",
+          "enum": [
+            "showWhenTruthy",
+            "hideWhenTruthy",
+            "highlightWhenTruthy"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -5,6 +5,7 @@
 2. Keep core behavior deterministic, portable, and schema-driven.
 3. Separate concerns cleanly across desktop shell, domain logic, data contracts, and UI.
 4. Preserve forward compatibility for Windows and collaboration features.
+5. Preserve single authoring flow with print-first and digital-ready contract layering.
 
 ## 2. Core Technology Choices
 1. Desktop shell: Electron
@@ -25,7 +26,7 @@
 3. Domain layer (pure logic)
    - Rules for templates/cards/games, validations, mapping, deterministic render rules
 4. Infrastructure layer
-   - SQLite repo, file storage, package import/export, migration engine, locking
+   - SQLite repo, file storage, package import/export, migration engine, locking, print preflight
 5. Desktop boundary layer
    - Electron main/preload IPC contracts
 
@@ -52,6 +53,7 @@ cardforge/
             migration-service/
             export-service/
             import-service/
+            preflight-service/
             checkpoint-service/
             asset-service/
           db/
@@ -95,7 +97,10 @@ cardforge/
       src/
         schema/
           game.ts
-          template.ts
+          card-data-template.ts
+          layout-template-print.ts
+          layout-template-digital.ts
+          layout-component-library.ts
           card.ts
           checkpoint.ts
           export-package.ts
@@ -146,6 +151,7 @@ Responsibility:
 1. Deterministic primitive rendering contract.
 2. Safe-mode validator for unsupported rules.
 3. Shared render path for preview/export parity.
+4. Print-profile-aware geometry checks (safe zone / bleed / dpi compatibility hooks).
 
 ### 6.4 `apps/desktop/src/main`
 Responsibility:
@@ -166,20 +172,26 @@ Responsibility:
    - identity, path, metadata, lock state
 2. Game
    - metadata, settings, assigned template IDs, asset index
-3. Template
-   - global template definition + version metadata + usage refs
-4. Card
-   - data payload + template reference + audit fields
-5. Checkpoint
+3. CardDataTemplate
+   - global field schema definition + version metadata + usage refs
+4. LayoutTemplatePrint
+   - print-target layout mapping for a CardDataTemplate
+5. LayoutTemplateDigital
+   - digital-target layout mapping for a CardDataTemplate
+6. LayoutComponentLibrary
+   - reusable layout components for rapid composition
+7. Card
+   - data payload + data template reference + optional preferred layout references + audit fields
+8. Checkpoint
    - named snapshot references and metadata
-6. ExportPackageManifest
+9. ExportPackageManifest
    - schema version, included components, checksums, metadata
 
 ## 7.2 Persistence Split
 1. SQLite stores:
    - operational indexes
    - search/sort metadata
-   - usage edges (game<->template, card->template)
+   - usage edges (game<->data template, game<->layout template, card->data template)
    - checkpoint catalog
 2. Filesystem stores:
    - assets
@@ -196,8 +208,12 @@ Responsibility:
 <game-export>.cardforge/
   manifest.json
   game.json
-  templates/
-    template-<id>.json
+  data-templates/
+    data-template-<id>.json
+  layout-templates/
+    layout-template-<id>.json
+  layout-components/
+    component-library-<id>.json
   cards/
     cards.json
   checkpoints/              # optional when exporting named state/history
@@ -209,11 +225,26 @@ Responsibility:
 ## 8.2 Import Pipeline
 1. Validate manifest + schema version.
 2. Resolve version migration plan (required before load).
-3. Validate component schemas (game/templates/cards/checkpoints).
+3. Validate component schemas (game/data templates/layout templates/components/cards/checkpoints).
 4. Check ID conflicts (fail-fast).
 5. Preview impact summary to user.
 6. Execute import transaction + asset copy.
 7. Emit structured import report (successes/issues).
+
+## 8.3 Export Preflight Pipeline
+1. Validate canvas geometry contract (size, unit, bleed, safe zone, dpi).
+2. Validate element bounds against safe zone and bleed policy.
+3. Validate image minimum effective DPI for export target.
+4. Emit actionable warnings/errors and block export when critical constraints fail.
+5. Produce preflight report artifact alongside export metadata.
+
+## 8.4 Output Adapter Strategy (V1 Boundary)
+1. V1 adapters:
+   - print-focused outputs (primary)
+   - digital-ready metadata outputs (non-interactive)
+2. V2+ adapters:
+   - interactive digital runtime targets
+3. Authoring path remains shared; adapters consume the same core contracts plus capability modules.
 
 ## 9. Workflow State Machines (XState)
 Use explicit machines for high-risk workflows:
@@ -230,7 +261,7 @@ Each machine should define:
 
 ## 10. Rendering Architecture
 1. Primitive registry (V1 fixed set).
-2. Layout parser -> validated render tree.
+2. Data template + layout template parser -> validated render tree.
 3. Safe-mode validator rejects unsupported style/primitive usage.
 4. Single render engine used by:
    - editor preview
@@ -257,6 +288,7 @@ Result:
 1. Import/export round-trip test (with assets)
 2. Conflict fail-fast behavior test
 3. Locking behavior test (single-writer enforcement)
+4. Print preflight gate test (safe-zone and dpi violations)
 
 ## 12.3 E2E Tests
 1. First-run onboarding path

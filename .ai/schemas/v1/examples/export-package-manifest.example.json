@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "1.0.0",
+  "packageId": "pkg-neon-arena-2026-02-08",
+  "exportedAt": "2026-02-08T18:30:00Z",
+  "sourceApp": {
+    "appId": "cardforge",
+    "appVersion": "1.0.0-alpha.1",
+    "platform": "macos"
+  },
+  "scope": {
+    "kind": "checkpoint",
+    "checkpointId": "cp-playtest-ready-v3",
+    "checkpointName": "Playtest Ready v3"
+  },
+  "game": {
+    "libraryId": "lib-main",
+    "gameId": "game-neon-arena",
+    "name": "Neon Arena"
+  },
+  "includes": {
+    "game": true,
+    "cardDataTemplates": [
+      {
+        "id": "dt-unit",
+        "version": "1.0.0",
+        "name": "Unit Data Template"
+      }
+    ],
+    "layoutTemplates": [
+      {
+        "id": "lt-print-unit-a",
+        "version": "1.0.0",
+        "name": "Unit Print Layout A",
+        "target": "print",
+        "dataTemplateId": "dt-unit"
+      }
+    ],
+    "layoutComponentLibraries": [
+      {
+        "id": "lcl-core-frames",
+        "version": "1.0.0",
+        "name": "Core Frames"
+      }
+    ],
+    "decks": [
+      {
+        "id": "deck-core-set",
+        "version": "1.0.0",
+        "name": "Core Set"
+      }
+    ],
+    "checkpoints": [
+      {
+        "id": "cp-playtest-ready-v3",
+        "version": "1.0.0",
+        "name": "Playtest Ready v3"
+      }
+    ],
+    "assets": [
+      {
+        "id": "asset-board-01",
+        "version": "1.0.0",
+        "name": "Board Reference",
+        "kind": "image",
+        "path": "assets/images/board-reference.png",
+        "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      }
+    ]
+  },
+  "files": [
+    {
+      "path": "manifest.json",
+      "kind": "manifest",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "bytes": 2450
+    },
+    {
+      "path": "game.json",
+      "kind": "game",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "bytes": 1740
+    },
+    {
+      "path": "cards/cards.json",
+      "kind": "deck",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "bytes": 11990
+    },
+    {
+      "path": "assets/images/board-reference.png",
+      "kind": "asset",
+      "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "bytes": 248112
+    }
+  ],
+  "preflight": {
+    "status": "pass",
+    "reportPath": "reports/preflight.json",
+    "errorCount": 0,
+    "warningCount": 1
+  },
+  "importHints": {
+    "requiresIdConflictResolution": false,
+    "minimumImporterSchemaVersion": "1.0.0"
+  }
+}

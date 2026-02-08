@@ -1,0 +1,365 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cardforge.app/schemas/v1/core/export-package-manifest.schema.json",
+  "title": "Export Package Manifest",
+  "description": "Manifest contract for portable game exports, including included artifacts, scope, and checksums.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "packageId",
+    "exportedAt",
+    "sourceApp",
+    "scope",
+    "game",
+    "includes",
+    "files"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "packageId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "exportedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sourceApp": {
+      "$ref": "#/$defs/SourceApp"
+    },
+    "scope": {
+      "$ref": "#/$defs/ExportScope"
+    },
+    "game": {
+      "$ref": "#/$defs/GameRef"
+    },
+    "includes": {
+      "$ref": "#/$defs/Includes"
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/FileEntry"
+      }
+    },
+    "preflight": {
+      "$ref": "#/$defs/PreflightSummary"
+    },
+    "importHints": {
+      "$ref": "#/$defs/ImportHints"
+    }
+  },
+  "$defs": {
+    "SourceApp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "appId",
+        "appVersion"
+      ],
+      "properties": {
+        "appId": {
+          "type": "string",
+          "minLength": 1,
+          "default": "cardforge"
+        },
+        "appVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platform": {
+          "type": "string",
+          "enum": [
+            "macos",
+            "windows",
+            "linux",
+            "unknown"
+          ],
+          "default": "unknown"
+        }
+      }
+    },
+    "ExportScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "current",
+            "checkpoint"
+          ]
+        },
+        "checkpointId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checkpointName": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "checkpoint"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "checkpointId"
+            ]
+          }
+        }
+      ]
+    },
+    "GameRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "libraryId",
+        "gameId",
+        "name"
+      ],
+      "properties": {
+        "libraryId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "gameId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "Includes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "game",
+        "cardDataTemplates",
+        "layoutTemplates",
+        "decks",
+        "assets"
+      ],
+      "properties": {
+        "game": {
+          "type": "boolean",
+          "const": true
+        },
+        "cardDataTemplates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "layoutTemplates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LayoutEntityRef"
+          }
+        },
+        "layoutComponentLibraries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "decks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EntityRef"
+          }
+        },
+        "assets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AssetEntityRef"
+          }
+        }
+      }
+    },
+    "EntityRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "LayoutEntityRef": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/EntityRef"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "target",
+            "dataTemplateId"
+          ],
+          "properties": {
+            "target": {
+              "type": "string",
+              "enum": [
+                "print",
+                "digital"
+              ]
+            },
+            "dataTemplateId": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      ]
+    },
+    "AssetEntityRef": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/EntityRef"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "image",
+                "icon",
+                "document",
+                "other"
+              ]
+            },
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{64}$"
+            }
+          }
+        }
+      ]
+    },
+    "FileEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "kind",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "manifest",
+            "game",
+            "cardDataTemplate",
+            "layoutTemplate",
+            "layoutComponentLibrary",
+            "deck",
+            "checkpoint",
+            "asset",
+            "other"
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "PreflightSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "warning",
+            "fail"
+          ]
+        },
+        "reportPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "errorCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warningCount": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "ImportHints": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requiresIdConflictResolution": {
+          "type": "boolean",
+          "default": false
+        },
+        "minimumImporterSchemaVersion": {
+          "type": "string",
+          "minLength": 1,
+          "default": "1.0.0"
+        }
+      }
+    }
+  }
+}

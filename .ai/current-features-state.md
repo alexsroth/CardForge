@@ -87,8 +87,10 @@ Intention:
 ## Rebuild Guidance (Intent Preserved)
 If rebuilding in another language/stack, preserve these invariants:
 - Template-driven rendering is the core differentiator.
+- Separate data-template design from layout-template design:
+  - card data fields are shared
+  - print and digital layouts are target-specific experiences
 - Project-level template assignment should remain explicit.
 - Live preview during editing is mandatory.
 - Import/export should remain first-class, not a secondary utility.
 - Local-first should remain available even if cloud features are added.
-

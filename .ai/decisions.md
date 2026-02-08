@@ -950,6 +950,161 @@ Before finalizing any new decision:
 - Release target:
   - V2+ behavior contract
 
+## D-052: Layout Designer Uses Container-First Authoring With Group-Only Layout Container
+- Date: 2026-02-08
+- Current behavior:
+  - Template layout behavior supported element placement, but authoring sequence was not explicitly locked as container-first.
+- Options considered:
+  1. `layout` container acts as group/frame only
+  2. `layout` container acts as repeater/data-driven list
+  3. Support both in V1
+- Decision:
+  - Use container-first flow in template designer:
+    1. draw container
+    2. map data field to container
+  - Supported container types for this flow:
+    - single line text
+    - text with icon
+    - area text
+    - image
+    - layout
+  - In V1, `layout` is group/frame only (no repeater semantics).
+- Why:
+  - Keeps authoring intuitive and visual while reducing V1 complexity/risk.
+- Problem solved / Impact:
+  - Improves usability for non-technical users and avoids premature complexity in data-driven nested layout behaviors.
+- User story reference(s):
+  - US-03, US-01, US-11
+- Release target:
+  - V1
+
+## D-053: Template Canvas Designer With Single Size per Template in V1
+- Date: 2026-02-08
+- Current behavior:
+  - Template layouts supported size-like properties but real print-oriented size governance was not a locked product rule.
+- Options considered:
+  1. Allow one template to contain multiple sizes in V1
+  2. Enforce one card size per template in V1
+- Decision:
+  - Add explicit canvas design step in template authoring.
+  - In V1, each template is bound to a single card size profile.
+  - A game may still include multiple templates with different sizes.
+- Why:
+  - Supports real print constraints while keeping rendering/export behavior deterministic.
+- Problem solved / Impact:
+  - Prevents cross-size layout ambiguity and improves confidence that designs map to physical card dimensions.
+- User story reference(s):
+  - US-14, US-11, US-09
+- Release target:
+  - V1
+
+## D-054: Same-Size Layout Versioning in V1; Multi-Size Layout Sets Considered for V2
+- Date: 2026-02-08
+- Current behavior:
+  - Layout variation behavior was not formally separated between same-size A/B testing and multi-size targeting.
+- Options considered:
+  1. No versioning in V1
+  2. Same-size layout versions in V1; defer multi-size layout sets
+  3. Full multi-size layout sets in V1
+- Decision:
+  - V1 supports multiple layout versions for the template’s single size (A/B testing).
+  - V2 can introduce multi-size layout sets under strict size binding rules.
+- Why:
+  - Delivers useful experimentation without increasing V1 schema/render complexity too early.
+- Problem solved / Impact:
+  - Enables layout iteration while preserving predictable sizing and migration behavior.
+- User story reference(s):
+  - US-03, US-14, US-11
+- Release target:
+  - V1 (same-size versions), V2+ (multi-size layout sets)
+
+## D-055: Print Geometry and Preflight Are Mandatory in V1 Canvas Contracts
+- Date: 2026-02-08
+- Current behavior:
+  - Layout authoring captured size intent, but explicit print production constraints were not mandatory in contract and export checks.
+- Options considered:
+  1. Minimal canvas geometry with optional print checks
+  2. Mandatory print-aware canvas contract and preflight
+- Decision:
+  - Require print-aware canvas schema fields in V1:
+    - physical unit
+    - physical dimensions
+    - dpi target
+    - bleed margins
+    - safe-zone margins
+    - optional trim/corner settings
+  - Require export preflight checks for safe-zone, bleed policy, and minimum effective image DPI.
+- Why:
+  - CardForge should embed real-world print best practices so new creators can produce playable output quickly and safely.
+- Problem solved / Impact:
+  - Prevents common amateur print failures and increases confidence that exported decks are test-ready.
+- User story reference(s):
+  - US-14, US-11, US-01, US-09
+- Release target:
+  - V1
+
+## D-056: V1 Is Print-First With Digital-Ready Non-Interactive Exports
+- Date: 2026-02-08
+- Current behavior:
+  - Product direction included both print and future digital needs, but explicit V1 boundary was not captured as a single rule.
+- Options considered:
+  1. Print-only V1 with no digital contract groundwork
+  2. Full digital runtime in V1
+  3. Print-first V1 plus digital-ready, non-interactive export groundwork
+- Decision:
+  - Choose option 3.
+  - V1 does not include interactive digital runtime behavior.
+  - V1 does include digital capability metadata and adapter-ready export structure.
+  - Users should not need to choose a separate print/digital authoring mode.
+- Why:
+  - Preserves V1 delivery focus while avoiding rework for digital expansion.
+- Problem solved / Impact:
+  - Enables single authoring flow across targets and reduces future migration cost.
+- User story reference(s):
+  - US-15, US-09, US-10, US-01
+- Release target:
+  - V1 (groundwork), V2+ (interactive runtime features)
+
+## D-057: Split Template Model Into Data Template and Target-Specific Layout Templates
+- Date: 2026-02-08
+- Current behavior:
+  - Earlier direction treated template definition and layout concerns as closely bundled, with print-primary assumptions.
+- Options considered:
+  1. Keep single combined template contract
+  2. Separate data contract from presentation contracts
+- Decision:
+  - Use a two-layer template model:
+    - Card Data Template (shared structured card fields/types)
+    - Layout Templates (separate print and digital layout experiences)
+  - Layout templates reference a data template via `dataTemplateId`.
+  - Shared data can power multiple target-specific layouts without forcing a mode choice during authoring.
+- Why:
+  - Print and digital layout design have different constraints and should be optimized independently while preserving shared data continuity.
+- Problem solved / Impact:
+  - Enables one card dataset to support multiple output targets while reducing layout coupling and migration complexity.
+- User story reference(s):
+  - US-15, US-03, US-09, US-10
+- Release target:
+  - V1 architecture contract
+
+## D-058: Component Builder Is a First-Class Layout Capability
+- Date: 2026-02-08
+- Current behavior:
+  - Layout authoring supported container composition but reusable component contracts were not explicit.
+- Options considered:
+  1. No component library in V1
+  2. Add reusable layout component contracts in V1
+- Decision:
+  - Add a reusable layout component builder/library contract, usable in print and digital layout templates.
+- Why:
+  - Supports rapid prototyping and structured variants (e.g., archetype frame differences) without re-authoring from scratch.
+- Problem solved / Impact:
+  - Speeds iterative design and helps amateurs reach playtest output faster.
+- User story reference(s):
+  - US-01, US-03, US-14
+- Release target:
+  - V1
+
 ---
 
 ## Open Items (Pending Decision)

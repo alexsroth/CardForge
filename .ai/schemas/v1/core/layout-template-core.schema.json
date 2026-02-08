@@ -1,0 +1,442 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cardforge.app/schemas/v1/core/layout-template-core.schema.json",
+  "title": "Layout Template Core",
+  "description": "Shared layout template structure used by print and digital layout experiences.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "layoutTemplateId",
+    "name",
+    "target",
+    "dataTemplateId",
+    "elements"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "layoutTemplateId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target": {
+      "type": "string",
+      "enum": [
+        "print",
+        "digital"
+      ]
+    },
+    "dataTemplateId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "layoutVersionId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/LayoutElement"
+      }
+    }
+  },
+  "$defs": {
+    "Rect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
+      "properties": {
+        "x": {
+          "type": "integer"
+        },
+        "y": {
+          "type": "integer"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "TextStyle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fontFamily": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fontSize": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "fontWeight": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "medium",
+            "semibold",
+            "bold"
+          ]
+        },
+        "color": {
+          "type": "string",
+          "minLength": 1
+        },
+        "align": {
+          "type": "string",
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
+        }
+      }
+    },
+    "ShapeStyle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fillColor": {
+          "type": "string"
+        },
+        "strokeColor": {
+          "type": "string"
+        },
+        "strokeWidth": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cornerRadiusPx": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "FieldBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "fieldKey"
+      ],
+      "properties": {
+        "type": {
+          "const": "field"
+        },
+        "fieldKey": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "StaticBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "value"
+      ],
+      "properties": {
+        "type": {
+          "const": "static"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "SingleLineTextElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "rect",
+        "binding"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "singleLineText"
+        },
+        "rect": {
+          "$ref": "#/$defs/Rect"
+        },
+        "zIndex": {
+          "type": "integer"
+        },
+        "binding": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/FieldBinding"
+            },
+            {
+              "$ref": "#/$defs/StaticBinding"
+            }
+          ]
+        },
+        "style": {
+          "$ref": "#/$defs/TextStyle"
+        }
+      }
+    },
+    "TextWithIconElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "rect",
+        "textBinding"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "textWithIcon"
+        },
+        "rect": {
+          "$ref": "#/$defs/Rect"
+        },
+        "zIndex": {
+          "type": "integer"
+        },
+        "textBinding": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/FieldBinding"
+            },
+            {
+              "$ref": "#/$defs/StaticBinding"
+            }
+          ]
+        },
+        "iconBinding": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/FieldBinding"
+            },
+            {
+              "$ref": "#/$defs/StaticBinding"
+            }
+          ]
+        },
+        "style": {
+          "$ref": "#/$defs/TextStyle"
+        }
+      }
+    },
+    "AreaTextElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "rect",
+        "binding"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "areaText"
+        },
+        "rect": {
+          "$ref": "#/$defs/Rect"
+        },
+        "zIndex": {
+          "type": "integer"
+        },
+        "binding": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/FieldBinding"
+            },
+            {
+              "$ref": "#/$defs/StaticBinding"
+            }
+          ]
+        },
+        "style": {
+          "$ref": "#/$defs/TextStyle"
+        }
+      }
+    },
+    "ImageElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "rect",
+        "fieldKey"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "image"
+        },
+        "rect": {
+          "$ref": "#/$defs/Rect"
+        },
+        "zIndex": {
+          "type": "integer"
+        },
+        "fieldKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fit": {
+          "type": "string",
+          "enum": [
+            "cover",
+            "contain",
+            "fill"
+          ],
+          "default": "cover"
+        }
+      }
+    },
+    "LayoutContainerElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "rect"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "layout"
+        },
+        "rect": {
+          "$ref": "#/$defs/Rect"
+        },
+        "zIndex": {
+          "type": "integer"
+        },
+        "style": {
+          "$ref": "#/$defs/ShapeStyle"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "DecorationElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "rect"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "decoration"
+        },
+        "rect": {
+          "$ref": "#/$defs/Rect"
+        },
+        "zIndex": {
+          "type": "integer"
+        },
+        "style": {
+          "$ref": "#/$defs/ShapeStyle"
+        }
+      }
+    },
+    "ComponentInstanceElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "componentId",
+        "rect"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "component"
+        },
+        "componentId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rect": {
+          "$ref": "#/$defs/Rect"
+        },
+        "zIndex": {
+          "type": "integer"
+        },
+        "bindingOverrides": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "LayoutElement": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/SingleLineTextElement"
+        },
+        {
+          "$ref": "#/$defs/TextWithIconElement"
+        },
+        {
+          "$ref": "#/$defs/AreaTextElement"
+        },
+        {
+          "$ref": "#/$defs/ImageElement"
+        },
+        {
+          "$ref": "#/$defs/LayoutContainerElement"
+        },
+        {
+          "$ref": "#/$defs/DecorationElement"
+        },
+        {
+          "$ref": "#/$defs/ComponentInstanceElement"
+        }
+      ]
+    }
+  }
+}

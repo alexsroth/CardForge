@@ -47,6 +47,12 @@ As a designer, I want recycle-bin style recovery instead of immediate destructiv
 ### US-13: Optional BYO AI Assistance
 As a cost-conscious designer, I want optional bring-your-own AI integrations for assistive workflows, so I can use AI help without platform lock-in or mandatory usage costs.
 
+### US-14: Print-Accurate Template Design
+As a designer preparing physical prototypes, I want template canvas sizing to match real print card dimensions, so layout decisions hold up when exported or printed.
+
+### US-15: One Authoring Flow for Print and Digital
+As a designer, I want to author once without choosing a separate print vs digital mode, so I can reuse the same card data/template work across multiple output targets.
+
 ## How To Use in Decisions
 - Add a line like:
   - `User story reference(s): US-04, US-05`

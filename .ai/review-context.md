@@ -34,7 +34,7 @@ Highlights already decided in review:
 4. Expanded game metadata + game-owned assets
 5. Multi-library architecture path (owned now, shared/rental later)
 6. Global templates with usage visibility across games
-7. Visual + JSON template editing
+7. Card Data Template and Layout Template are separate but linked
 8. Drag/drop + snap-to-grid direction for template layout UX
 9. Template change model supports global update or fork/version
 10. Mandatory remap flow when schema/template changes impact cards
@@ -43,6 +43,7 @@ Highlights already decided in review:
 13. CSV template download + mapped bulk import + error report
 14. Autosave + named checkpoints
 15. AI name generation is out of V1 scope
+16. Print and digital layouts are separate experiences sharing the same card data template
 
 See `.ai/decisions.md` for full rationale and impact details.
 

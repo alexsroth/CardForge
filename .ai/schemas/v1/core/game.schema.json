@@ -1,0 +1,228 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cardforge.app/schemas/v1/core/game.schema.json",
+  "title": "Game",
+  "description": "Game container contract for metadata, settings, template assignment, and game-owned assets.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "libraryId",
+    "gameId",
+    "name",
+    "settings"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "libraryId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "gameId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "archived"
+      ],
+      "default": "active"
+    },
+    "metadata": {
+      "$ref": "#/$defs/GameMetadata"
+    },
+    "settings": {
+      "$ref": "#/$defs/GameSettings"
+    },
+    "assetIndex": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AssetRef"
+      }
+    },
+    "deckRefs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/DeckRef"
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "archivedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "GameMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rules": {
+          "type": "string"
+        },
+        "playtestNotes": {
+          "type": "string"
+        },
+        "playtestTemplates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PlaytestTemplate"
+          }
+        },
+        "referenceImageAssetIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "PlaytestTemplate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "templateId",
+        "name"
+      ],
+      "properties": {
+        "templateId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prompt": {
+          "type": "string"
+        }
+      }
+    },
+    "GameSettings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignedDataTemplateIds"
+      ],
+      "properties": {
+        "assignedDataTemplateIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "assignedLayoutTemplateIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "defaultDeckId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "defaultExportTarget": {
+          "type": "string",
+          "enum": [
+            "print",
+            "digital"
+          ]
+        }
+      }
+    },
+    "AssetRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assetId",
+        "kind",
+        "path"
+      ],
+      "properties": {
+        "assetId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "image",
+            "icon",
+            "document",
+            "other"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contentType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sizeBytes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "DeckRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deckId",
+        "name"
+      ],
+      "properties": {
+        "deckId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cardCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "default": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  }
+}

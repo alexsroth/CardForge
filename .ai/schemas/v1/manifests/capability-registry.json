@@ -1,0 +1,70 @@
+{
+  "registryVersion": "1.0.0",
+  "capabilities": [
+    {
+      "id": "game.core",
+      "version": "1.0.0",
+      "schema": "https://cardforge.app/schemas/v1/core/game.schema.json",
+      "releaseTarget": "v1"
+    },
+    {
+      "id": "data.template.core",
+      "version": "1.0.0",
+      "schema": "https://cardforge.app/schemas/v1/core/card-data-template.schema.json",
+      "releaseTarget": "v1"
+    },
+    {
+      "id": "layout.template.core",
+      "version": "1.0.0",
+      "schema": "https://cardforge.app/schemas/v1/core/layout-template-core.schema.json",
+      "releaseTarget": "v1"
+    },
+    {
+      "id": "layout.print",
+      "version": "1.0.0",
+      "schema": "https://cardforge.app/schemas/v1/modules/layout.print.schema.json",
+      "releaseTarget": "v1",
+      "requiredForExportProfiles": [
+        "print"
+      ]
+    },
+    {
+      "id": "layout.digital",
+      "version": "1.0.0",
+      "schema": "https://cardforge.app/schemas/v1/modules/layout.digital.schema.json",
+      "releaseTarget": "v2+",
+      "requiredForExportProfiles": [
+        "digital"
+      ]
+    },
+    {
+      "id": "layout.components",
+      "version": "1.0.0",
+      "schema": "https://cardforge.app/schemas/v1/modules/layout.components.schema.json",
+      "releaseTarget": "v1"
+    },
+    {
+      "id": "deck.core",
+      "version": "1.0.0",
+      "schema": "https://cardforge.app/schemas/v1/card-deck.schema.json",
+      "releaseTarget": "v1"
+    },
+    {
+      "id": "export.package.manifest",
+      "version": "1.0.0",
+      "schema": "https://cardforge.app/schemas/v1/core/export-package-manifest.schema.json",
+      "releaseTarget": "v1"
+    },
+    {
+      "id": "print.preflight",
+      "version": "1.0.0",
+      "schema": null,
+      "releaseTarget": "v1",
+      "runtimeChecks": [
+        "safeZoneBounds",
+        "bleedPolicy",
+        "minimumImageDpi"
+      ]
+    }
+  ]
+}
