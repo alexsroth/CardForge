@@ -44,6 +44,9 @@ As a designer, I want reliable card previews that reflect template + card data c
 ### US-12: Recover From Mistakes
 As a designer, I want recycle-bin style recovery instead of immediate destructive deletes, so accidental actions are reversible.
 
+### US-13: Optional BYO AI Assistance
+As a cost-conscious designer, I want optional bring-your-own AI integrations for assistive workflows, so I can use AI help without platform lock-in or mandatory usage costs.
+
 ## How To Use in Decisions
 - Add a line like:
   - `User story reference(s): US-04, US-05`

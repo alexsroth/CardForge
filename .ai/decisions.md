@@ -417,11 +417,540 @@ Before finalizing any new decision:
 - Release target:
   - V1
 
+## D-024: V1 Renderer Prioritizes Deterministic Consistency
+- Date: 2026-02-08
+- Current behavior:
+  - Rendering supported dynamic layouts but could be affected by broad style/input variation.
+- Options considered:
+  1. Strict deterministic rendering with narrower supported behavior
+  2. More expressive rendering with broader style flexibility in V1
+- Decision:
+  - Choose strict deterministic rendering behavior for V1.
+- Why:
+  - V1 should optimize trust and predictable outcomes over maximum styling freedom.
+- Problem solved / Impact:
+  - Reduces rendering surprises and makes large card sets safer to author/import.
+- User story reference(s):
+  - US-03, US-11, US-05
+- Release target:
+  - V1
+
+## D-025: Safe Rendering Mode Required in V1
+- Date: 2026-02-08
+- Current behavior:
+  - Unsupported rules could be handled inconsistently depending on renderer behavior.
+- Options considered:
+  1. Safe mode: reject unsupported rules with explicit validation errors
+  2. Best-effort mode: attempt render and silently ignore unsupported rules
+- Decision:
+  - Use safe rendering mode in V1.
+- Why:
+  - Explicit failures are preferable to silent visual drift.
+- Problem solved / Impact:
+  - Improves user confidence and shortens debugging by surfacing invalid layout rules immediately.
+- User story reference(s):
+  - US-11, US-05
+- Release target:
+  - V1
+
+## D-026: V1 Renderer Primitive Set Is Minimal
+- Date: 2026-02-08
+- Current behavior:
+  - Template layouts used common primitives with room for expansion.
+- Options considered:
+  1. Minimal primitive set now
+  2. Broader primitive/plugin model in V1
+- Decision:
+  - V1 primitive set remains minimal:
+    - text
+    - image slot
+    - icon
+    - stat value
+    - shape/container
+- Why:
+  - Keeps renderer stable and testable while still covering common card-game needs.
+- Problem solved / Impact:
+  - Delivers practical layout capability without introducing high-risk rendering complexity in V1.
+- User story reference(s):
+  - US-03, US-11
+- Release target:
+  - V1
+
+## D-027: Editor Preview and Export Render Must Match in V1
+- Date: 2026-02-08
+- Current behavior:
+  - Preview and output fidelity could diverge depending on rendering path.
+- Options considered:
+  1. Render parity between editor preview and export
+  2. Data-only export with deferred rendering elsewhere
+- Decision:
+  - Require render parity in V1 (what users see is what exported visuals produce).
+- Why:
+  - Trust in output is core to playtest and sharing workflows.
+- Problem solved / Impact:
+  - Prevents handoff surprises and increases reliability of external review/playtest outputs.
+- User story reference(s):
+  - US-11, US-09
+- Release target:
+  - V1
+
+## D-028: Full Game Export Is Multi-Part and Portable
+- Date: 2026-02-08
+- Current behavior:
+  - Export/import existed, but full-game portability contract was not finalized.
+- Options considered:
+  1. Single monolithic export artifact
+  2. Multi-part export with separable components
+- Decision:
+  - Full-game export must include:
+    - game metadata (rules, playtest artifacts, etc.)
+    - card templates used by the game
+    - deck/card data
+  - Components should be separable (e.g., export only cards, only templates, or full game).
+- Why:
+  - Users need both targeted exports and complete shareable handoff packages.
+- Problem solved / Impact:
+  - Supports modular workflows while preserving full portability for collaboration/handoff.
+- User story reference(s):
+  - US-07, US-09, US-10, US-04
+- Release target:
+  - V1
+
+## D-029: Export Packaging Includes Asset Files (Not References Only)
+- Date: 2026-02-08
+- Current behavior:
+  - Asset handling for portable exports was not locked.
+- Options considered:
+  1. References-only exports
+  2. Package and include asset files with export
+- Decision:
+  - Include uploaded game assets with export package.
+  - Use packaged-file approach (Option B from review) for transportability.
+- Why:
+  - Imported games must be editable by another user without broken asset links.
+- Problem solved / Impact:
+  - Ensures shared imports are self-contained and collaboration-ready.
+- User story reference(s):
+  - US-07, US-09, US-10
+- Release target:
+  - V1
+
+## D-030: Import ID Conflicts Are Fail-Fast and Explicit
+- Date: 2026-02-08
+- Current behavior:
+  - Conflict behavior on import was not standardized.
+- Options considered:
+  1. Fail and ask user to resolve
+  2. Auto-rename copies
+  3. Auto-merge
+- Decision:
+  - Use fail-fast conflict handling (Option A), requiring explicit user resolution.
+- Why:
+  - Protects data integrity and avoids silent collisions/overwrites.
+- Problem solved / Impact:
+  - Prevents ambiguous merges and keeps imports deterministic and auditable.
+- User story reference(s):
+  - US-05, US-09
+- Release target:
+  - V1
+
+## D-031: Export Scope Supports Current State or Named Save State
+- Date: 2026-02-08
+- Current behavior:
+  - Save/checkpoint behavior existed, but export-state selection was not formalized.
+- Options considered:
+  1. Export latest/current only
+  2. Offer export of current or selected named checkpoint
+- Decision:
+  - Export flow must allow:
+    - export current state, or
+    - export a named save checkpoint.
+- Why:
+  - Users need controlled rollback/snapshot sharing in playtest and review cycles.
+- Problem solved / Impact:
+  - Improves reproducibility and collaboration around specific test versions.
+- User story reference(s):
+  - US-06, US-09
+- Release target:
+  - V1
+
+## D-032: Collaboration Metadata Groundwork Starts in V1
+- Date: 2026-02-08
+- Current behavior:
+  - Collaboration model was future-facing but not yet encoded in export contracts.
+- Options considered:
+  1. Defer collaboration metadata entirely to V2
+  2. Include foundational collaboration metadata now
+- Decision:
+  - Include collaboration-readiness groundwork in V1 data/export models.
+- Why:
+  - Avoids disruptive schema migration when shared/rental libraries are introduced.
+- Problem solved / Impact:
+  - De-risks future collaboration rollout and preserves forward compatibility.
+- User story reference(s):
+  - US-10, US-09
+- Release target:
+  - V1 architecture groundwork
+
+## D-033: Schema-Versioning Strategy for Import/Export Is Pending
+- Date: 2026-02-08
+- Current behavior:
+  - No final decision yet between strict migration-first vs tolerant parsing.
+- Options considered:
+  1. Strict schema version + explicit migration
+  2. Best-effort tolerant parsing
+- Decision:
+  - Use strict schema versioning with explicit migration requirements (Option 1).
+- Why:
+  - Deterministic compatibility and safe portability are higher priority than permissive parsing.
+- Problem solved / Impact:
+  - Prevents ambiguous import behavior and reduces hidden corruption risk across app versions.
+- User story reference(s):
+  - US-09, US-10, US-05
+- Release target:
+  - V1 (must be finalized before implementation)
+
+## D-034: Persistence Model Is Hybrid (SQLite + Portable JSON + Asset Files)
+- Date: 2026-02-08
+- Current behavior:
+  - Prior app was local-storage centered and lacked a formal desktop persistence contract.
+- Options considered:
+  1. File-first JSON
+  2. SQLite-first
+  3. Hybrid model
+- Decision:
+  - Use hybrid persistence:
+    - SQLite for app state/indexing and operational reliability
+    - Structured JSON artifacts for import/export portability
+    - Managed asset files on disk
+- Why:
+  - Balances robust desktop behavior with portable/shareable data contracts.
+- Problem solved / Impact:
+  - Provides reliable local performance while preserving long-term collaboration portability.
+- User story reference(s):
+  - US-09, US-10, US-07, US-08
+- Release target:
+  - V1
+
+## D-035: Multiple Selectable Libraries
+- Date: 2026-02-08
+- Current behavior:
+  - Single-library assumptions were common in the legacy app.
+- Options considered:
+  1. Single app-managed library
+  2. Multiple user-selectable libraries
+- Decision:
+  - Support multiple libraries.
+- Why:
+  - Aligns with future owned/shared/rental library workflows.
+- Problem solved / Impact:
+  - Improves organization at scale and reduces future migration cost for collaboration features.
+- User story reference(s):
+  - US-08, US-10
+- Release target:
+  - V1
+
+## D-036: Crash-Safe Atomic Write Strategy
+- Date: 2026-02-08
+- Current behavior:
+  - Previous architecture did not define a strong crash-safe write contract.
+- Options considered:
+  1. Immediate in-place writes
+  2. Atomic writes with durability safeguards
+- Decision:
+  - Use atomic write strategy for persistence operations.
+- Why:
+  - Data safety is critical with autosave and frequent edit operations.
+- Problem solved / Impact:
+  - Reduces corruption risk from crashes/interrupted writes and increases trust in autosave.
+- User story reference(s):
+  - US-06, US-05
+- Release target:
+  - V1
+
+## D-037: Checkpoints Stored as Full Snapshots
+- Date: 2026-02-08
+- Current behavior:
+  - Checkpoint model existed conceptually but storage strategy was not formalized.
+- Options considered:
+  1. Full snapshot checkpoints
+  2. Delta/diff checkpoints
+- Decision:
+  - Store named checkpoints as full snapshots in V1.
+- Why:
+  - Simpler and safer restore behavior for early versions.
+- Problem solved / Impact:
+  - Improves rollback reliability and reduces restore-chain failure complexity.
+- User story reference(s):
+  - US-06, US-12
+- Release target:
+  - V1
+
+## D-038: Managed Asset Copy Strategy
+- Date: 2026-02-08
+- Current behavior:
+  - Legacy approach included placeholders and non-portable asset pathways.
+- Options considered:
+  1. Copy assets into managed game/library folders
+  2. Reference external absolute paths
+- Decision:
+  - Copy/import assets into managed storage.
+- Why:
+  - Portable, shareable game packages require self-contained assets.
+- Problem solved / Impact:
+  - Prevents broken references when transferring games between users/machines.
+- User story reference(s):
+  - US-07, US-09
+- Release target:
+  - V1
+
+## D-039: Startup Auto-Migration for Schema Changes
+- Date: 2026-02-08
+- Current behavior:
+  - Migration timing strategy was not finalized.
+- Options considered:
+  1. Auto-migrate on startup
+  2. Lazy migrate per game on open
+- Decision:
+  - Use startup auto-migration.
+- Why:
+  - Maintains consistent library state and avoids mixed-schema behavior.
+- Problem solved / Impact:
+  - Reduces version skew bugs and creates predictable upgrade behavior.
+- User story reference(s):
+  - US-09, US-10, US-05
+- Release target:
+  - V1
+
+## D-040: Single-Writer Lock Per Library
+- Date: 2026-02-08
+- Current behavior:
+  - Concurrency behavior was not formalized for desktop filesystem workflows.
+- Options considered:
+  1. Single-writer lock per library
+  2. Optimistic local multi-writer
+- Decision:
+  - Use single-writer locking per library in V1.
+- Why:
+  - Prioritizes integrity over complex conflict resolution in early versions.
+- Problem solved / Impact:
+  - Prevents simultaneous-write corruption and reduces conflict-handling complexity.
+- User story reference(s):
+  - US-05, US-10
+- Release target:
+  - V1
+
+## D-041: V1 Onboarding Uses Interactive Step-by-Step Wizard
+- Date: 2026-02-08
+- Current behavior:
+  - Legacy onboarding was documentation-oriented and less flow-driven.
+- Options considered:
+  1. Static docs page only
+  2. Guided checklist
+  3. Interactive wizard that creates a sample path
+- Decision:
+  - Use an interactive step-by-step onboarding wizard in V1.
+- Why:
+  - New users need guided, in-product setup to reach first success quickly.
+- Problem solved / Impact:
+  - Reduces early confusion and shortens time-to-first-playtestable outcome.
+- User story reference(s):
+  - US-01, US-03
+- Release target:
+  - V1
+
+## D-042: Include a Starter Sample Game on First Run
+- Date: 2026-02-08
+- Current behavior:
+  - Starting state could be sparse and require users to discover workflow manually.
+- Options considered:
+  1. Empty app
+  2. Starter sample game
+  3. Template gallery only
+- Decision:
+  - Provide a starter sample game (templates + sample cards) on first run.
+- Why:
+  - Concrete examples improve comprehension of templates, cards, and rendering flow.
+- Problem solved / Impact:
+  - Gives users an immediate working reference they can inspect, modify, and learn from.
+- User story reference(s):
+  - US-01, US-11
+- Release target:
+  - V1
+
+## D-043: CSV Onboarding Includes Guided Mini-Flow
+- Date: 2026-02-08
+- Current behavior:
+  - CSV was available but onboarding depth was limited.
+- Options considered:
+  1. Docs link only
+  2. Guided CSV template/export/import flow
+  3. Omit CSV onboarding in V1
+- Decision:
+  - Include guided mini-flow for:
+    - downloading template CSV
+    - populating/importing CSV
+    - reviewing import outcomes
+- Why:
+  - CSV is a core high-volume authoring path and must be discoverable early.
+- Problem solved / Impact:
+  - Increases adoption of efficient bulk workflows and reduces import misuse.
+- User story reference(s):
+  - US-04, US-01
+- Release target:
+  - V1
+
+## D-044: Track Onboarding Progress and Allow Reset
+- Date: 2026-02-08
+- Current behavior:
+  - Onboarding progress state was not a formal product contract.
+- Options considered:
+  1. No progress tracking
+  2. Track progress + reset option
+  3. Force completion gate before normal use
+- Decision:
+  - Persist onboarding progress and allow users to reset/replay onboarding.
+- Why:
+  - Supports both first-time guidance and later relearning without hard lock-in.
+- Problem solved / Impact:
+  - Balances flexibility with guidance; avoids both user lockout and onboarding abandonment.
+- User story reference(s):
+  - US-01, US-08
+- Release target:
+  - V1
+
+## D-045: Basic and Advanced Workspace Modes
+- Date: 2026-02-08
+- Current behavior:
+  - Advanced capabilities existed but discoverability and cognitive load needed clearer structure.
+- Options considered:
+  1. Hide advanced features initially
+  2. Show everything with hints
+  3. Separate basic and advanced workspace modes
+- Decision:
+  - Provide explicit Basic and Advanced workspace modes in V1.
+- Why:
+  - Keeps entry path approachable while preserving power-user control.
+- Problem solved / Impact:
+  - Reduces cognitive overload for new users without limiting expert workflows.
+- User story reference(s):
+  - US-01, US-03
+- Release target:
+  - V1
+
+## D-046: Actionable Errors With Fix Guidance
+- Date: 2026-02-08
+- Current behavior:
+  - Error messages could be technical and not always recovery-oriented.
+- Options considered:
+  1. Generic errors only
+  2. Actionable errors with fix links/hints
+  3. Full diagnostics panel in V1
+- Decision:
+  - Use actionable, user-facing errors with clear next steps and fix guidance.
+- Why:
+  - Recoverability is essential for import/template workflows and first-run success.
+- Problem solved / Impact:
+  - Reduces frustration and improves task completion after failures.
+- User story reference(s):
+  - US-05, US-04, US-01
+- Release target:
+  - V1
+
+## D-047: No Core AI Features in V1 Product Scope
+- Date: 2026-02-08
+- Current behavior:
+  - Legacy app included an AI name-generation path.
+- Options considered:
+  1. Ship AI in V1
+  2. Keep AI out of core V1 scope
+- Decision:
+  - AI features are out of V1 core scope.
+- Why:
+  - Core authoring reliability and usability take priority over assistive AI features.
+- Problem solved / Impact:
+  - Reduces complexity and delivery risk in V1 while preserving focus on core workflows.
+- User story reference(s):
+  - US-01, US-05
+- Release target:
+  - V1
+
+## D-048: Future AI Model Is BYO Provider (No Platform-Funded Usage)
+- Date: 2026-02-08
+- Current behavior:
+  - AI provider/cost ownership model was not formalized.
+- Options considered:
+  1. App-managed shared AI billing
+  2. Bring-your-own AI provider/key model
+- Decision:
+  - Use a BYO AI integration model for future AI features.
+- Why:
+  - Avoids mandatory platform-side AI costs and keeps user/provider choice open.
+- Problem solved / Impact:
+  - Lowers operational cost risk and avoids lock-in for users.
+- User story reference(s):
+  - US-13
+- Release target:
+  - V2+
+
+## D-049: AI Features Must Degrade Gracefully Offline
+- Date: 2026-02-08
+- Current behavior:
+  - AI was optional but offline behavior contract was not explicit.
+- Options considered:
+  1. AI blocks or degrades core workflows when unavailable
+  2. AI is optional and simply unavailable when offline/disconnected
+- Decision:
+  - AI features are optional helpers only and should be unavailable (without blocking core flows) when offline.
+- Why:
+  - Core app capabilities must remain independent of AI connectivity.
+- Problem solved / Impact:
+  - Preserves a dependable offline-first workflow and prevents AI outages from impacting core usage.
+- User story reference(s):
+  - US-01, US-13
+- Release target:
+  - V2+ behavior contract
+
+## D-050: Future AI Feature Candidates Prioritized for Exploration
+- Date: 2026-02-08
+- Current behavior:
+  - Legacy AI focus was mainly card-name generation.
+- Options considered:
+  1. Keep name generation as first AI priority
+  2. Prioritize broader assistive workflows
+- Decision:
+  - Prioritize exploration of:
+    - image generation assistance
+    - bulk deck maker assistance
+  - over standalone name generation.
+- Why:
+  - These candidates potentially provide higher leverage for content velocity.
+- Problem solved / Impact:
+  - Focuses future AI work on features with larger workflow impact.
+- User story reference(s):
+  - US-04, US-13
+- Release target:
+  - V2+ exploration backlog
+
+## D-051: Do Not Persist AI Prompt Payloads by Default
+- Date: 2026-02-08
+- Current behavior:
+  - Prompt/result persistence policy was unspecified.
+- Options considered:
+  1. Do not persist prompt payloads by default
+  2. Persist prompts/results for full reproducibility
+- Decision:
+  - Default to non-persistence of raw AI prompt payloads.
+- Why:
+  - Minimizes stored sensitive context and keeps baseline privacy posture conservative.
+- Problem solved / Impact:
+  - Reduces privacy/compliance surface for future AI integrations.
+- User story reference(s):
+  - US-13
+- Release target:
+  - V2+ behavior contract
+
 ---
 
 ## Open Items (Pending Decision)
-- Feature 5: Dynamic Card Rendering
-- Feature 6: Data Import/Export (beyond CSV decisions already made)
-- Feature 7: Persistence model details for Electron filesystem design
-- Feature 8: Onboarding/getting-started experience
-- Feature 9: AI features (currently out of V1)
+- None (feature review complete; next phase is scope synthesis + stack selection)

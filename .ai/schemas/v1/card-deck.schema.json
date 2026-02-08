@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cardforge.app/schemas/v1/card-deck.schema.json",
+  "title": "Card Deck",
+  "description": "V1 card deck contract with explicit template linkage.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "gameId",
+    "deckId",
+    "name",
+    "templates",
+    "cards"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "gameId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "deckId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "templates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/TemplateRef"
+      },
+      "uniqueItems": true
+    },
+    "cards": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Card"
+      }
+    },
+    "metadata": {
+      "$ref": "#/$defs/DeckMetadata"
+    }
+  },
+  "$defs": {
+    "TemplateRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "templateId",
+        "templateVersion"
+      ],
+      "properties": {
+        "templateId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "templateVersion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "Card": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cardId",
+        "templateId",
+        "fields"
+      ],
+      "properties": {
+        "cardId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "templateId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fields": {
+          "type": "object",
+          "description": "Template-driven card payload. Keys are template field keys.",
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "assetRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AssetRef"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "AssetRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assetId",
+        "path"
+      ],
+      "properties": {
+        "assetId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "image",
+            "icon",
+            "other"
+          ],
+          "default": "image"
+        }
+      }
+    },
+    "DeckMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "playtestNotes": {
+          "type": "string"
+        },
+        "rulesRef": {
+          "type": "string",
+          "description": "Reference to game-level rules document or identifier."
+        }
+      }
+    }
+  }
+}
